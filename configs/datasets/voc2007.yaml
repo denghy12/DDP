@@ -1,0 +1,6 @@
+DATASET:
+  NAME: "voc2007"
+  ROOT: ""
+  VAL_SPLIT: "test"
+  TEST_SPLIT: "test"
+  TRAIN_SPLIT: "trainval"

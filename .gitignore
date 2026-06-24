@@ -1,0 +1,33 @@
+# Local AI/project instructions may contain server credentials.
+AGENTS_DDP.md
+
+# IDE and operating-system files.
+.idea/
+.DS_Store
+
+# Python caches and local environments.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Datasets and pretrained weights.
+datasets/*
+!datasets/VOC2007/
+datasets/VOC2007/*
+!datasets/VOC2007/.gitkeep
+pretrained/*
+!pretrained/clip/
+pretrained/clip/*
+!pretrained/clip/.gitkeep
+*.pt
+*.pth
+*.ckpt
+
+# Training artifacts too large for source control.
+checkpoint/
+checkpoints/
+output/
+tmp/
+

@@ -1,0 +1,198 @@
+Loading CLIP (backbone: ViT-B/16)
+using VisionTransformer
+Building DDP
+Initializing class-specific contexts
+Initial positive context: "X X X X X X X X X X X X X X X X"
+Initial negative  context: "X X X X X X X X X X X X X X X X"
+Number of positive context words (tokens): 16
+Number of negative context words (tokens): 16
+Freeze the backbone weights
+Freeze the attn weights
+Incremental stages: [(0, 4), (4, 8), (8, 12), (12, 16), (16, 20)]
+🚀 Training start: 
+Task_id:  0
+epoch:  0
+/opt/conda/envs/ddp/lib/python3.9/site-packages/torch/_tensor.py:775: UserWarning: non-inplace resize is deprecated
+  warnings.warn("non-inplace resize is deprecated")
+epoch:  1
+epoch:  2
+epoch:  3
+epoch:  4
+epoch:  5
+epoch:  6
+epoch:  7
+epoch:  8
+epoch:  9
+epoch:  10
+epoch:  11
+epoch:  12
+epoch:  13
+epoch:  14
+epoch:  15
+epoch:  16
+epoch:  17
+epoch:  18
+epoch:  19
+
+✅ Training finished！
+🚀 Test start: 
+Task_id:  0
+Test:
+mAP 80.01709156329918
+mean_map 80.01709156329918
+CP 74.70930218696594
+CR 73.44209253787994
+CF1 74.06735032553694
+OP 99.69039916992188
+OR 71.79487609863281
+OF1 83.4737548828125
+
+✅ Test finished！
+🚀 Training start: 
+Task_id:  1
+epoch:  0
+epoch:  1
+epoch:  2
+epoch:  3
+epoch:  4
+epoch:  5
+epoch:  6
+epoch:  7
+epoch:  8
+epoch:  9
+epoch:  10
+epoch:  11
+epoch:  12
+epoch:  13
+epoch:  14
+epoch:  15
+epoch:  16
+epoch:  17
+epoch:  18
+epoch:  19
+
+✅ Training finished！
+🚀 Test start: 
+Task_id:  1
+Test:
+mAP 86.81535662768431
+mean_map 83.41622409549174
+CP 83.52560997009277
+CR 81.56943395733833
+CF1 82.45621455635921
+OP 95.37628936767578
+OR 83.36199188232422
+OF1 88.9653549194336
+
+✅ Test finished！
+🚀 Training start: 
+Task_id:  2
+epoch:  0
+epoch:  1
+epoch:  2
+epoch:  3
+epoch:  4
+epoch:  5
+epoch:  6
+epoch:  7
+epoch:  8
+epoch:  9
+epoch:  10
+epoch:  11
+epoch:  12
+epoch:  13
+epoch:  14
+epoch:  15
+epoch:  16
+epoch:  17
+epoch:  18
+epoch:  19
+
+✅ Training finished！
+🚀 Test start: 
+Task_id:  2
+Test:
+mAP 85.70707710157505
+mean_map 84.17984176418618
+CP 79.0628453095754
+CR 81.6673884789149
+CF1 79.79014727681029
+OP 83.98030090332031
+OR 83.35250091552734
+OF1 83.66522979736328
+
+✅ Test finished！
+🚀 Training start: 
+Task_id:  3
+epoch:  0
+epoch:  1
+epoch:  2
+epoch:  3
+epoch:  4
+epoch:  5
+epoch:  6
+epoch:  7
+epoch:  8
+epoch:  9
+epoch:  10
+epoch:  11
+epoch:  12
+epoch:  13
+epoch:  14
+epoch:  15
+epoch:  16
+epoch:  17
+epoch:  18
+epoch:  19
+
+✅ Training finished！
+🚀 Test start: 
+Task_id:  3
+Test:
+mAP 84.84490719762803
+mean_map 84.34610812254664
+CP 75.47164224088192
+CR 82.54941888153553
+CF1 77.64088318912432
+OP 74.4163818359375
+OR 87.8626708984375
+OF1 80.58245086669922
+
+✅ Test finished！
+🚀 Training start: 
+Task_id:  4
+epoch:  0
+epoch:  1
+epoch:  2
+epoch:  3
+epoch:  4
+epoch:  5
+epoch:  6
+epoch:  7
+epoch:  8
+epoch:  9
+epoch:  10
+epoch:  11
+epoch:  12
+epoch:  13
+epoch:  14
+epoch:  15
+epoch:  16
+epoch:  17
+epoch:  18
+epoch:  19
+
+✅ Training finished！
+🚀 Test start: 
+Task_id:  4
+Test:
+mAP 84.80749688015233
+mean_map 84.43838587406778
+CP 72.61438578367233
+CR 84.37019377946854
+CF1 76.21014044038643
+OP 71.24552917480469
+OR 88.00798797607422
+OF1 78.74458312988281
+
+✅ Test finished！
