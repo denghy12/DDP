@@ -1,0 +1,7 @@
+DATASET:
+  NAME: "emotic"
+  ROOT: ""
+  VAL_SPLIT: "val+test"
+  TEST_SPLIT: "val+test"
+  TRAIN_SPLIT: "train"
+

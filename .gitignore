@@ -17,6 +17,8 @@ datasets/*
 !datasets/VOC2007/
 datasets/VOC2007/*
 !datasets/VOC2007/.gitkeep
+# EMOTIC is linked from the shared server dataset and must not be committed.
+datasets/EMOTIC
 pretrained/*
 !pretrained/clip/
 pretrained/clip/*
@@ -30,4 +32,3 @@ checkpoint/
 checkpoints/
 output/
 tmp/
-

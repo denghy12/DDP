@@ -14,6 +14,12 @@ def arg_parser():
     parser.add_argument('--auto_resume', action='store_true', help='if the log folder includes a checkpoint, automatically resume')
 
     # data-related
+    parser.add_argument('--dataset', choices=['voc', 'emotic'], default='voc',
+                        help='dataset protocol to run')
+    parser.add_argument('--name', type=str, default=None,
+                        help='run name used by checkpoints and detail reports')
+    parser.add_argument('--output_dir', type=str, default='./output',
+                        help='directory for checkpoints, HTML and JSON reports')
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument('--datadir', type=str,  metavar='DIR', help='path to dataset file list')
     parser.add_argument('--input_size', default=224, type=int, metavar='N', help='input image size')
@@ -27,6 +33,18 @@ def arg_parser():
                         help='total number of classes for the incremental protocol')
     parser.add_argument('--num_workers', type=int, default=8,
                         help='number of data-loading workers')
+    parser.add_argument('--eval_batch_size', type=int, default=None,
+                        help='physical validation batch size; defaults to train batch size')
+    parser.add_argument('--effective_batch_size', type=int, default=None,
+                        help='effective batch size implemented with gradient accumulation')
+    parser.add_argument('--emotic_input_mode', choices=['full', 'person_crop'], default='full',
+                        help='use the full EMOTIC image or the annotated person crop')
+    parser.add_argument('--max_tasks', type=int, default=None,
+                        help='optional task limit for smoke tests')
+    parser.add_argument('--max_train_batches', type=int, default=None,
+                        help='optional batches-per-epoch limit for smoke tests')
+    parser.add_argument('--max_eval_batches', type=int, default=None,
+                        help='optional validation batch limit for smoke tests')
     parser.add_argument('--epochs', type=int, default=20,
                         help='number of epochs for each incremental task')
     parser.add_argument('--test_input_size', type=int, metavar='N', help='input image size')

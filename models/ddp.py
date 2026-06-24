@@ -283,7 +283,7 @@ class DDP(nn.Module):
         w = torch.cat([w_half, w_half], dim=1)
         output_list = 5 * (output_list * w).sum(-1)
         b, c = output_list.shape
-        logits = output_list.resize(b, 2, c//2)
+        logits = output_list.reshape(b, 2, c // 2)
 
         return logits
 
