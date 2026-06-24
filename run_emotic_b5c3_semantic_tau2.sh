@@ -24,8 +24,8 @@ PYTHONHASHSEED=0 CUDA_VISIBLE_DEVICES="${GPU}" python main.py \
   --eval_batch_size 4 \
   --num_workers 4 \
   --emotic_input_mode full \
-  --positive_prompt "a photo containing a" \
-  --negative_prompt "a photo without a" \
+  --positive_prompt "a photo of a person clearly feeling" \
+  --negative_prompt "a photo of a person not feeling" \
   --csc \
   --t_min 1 \
   --t_max 2 \
