@@ -85,3 +85,17 @@ The two runs reuse deterministic CLIP features in
 `best_adapter.pth`, `last_adapter.pth`, `train.log`, and
 `evaluation_summary.json`. Use `--force_recache` after changing CLIP weights,
 input mode, or preprocessing.
+
+After the standalone Base5-balanced adapter has been validated, task7 can be
+evaluated by offline score fusion without retraining DDP:
+
+```
+bash run_emotic_prototype_fusion_task7.sh
+```
+
+The fusion script verifies exact target ordering between the saved DDP scores
+and the cached Prototype features. It uses `val` only to fit one global
+temperature and bias, select a global fusion weight beta by mAP, and select
+global decision thresholds by mean cF1/oF1. The `test` split is evaluated only
+after all selections are fixed. Results are saved to `fusion_summary.json` and
+`fusion_scores.pt`.

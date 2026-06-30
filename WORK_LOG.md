@@ -21,6 +21,10 @@
   to an eager vanilla CLIP model because PyTorch 2.0.1 no longer supports the
   old JIT Node subscript API. The DDP prompt-aware `CLIP_conv_proj` path remains
   unchanged.
+- Added task7 offline fusion evaluation for the saved DDP scores and the
+  Base5-balanced Prototype Adapter. The script asserts exact target alignment,
+  fits a global Prototype temperature/bias on `val`, selects beta and decision
+  thresholds on `val`, and reports `test` only after selection.
 
 ## 2026-06-24
 
