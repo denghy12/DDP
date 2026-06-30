@@ -1,5 +1,23 @@
 # WORK_LOG
 
+## 2026-06-30
+
+- Preserved the clean `emotic` baseline at commit `7878f58` and created the
+  `emotic-prototype-adapter` branch for the new experiment.
+- Added a standalone EMOTIC Prototype Adapter without changing the DDP prompt
+  learner or existing checkpoints.
+- The experiment uses frozen official CLIP ViT-B/16 global features, fixed
+  positive/negative text-prototype ensembles, and a zero-initialized
+  `512 -> 128 -> 512` residual adapter.
+- Added `all26` supervised feasibility and strict `base5` transfer protocols.
+  Base5 excludes later classes from its loss and selects its checkpoint only by
+  base-class mAP on base-positive validation samples.
+- Separated `val` checkpoint selection from final `test` reporting. A combined
+  `val+test` result is reported only for comparison with existing CODE_DDP runs.
+- Added deterministic feature caching, zero-shot/best/per-class metrics,
+  identity preservation regularization, optional class-balanced BCE, launcher
+  scripts, and adapter unit tests.
+
 ## 2026-06-24
 
 - 创建独立 Python 3.9 Conda 环境 `ddp`，路径为 `/opt/conda/envs/ddp`，未修改服务器其他环境。

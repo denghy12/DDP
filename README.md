@@ -53,3 +53,35 @@ CUDA_VISIBLE_DEVICES=0 python main.py --config_file configs/models/vitb16_ep50.y
     --task_size 4 \
     --total_classes 20
 ```
+
+# EMOTIC Prototype Adapter
+
+This branch includes an isolated Prototype Adapter experiment. It freezes the
+official CLIP ViT-B/16 encoders, caches one global image feature per EMOTIC
+sample, and learns a zero-initialized residual adapter against fixed ensembles
+of positive/negative emotion text prototypes. Existing DDP prompts and
+checkpoints are not modified.
+
+Run the supervised 26-class feasibility upper bound first:
+
+```
+bash run_emotic_prototype_adapter_all26.sh
+```
+
+Then run the class-incremental-safe transfer experiment:
+
+```
+bash run_emotic_prototype_adapter_base5.sh
+```
+
+The Base5 variant uses only samples intersecting the first five alphabetical
+EMOTIC classes and computes its training loss only on those labels. Both
+protocols select checkpoints on `val` only, report `test` once after selection,
+and additionally report `val+test` for comparison with the existing CODE_DDP
+evaluation convention.
+
+The two runs reuse deterministic CLIP features in
+`./output/emotic_clip_feature_cache`. Each output directory contains
+`best_adapter.pth`, `last_adapter.pth`, `train.log`, and
+`evaluation_summary.json`. Use `--force_recache` after changing CLIP weights,
+input mode, or preprocessing.
