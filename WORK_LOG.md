@@ -17,6 +17,10 @@
 - Added deterministic feature caching, zero-shot/best/per-class metrics,
   identity preservation regularization, optional class-balanced BCE, launcher
   scripts, and adapter unit tests.
+- Switched the standalone feature extractor from the legacy JIT execution path
+  to an eager vanilla CLIP model because PyTorch 2.0.1 no longer supports the
+  old JIT Node subscript API. The DDP prompt-aware `CLIP_conv_proj` path remains
+  unchanged.
 
 ## 2026-06-24
 

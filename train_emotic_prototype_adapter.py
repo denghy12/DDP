@@ -87,11 +87,14 @@ def build_clip_transform(input_size):
     )
 
 
-def load_clip_jit(model_path, device):
+def load_frozen_clip(model_path, device):
     model_path = os.path.abspath(os.path.expanduser(model_path))
     if not os.path.isfile(model_path):
         raise FileNotFoundError(f"CLIP model not found: {model_path}")
-    model, _ = clip.load(model_path, device=device, jit=True)
+    # Build an eager model from the official JIT checkpoint's state dict.
+    # The legacy JIT graph patcher in clip.load(jit=True) uses a Node API that
+    # is incompatible with PyTorch 2.0.1.
+    model, _ = clip.load(model_path, device=device, jit=False)
     model.eval()
     for parameter in model.parameters():
         parameter.requires_grad = False
@@ -491,7 +494,7 @@ def main():
             f"Expected {args.total_classes} classes, found {len(classnames)}"
         )
 
-    clip_model = load_clip_jit(args.clip_model_path, device)
+    clip_model = load_frozen_clip(args.clip_model_path, device)
     positive_prototypes = encode_template_ensemble(
         clip_model, classnames, POSITIVE_TEMPLATES, device
     )
@@ -540,4 +543,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -460,7 +460,10 @@ class CLIP(nn.Module):
             )
         else:
             vision_heads = vision_width // 64
-            self.visual = VisionTransformer(
+            # Vanilla CLIP must return one global CLS embedding and must not
+            # require class-specific visual prompts. DDP's prompt-aware path
+            # is constructed separately by CLIP_conv_proj below.
+            self.visual = VisionTransformer_backup(
                 input_resolution=image_resolution,
                 patch_size=vision_patch_size,
                 width=vision_width,
