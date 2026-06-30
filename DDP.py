@@ -54,7 +54,9 @@ class DDP:
         )
         self.num_workers = args.num_workers
         self.run_name = args.name or (
-            "emotic_b5c3_ddp_semantic_tau2"
+            "emotic_upper_bound_ddp_semantic_threshold050"
+            if self.dataset_name == "emotic" and args.upper_bound
+            else "emotic_b5c3_ddp_semantic_tau2"
             if self.dataset_name == "emotic"
             else f"voc_b{self.base_classes}c{self.task_size}"
         )
@@ -94,10 +96,20 @@ class DDP:
             raise ValueError("task_size must be > 0")
         if self.total_classes <= 0:
             raise ValueError("total_classes must be > 0")
-        if self.base_classes >= self.total_classes:
+        if self.base_classes > self.total_classes:
+            raise ValueError("base_classes must not exceed total_classes")
+        if self.base_classes == self.total_classes and not args.upper_bound:
             raise ValueError("base_classes must be smaller than total_classes")
+        if args.upper_bound and self.base_classes != self.total_classes:
+            raise ValueError(
+                "upper_bound requires base_classes == total_classes"
+            )
 
     def _incremental_stages(self):
+        if args.upper_bound:
+            stages = [(0, self.total_classes)]
+            return stages[: args.max_tasks] if args.max_tasks is not None else stages
+
         stages = [(0, self.base_classes)] if self.base_classes > 0 else []
         start_class = self.base_classes if self.base_classes > 0 else 0
         stages.extend(
@@ -145,7 +157,12 @@ class DDP:
         self.detail_report = None
 
     def _build_emotic_data(self):
-        if (
+        if args.upper_bound:
+            if self.base_classes != 26 or self.total_classes != 26:
+                raise ValueError(
+                    "EMOTIC upper bound requires 26 joint classes"
+                )
+        elif (
             self.base_classes != 5
             or self.task_size != 3
             or self.total_classes != 26
@@ -193,13 +210,16 @@ class DDP:
                 f"Expected {self.total_classes} EMOTIC classes, "
                 f"found {len(self.classnames)}"
             )
-        class_mask = [list(range(0, self.base_classes))]
-        class_mask.extend(
-            list(range(low, min(low + self.task_size, self.total_classes)))
-            for low in range(
-                self.base_classes, self.total_classes, self.task_size
+        if args.upper_bound:
+            class_mask = [list(range(self.total_classes))]
+        else:
+            class_mask = [list(range(0, self.base_classes))]
+            class_mask.extend(
+                list(range(low, min(low + self.task_size, self.total_classes)))
+                for low in range(
+                    self.base_classes, self.total_classes, self.task_size
+                )
             )
-        )
         self._write_class_order(class_mask)
         self.detail_report = DetailReport(
             self.output_dir,
@@ -362,6 +382,8 @@ class DDP:
                 self.scheduler.step()
 
     def _temperature(self, high_range):
+        if args.upper_bound:
+            return 1.0
         denominator = self.total_classes - self.base_classes
         progress = (
             (high_range - self.base_classes) / denominator if denominator else 1.0

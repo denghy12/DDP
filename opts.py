@@ -31,6 +31,8 @@ def arg_parser():
                         help='number of new classes per incremental session; default 4 gives VOC B0-C4')
     parser.add_argument('--total_classes', type=int, default=20,
                         help='total number of classes for the incremental protocol')
+    parser.add_argument('--upper_bound', action='store_true',
+                        help='train all classes jointly as one task')
     parser.add_argument('--num_workers', type=int, default=8,
                         help='number of data-loading workers')
     parser.add_argument('--eval_batch_size', type=int, default=None,
