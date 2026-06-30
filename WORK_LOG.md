@@ -25,6 +25,13 @@
   Base5-balanced Prototype Adapter. The script asserts exact target alignment,
   fits a global Prototype temperature/bias on `val`, selects beta and decision
   thresholds on `val`, and reports `test` only after selection.
+- Extended offline fusion to all eight EMOTIC B5-C3 tasks. Each task rebuilds
+  CODE_DDP's seen-class sample mask from cached labels, asserts exact score
+  target order, and performs all calibration and selection on `val` only.
+- Added the safer per-class binary gate as the main fusion: every seen class
+  chooses either DDP-only (`beta=0`) or the task's globally selected mixture.
+  The summary reports test/val+test average mAP, final mAP, and peak-to-final
+  old-class forgetting without retraining DDP.
 
 ## 2026-06-24
 

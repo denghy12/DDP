@@ -99,3 +99,18 @@ temperature and bias, select a global fusion weight beta by mAP, and select
 global decision thresholds by mean cF1/oF1. The `test` split is evaluated only
 after all selections are fixed. Results are saved to `fusion_summary.json` and
 `fusion_scores.pt`.
+
+To evaluate the incrementally safe binary-gated fusion over all eight B5-C3
+tasks, run:
+
+```
+bash run_emotic_prototype_fusion_all_tasks.sh
+```
+
+For every task, the script reconstructs exactly the same seen-class sample
+subset as CODE_DDP and asserts target-by-target alignment. It uses validation
+data to calibrate the frozen Prototype Adapter, choose one global beta, choose
+per-class gates from `{0, beta}`, and select decision thresholds. It then
+reports held-out test and legacy val+test metrics, average task mAP, and
+peak-to-final old-class forgetting. This is offline score fusion; it does not
+retrain or modify DDP checkpoints.

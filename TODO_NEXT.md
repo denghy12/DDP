@@ -1,7 +1,7 @@
 # TODO_NEXT
 
-1. 在服务器运行 task7 离线 Prototype/DDP 校准融合，核对 target alignment、val 选择的 beta 与 test 增益。
-2. 若全局 beta 融合有效，再扩展到逐 task 评估；若无效，先分析逐类 AP 互补性，不直接引入 soft teacher。
+1. 在服务器运行全八任务的二值类别门控融合，核对每个任务的 target alignment、平均 mAP 与 old-class forgetting。
+2. 将全局 beta、二值类别门控和 DDP-only 的逐任务结果并列；连续逐类 beta 仅保留为高自由度诊断，不作为主结果。
 3. 保留 All26-balanced 作为监督上限、Base5-balanced 作为增量安全主版本、Base5 普通 BCE 作为排序消融。
 4. 在离线融合证明确有收益前，不修改 DDP 训练目标。
 5. 基于 CODE_DDP semantic + tau2 20ep 最强结果，补充与 `multi-lane-main` official semantic tau2 的逐 task/per-class 对齐分析。
