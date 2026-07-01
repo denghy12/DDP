@@ -143,9 +143,13 @@ def main():
     classnames = checkpoint["classnames"]
     total_classes = len(classnames)
     base_classes = 5
-    high_range = min(base_classes + task_id * 3, total_classes)
-    if task_id == 0:
+    is_upper_bound = bool(checkpoint.get("args", {}).get("upper_bound", False))
+    if is_upper_bound:
+        high_range = total_classes
+    elif task_id == 0:
         high_range = base_classes
+    else:
+        high_range = min(base_classes + task_id * 3, total_classes)
 
     model_args = checkpoint_model_args(checkpoint, args)
     cfg = setup_cfg(model_args)
@@ -200,13 +204,9 @@ def main():
 
     logits = torch.cat(output_batches)
     targets_tensor = torch.cat(target_batches)
-    temperature = temperature_for_task(
-        high_range,
-        total_classes,
-        base_classes,
-        args.t_min,
-        args.t_max,
-        args.t_gamma,
+    temperature = 1.0 if is_upper_bound else temperature_for_task(
+        high_range, total_classes, base_classes,
+        args.t_min, args.t_max, args.t_gamma,
     )
     scores = torch.softmax(logits / temperature, dim=1)[:, 1, :]
     rows = [
@@ -228,6 +228,7 @@ def main():
         "seen_classes": high_range,
         "samples": len(indices),
         "temperature": temperature,
+        "upper_bound": is_upper_bound,
         "best_oF1": best_of1,
         "best_cF1": best_cf1,
         "best_mean_oF1_cF1": best_balanced,
