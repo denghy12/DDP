@@ -49,6 +49,14 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        "--zero_shot_prototype",
+        action="store_true",
+        help=(
+            "Use the checkpoint's fixed text prototypes with an identity "
+            "adapter; learned adapter weights are ignored"
+        ),
+    )
+    parser.add_argument(
         "--val_cache",
         default="./output/emotic_clip_feature_cache/val_full_224_vitb16.pt",
     )
@@ -84,7 +92,7 @@ def load_feature_cache(path):
     return features, labels, payload["metadata"]
 
 
-def load_prototype_model(path, device):
+def load_prototype_model(path, device, zero_shot=False):
     checkpoint = torch.load(path, map_location="cpu")
     state = checkpoint.get("model", checkpoint)
     positive = state["positive_prototypes"]
@@ -96,9 +104,10 @@ def load_prototype_model(path, device):
         negative,
         bottleneck_dim=adapter_dim,
         residual_scale=float(checkpoint_args.get("residual_scale", 0.1)),
-        initial_logit_scale=1.0,
+        initial_logit_scale=float(checkpoint_args.get("initial_logit_scale", 10.0)),
     )
-    model.load_state_dict(state)
+    if not zero_shot:
+        model.load_state_dict(state)
     model.to(device).eval()
     classnames = checkpoint.get("classnames")
     if classnames is None:
@@ -249,7 +258,6 @@ def split_metrics(
     splits = {
         "val": (slice(0, val_count)),
         "test": (slice(val_count, None)),
-        "val_test": (slice(None)),
     }
     return {
         name: score_metrics(targets[index], scores[index], threshold, classnames)
@@ -286,7 +294,7 @@ def main():
         )
 
     model, classnames, checkpoint = load_prototype_model(
-        args.prototype_checkpoint, device
+        args.prototype_checkpoint, device, args.zero_shot_prototype
     )
     if classnames != val_metadata.get("classnames"):
         raise RuntimeError("Prototype checkpoint and cache class orders differ")
@@ -363,6 +371,7 @@ def main():
             "ddp_scores": args.ddp_scores,
             "prototype_checkpoint": args.prototype_checkpoint,
             "prototype_checkpoint_epoch": checkpoint.get("epoch"),
+            "zero_shot_prototype": args.zero_shot_prototype,
             "val_cache": args.val_cache,
             "test_cache": args.test_cache,
         },
@@ -421,14 +430,11 @@ def main():
     )
     for name in ("ddp", "prototype", "fusion"):
         test = results[name]["test"]
-        combined = results[name]["val_test"]
         print(
             f"{name:10s} test: mAP={test['mAP']:.4f}, "
-            f"cF1={test['cF1']:.4f}, oF1={test['oF1']:.4f}; "
-            f"val+test mAP={combined['mAP']:.4f}"
+            f"cF1={test['cF1']:.4f}, oF1={test['oF1']:.4f}"
         )
 
 
 if __name__ == "__main__":
     main()
-

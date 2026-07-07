@@ -30,6 +30,17 @@ def parse_args():
     parser.add_argument(
         "--ddp_scores_dir",
         default="./output/emotic_b5c3_ddp_semantic_tau2_threshold050",
+        help="Legacy directory containing concatenated val+test task scores",
+    )
+    parser.add_argument(
+        "--ddp_val_scores_root",
+        default=None,
+        help="Strict val root containing taskN/task_scores.pt",
+    )
+    parser.add_argument(
+        "--ddp_test_scores_dir",
+        default=None,
+        help="Strict test directory containing taskN_scores.pt",
     )
     parser.add_argument(
         "--prototype_checkpoint",
@@ -37,6 +48,11 @@ def parse_args():
             "./output/emotic_prototype_adapter_base5_balanced/"
             "best_adapter.pth"
         ),
+    )
+    parser.add_argument(
+        "--zero_shot_prototype",
+        action="store_true",
+        help="Ignore learned adapter weights and evaluate identity CLIP prototypes",
     )
     parser.add_argument(
         "--val_cache",
@@ -176,7 +192,7 @@ def aggregate_results(task_summaries, methods, classnames):
     aggregate = {"methods": {}}
     for method in methods:
         method_summary = {}
-        for split in ("test", "val_test"):
+        for split in ("test",):
             task_map = [
                 task["results"][method][split]["mAP"]
                 for task in task_summaries
@@ -191,7 +207,7 @@ def aggregate_results(task_summaries, methods, classnames):
             }
         aggregate["methods"][method] = method_summary
 
-    for split in ("test", "val_test"):
+    for split in ("test",):
         ddp = aggregate["methods"]["ddp"][split]
         gated = aggregate["methods"]["binary_gate"][split]
         aggregate[f"binary_gate_gain_over_ddp_{split}"] = {
@@ -203,6 +219,51 @@ def aggregate_results(task_summaries, methods, classnames):
             ),
         }
     return aggregate
+
+
+def load_ddp_task_scores(args, task_id):
+    """Load either strict separate val/test scores or a legacy combined file."""
+    has_val = args.ddp_val_scores_root is not None
+    has_test = args.ddp_test_scores_dir is not None
+    if has_val != has_test:
+        raise ValueError(
+            "--ddp_val_scores_root and --ddp_test_scores_dir must be set together"
+        )
+    if has_val:
+        val_path = (
+            Path(args.ddp_val_scores_root) / f"task{task_id}" / "task_scores.pt"
+        )
+        test_path = Path(args.ddp_test_scores_dir) / f"task{task_id}_scores.pt"
+        if not val_path.is_file():
+            raise FileNotFoundError(val_path)
+        if not test_path.is_file():
+            raise FileNotFoundError(test_path)
+        val_payload = torch.load(val_path, map_location="cpu")
+        test_payload = torch.load(test_path, map_location="cpu")
+        return {
+            "scores": torch.cat(
+                [val_payload["scores"].float(), test_payload["scores"].float()],
+                dim=0,
+            ),
+            "targets": torch.cat(
+                [val_payload["targets"].float(), test_payload["targets"].float()],
+                dim=0,
+            ),
+            "val_count": int(val_payload["scores"].shape[0]),
+            "temperature": test_payload.get(
+                "temperature", val_payload.get("temperature")
+            ),
+            "sources": {"val": str(val_path), "test": str(test_path)},
+        }
+
+    score_path = Path(args.ddp_scores_dir) / f"task{task_id}_scores.pt"
+    if not score_path.is_file():
+        raise FileNotFoundError(score_path)
+    payload = torch.load(score_path, map_location="cpu")
+    payload["scores"] = payload["scores"].float()
+    payload["targets"] = payload["targets"].float()
+    payload["sources"] = {"combined": str(score_path)}
+    return payload
 
 
 def main():
@@ -217,7 +278,7 @@ def main():
         raise RuntimeError("Validation and test cache class orders differ")
 
     model, classnames, checkpoint = load_prototype_model(
-        args.prototype_checkpoint, device
+        args.prototype_checkpoint, device, args.zero_shot_prototype
     )
     if classnames != val_metadata.get("classnames"):
         raise RuntimeError("Prototype checkpoint and cache class orders differ")
@@ -238,12 +299,9 @@ def main():
     methods = ("ddp", "prototype", "global_fusion", "binary_gate")
 
     for task_id, seen_classes in enumerate(TASK_SEEN_CLASSES):
-        score_path = Path(args.ddp_scores_dir) / f"task{task_id}_scores.pt"
-        if not score_path.is_file():
-            raise FileNotFoundError(score_path)
-        ddp_payload = torch.load(score_path, map_location="cpu")
-        ddp_scores = ddp_payload["scores"].float()
-        ddp_targets = ddp_payload["targets"].float()
+        ddp_payload = load_ddp_task_scores(args, task_id)
+        ddp_scores = ddp_payload["scores"]
+        ddp_targets = ddp_payload["targets"]
 
         val_mask = seen_sample_mask(val_labels, seen_classes)
         test_mask = seen_sample_mask(test_labels, seen_classes)
@@ -264,6 +322,11 @@ def main():
         val_count = int(val_mask.sum().item())
         test_count = int(test_mask.sum().item())
         expected_shape = (val_count + test_count, seen_classes)
+        if "val_count" in ddp_payload and ddp_payload["val_count"] != val_count:
+            raise RuntimeError(
+                f"Task {task_id} strict DDP val count "
+                f"{ddp_payload['val_count']} does not match cache count {val_count}"
+            )
         if tuple(ddp_scores.shape) != expected_shape:
             raise RuntimeError(
                 f"Task {task_id} DDP shape {tuple(ddp_scores.shape)} does not "
@@ -343,6 +406,7 @@ def main():
                 "targets_equal": True,
             },
             "ddp_temperature": ddp_payload.get("temperature"),
+            "ddp_score_sources": ddp_payload["sources"],
             "prototype_calibration": calibration,
             "selection": {
                 "split": "val",
@@ -395,13 +459,20 @@ def main():
             "selection_split": "val",
             "test_used_for_selection": False,
             "ddp_retrained": False,
-            "prototype_training": "Base5-balanced checkpoint, frozen for all tasks",
+            "prototype_training": (
+                "Zero-shot identity adapter with fixed text prototypes"
+                if args.zero_shot_prototype
+                else "Frozen checkpoint specified by prototype_checkpoint"
+            ),
             "main_fusion": "per-class binary gate choosing beta in {0, global_beta}",
         },
         "inputs": {
             "ddp_scores_dir": args.ddp_scores_dir,
+            "ddp_val_scores_root": args.ddp_val_scores_root,
+            "ddp_test_scores_dir": args.ddp_test_scores_dir,
             "prototype_checkpoint": args.prototype_checkpoint,
             "prototype_checkpoint_epoch": checkpoint.get("epoch"),
+            "zero_shot_prototype": args.zero_shot_prototype,
             "val_cache": args.val_cache,
             "test_cache": args.test_cache,
         },
@@ -414,7 +485,7 @@ def main():
         json.dump(summary, fp, indent=2, ensure_ascii=False)
 
     print("\nAggregate results (main binary gate versus DDP):")
-    for split in ("test", "val_test"):
+    for split in ("test",):
         ddp = aggregate["methods"]["ddp"][split]
         gate = aggregate["methods"]["binary_gate"][split]
         print(

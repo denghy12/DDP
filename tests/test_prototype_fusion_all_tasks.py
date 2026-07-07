@@ -1,4 +1,7 @@
 import unittest
+import tempfile
+from pathlib import Path
+from types import SimpleNamespace
 
 import torch
 
@@ -7,12 +10,38 @@ from eval_emotic_prototype_fusion_all_tasks import (
     forgetting_summary,
     fuse_classwise,
     introduction_tasks,
+    load_ddp_task_scores,
     seen_sample_mask,
     select_binary_class_gates,
 )
 
 
 class AllTaskPrototypeFusionTest(unittest.TestCase):
+    def test_strict_ddp_loader_concatenates_val_then_test(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            val_dir = root / "val" / "task0"
+            test_dir = root / "test"
+            val_dir.mkdir(parents=True)
+            test_dir.mkdir()
+            torch.save(
+                {"scores": torch.ones(2, 1), "targets": torch.ones(2, 1)},
+                val_dir / "task_scores.pt",
+            )
+            torch.save(
+                {"scores": torch.zeros(3, 1), "targets": torch.zeros(3, 1)},
+                test_dir / "task0_scores.pt",
+            )
+            args = SimpleNamespace(
+                ddp_val_scores_root=str(root / "val"),
+                ddp_test_scores_dir=str(test_dir),
+                ddp_scores_dir=None,
+            )
+            payload = load_ddp_task_scores(args, 0)
+        self.assertEqual(payload["val_count"], 2)
+        self.assertEqual(tuple(payload["scores"].shape), (5, 1))
+        self.assertEqual(payload["scores"][:, 0].tolist(), [1, 1, 0, 0, 0])
+
     def test_seen_sample_mask_matches_incremental_filter(self):
         labels = torch.tensor(
             [

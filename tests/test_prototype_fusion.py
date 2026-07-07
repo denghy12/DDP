@@ -1,9 +1,17 @@
 import unittest
+import tempfile
 from types import SimpleNamespace
+from pathlib import Path
 
 import torch
 
-from eval_emotic_prototype_fusion import select_beta, select_threshold
+from eval_emotic_prototype_fusion import (
+    load_prototype_model,
+    select_beta,
+    select_threshold,
+    split_metrics,
+)
+from prototype_adapter import ResidualPrototypeAdapter
 
 
 class PrototypeFusionSelectionTest(unittest.TestCase):
@@ -33,6 +41,31 @@ class PrototypeFusionSelectionTest(unittest.TestCase):
         best, _ = select_threshold(targets, scores, args)
         self.assertGreater(best["cF1"], 99.9)
         self.assertGreater(best["oF1"], 99.9)
+
+    def test_strict_split_does_not_report_val_test(self):
+        scores = torch.tensor([[0.9], [0.1], [0.8], [0.2]])
+        targets = torch.tensor([[1.0], [0.0], [1.0], [0.0]])
+        result = split_metrics(scores, targets, 2, 0.5, ["emotion"])
+        self.assertEqual(set(result), {"val", "test"})
+
+    def test_zero_shot_loader_ignores_learned_adapter_weights(self):
+        positive = torch.eye(2)
+        negative = -torch.eye(2)
+        learned = ResidualPrototypeAdapter(positive, negative, bottleneck_dim=1)
+        with torch.no_grad():
+            learned.up.weight.fill_(4.0)
+        checkpoint = {
+            "model": learned.state_dict(),
+            "classnames": ["a", "b"],
+            "args": {"residual_scale": 0.1, "initial_logit_scale": 10.0},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "adapter.pth"
+            torch.save(checkpoint, path)
+            zero_shot, _, _ = load_prototype_model(path, torch.device("cpu"), True)
+        features = torch.tensor([[0.6, 0.8]])
+        adapted, original = zero_shot.adapt(features)
+        self.assertTrue(torch.allclose(adapted, original))
 
 
 if __name__ == "__main__":
