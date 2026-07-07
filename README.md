@@ -76,15 +76,47 @@ bash run_emotic_prototype_adapter_base5.sh
 
 The Base5 variant uses only samples intersecting the first five alphabetical
 EMOTIC classes and computes its training loss only on those labels. Both
-protocols select checkpoints on `val` only, report `test` once after selection,
-and additionally report `val+test` for comparison with the existing CODE_DDP
-evaluation convention.
+protocols select checkpoints on `val` only and report `test` once after all
+selection is locked. Combining `val` and `test` for metrics, visualization, or
+paper reporting is forbidden; legacy `val+test` artifacts are diagnostic only.
 
 The two runs reuse deterministic CLIP features in
 `./output/emotic_clip_feature_cache`. Each output directory contains
 `best_adapter.pth`, `last_adapter.pth`, `train.log`, and
 `evaluation_summary.json`. Use `--force_recache` after changing CLIP weights,
 input mode, or preprocessing.
+
+## EMOTIC Prototype Adapter Few-Shot Ablation
+
+The CLIP-Adapter-inspired sample-efficiency experiment uses
+`K = 1, 2, 4, 8, 16` positive training anchors per active class and seeds
+`0, 1, 2`. EMOTIC is multi-label, unlike the single-label datasets used by
+CLIP-Adapter. To keep the meaning of K exact, each class receives exactly K
+supervised positive labels. Positive co-labels introduced by samples selected
+for another class are masked for that class, while genuine negatives in the
+selected union remain supervised. The sampler records the exact source indices
+and per-class supervised/ignored counts in every summary.
+
+Run the non-incremental 26-class sample-efficiency upper bound:
+
+```
+bash run_emotic_prototype_adapter_fewshot_all26.sh
+```
+
+Then run the class-incremental-safe Base5 transfer curve:
+
+```
+bash run_emotic_prototype_adapter_fewshot_base5.sh
+```
+
+Both launchers use class-balanced masked BCE, 200 epochs, the unchanged frozen
+CLIP/text prototypes/`512 -> 128 -> 512` Adapter, and the shared feature cache.
+Each K is repeated over three seeds. Aggregated held-out test mean and standard
+deviation are written to `output/emotic_prototype_fewshot_summary/` as JSON and
+CSV. Each run also writes `fewshot_sampling.json` before optimization with the
+exact source indices and supervision counts. All26 few-shot sees future class
+labels and is only a feasibility curve; Base5 few-shot is the valid
+incremental-transfer experiment.
 
 After the standalone Base5-balanced adapter has been validated, task7 can be
 evaluated by offline score fusion without retraining DDP:
@@ -111,6 +143,6 @@ For every task, the script reconstructs exactly the same seen-class sample
 subset as CODE_DDP and asserts target-by-target alignment. It uses validation
 data to calibrate the frozen Prototype Adapter, choose one global beta, choose
 per-class gates from `{0, beta}`, and select decision thresholds. It then
-reports held-out test and legacy val+test metrics, average task mAP, and
-peak-to-final old-class forgetting. This is offline score fusion; it does not
-retrain or modify DDP checkpoints.
+reports held-out test metrics, average task mAP, and peak-to-final old-class
+forgetting. It must not produce or use combined `val+test` metrics. This is
+offline score fusion; it does not retrain or modify DDP checkpoints.

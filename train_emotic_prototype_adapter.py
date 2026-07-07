@@ -19,6 +19,11 @@ from prototype_adapter import (
     ResidualPrototypeAdapter,
     protocol_class_indices,
 )
+from prototype_fewshot import (
+    masked_bce_with_logits,
+    masked_pos_weight,
+    sample_multilabel_kshot,
+)
 from src.helper_functions.emotic_loader import EMOTIC
 
 
@@ -57,6 +62,15 @@ def parse_args():
     parser.add_argument("--initial_logit_scale", type=float, default=10.0)
     parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument("--class_balanced_bce", action="store_true")
+    parser.add_argument(
+        "--shots_per_class",
+        type=int,
+        default=None,
+        help=(
+            "Few-shot mode: use exactly K supervised positive anchors per "
+            "active class. Omit for full-data training."
+        ),
+    )
     parser.add_argument("--force_recache", action="store_true")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
@@ -272,24 +286,27 @@ def evaluate_model(model, features, labels, classnames, args, device):
     )
 
 
-def compact_metrics(metrics):
-    return {key: value for key, value in metrics.items() if key != "per_class_ap"}
-
-
-def make_pos_weight(labels, active_indices):
-    active_labels = labels[:, active_indices]
-    positives = active_labels.sum(dim=0)
-    negatives = active_labels.shape[0] - positives
-    return (negatives / positives.clamp_min(1.0)).clamp(max=20.0)
-
-
-def evaluate_splits(model, split_data, classnames, args, device):
-    results = {}
-    for split_name, (features, labels) in split_data.items():
-        results[split_name] = evaluate_model(
-            model, features, labels, classnames, args, device
-        )
-    return results
+def evaluate_selection_map(model, features, labels, active_indices, args, device):
+    """Compute the val selection metric using active-class labels only."""
+    model.eval()
+    active_list = active_indices.tolist()
+    logits = []
+    loader = DataLoader(
+        TensorDataset(features),
+        batch_size=args.adapter_batch_size,
+        shuffle=False,
+    )
+    with torch.no_grad():
+        for (feature_batch,) in loader:
+            batch_logits, _, _ = model(feature_batch.to(device))
+            logits.append(batch_logits[:, active_list].cpu())
+    active_labels = labels[:, active_list]
+    seen_mask = active_labels.sum(dim=1).gt(0)
+    score, _ = mAP(
+        active_labels[seen_mask].numpy(),
+        torch.sigmoid(torch.cat(logits)[seen_mask]).numpy(),
+    )
+    return float(score)
 
 
 def train_adapter(
@@ -307,18 +324,51 @@ def train_adapter(
     active_indices = protocol_class_indices(
         args.protocol, args.total_classes, args.base_classes
     )
+    train_source_indices = torch.arange(len(train_labels), dtype=torch.long)
     if args.protocol == "base5":
         sample_mask = train_labels[:, active_indices].sum(dim=1).gt(0)
         train_features = train_features[sample_mask]
         train_labels = train_labels[sample_mask]
+        train_source_indices = train_source_indices[sample_mask]
+    supervision_mask = torch.ones_like(train_labels, dtype=torch.bool)
+    fewshot_summary = None
+    if args.shots_per_class is not None:
+        selected, selected_supervision, sampling_rows = sample_multilabel_kshot(
+            train_labels,
+            active_indices,
+            args.shots_per_class,
+            args.seed,
+        )
+        train_features = train_features[selected]
+        train_labels = train_labels[selected]
+        selected_source_indices = train_source_indices[selected]
+        supervision_mask = selected_supervision
+        for row in sampling_rows:
+            row["class_name"] = classnames[row["class_id"]]
+        fewshot_summary = {
+            "shots_per_class": args.shots_per_class,
+            "seed": args.seed,
+            "unique_training_samples": int(selected.numel()),
+            "selected_train_indices": selected_source_indices.tolist(),
+            "active_class_count": int(active_indices.numel()),
+            "sampling": sampling_rows,
+        }
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if fewshot_summary is not None:
+        with open(
+            output_dir / "fewshot_sampling.json", "w", encoding="utf-8"
+        ) as fp:
+            json.dump(fewshot_summary, fp, indent=2, ensure_ascii=False)
     print(
         f"Protocol={args.protocol}, active_classes={active_indices.tolist()}, "
+        f"shots_per_class={args.shots_per_class}, "
         f"train_samples={len(train_features)}"
     )
 
     generator = torch.Generator().manual_seed(args.seed)
     loader = DataLoader(
-        TensorDataset(train_features, train_labels),
+        TensorDataset(train_features, train_labels, supervision_mask),
         batch_size=args.adapter_batch_size,
         shuffle=True,
         generator=generator,
@@ -329,22 +379,27 @@ def train_adapter(
     )
     pos_weight = None
     if args.class_balanced_bce:
-        pos_weight = make_pos_weight(train_labels, active_indices).to(device)
+        pos_weight = masked_pos_weight(
+            train_labels,
+            supervision_mask,
+            active_indices,
+        ).to(device)
 
-    val_test_features = torch.cat([val_features, test_features], dim=0)
-    val_test_labels = torch.cat([val_labels, test_labels], dim=0)
-    split_data = {
-        "val": (val_features, val_labels),
-        "test": (test_features, test_labels),
-        "val_test": (val_test_features, val_test_labels),
+    initial_state = {
+        key: value.detach().cpu().clone()
+        for key, value in model.state_dict().items()
     }
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    zero_shot = evaluate_splits(model, split_data, classnames, args, device)
+    zero_shot_val_selection = evaluate_selection_map(
+        model,
+        val_features,
+        val_labels,
+        active_indices,
+        args,
+        device,
+    )
     print(
-        f"Zero-shot: val_mAP={zero_shot['val']['mAP']:.4f}, "
-        f"test_mAP={zero_shot['test']['mAP']:.4f}, "
-        f"val+test_mAP={zero_shot['val_test']['mAP']:.4f}"
+        "Zero-shot selection baseline: "
+        f"val_selection_mAP={zero_shot_val_selection:.4f}"
     )
 
     best_score = -math.inf
@@ -357,13 +412,15 @@ def train_adapter(
         class_loss_sum = 0.0
         identity_loss_sum = 0.0
         sample_count = 0
-        for feature_batch, label_batch in loader:
+        for feature_batch, label_batch, supervision_batch in loader:
             feature_batch = feature_batch.to(device)
             label_batch = label_batch.to(device)
+            supervision_batch = supervision_batch.to(device)
             logits, adapted, original = model(feature_batch)
-            class_loss = F.binary_cross_entropy_with_logits(
+            class_loss = masked_bce_with_logits(
                 logits[:, active_list],
                 label_batch[:, active_list],
+                supervision_batch[:, active_list],
                 pos_weight=pos_weight,
             )
             identity_loss = 1 - (adapted * original).sum(dim=-1).mean()
@@ -379,13 +436,13 @@ def train_adapter(
             class_loss_sum += class_loss.item() * batch_size
             identity_loss_sum += identity_loss.item() * batch_size
 
-        val_metrics = evaluate_model(
-            model, val_features, val_labels, classnames, args, device
-        )
-        selection_score = (
-            val_metrics["mAP"]
-            if args.protocol == "all26"
-            else val_metrics["base_seen_mAP"]
+        selection_score = evaluate_selection_map(
+            model,
+            val_features,
+            val_labels,
+            active_indices,
+            args,
+            device,
         )
         row = {
             "epoch": epoch,
@@ -393,14 +450,12 @@ def train_adapter(
             "classification_loss": class_loss_sum / sample_count,
             "identity_loss": identity_loss_sum / sample_count,
             "logit_scale": model.logit_scale.exp().clamp(max=100).item(),
-            "val": compact_metrics(val_metrics),
+            "val_selection_mAP": selection_score,
         }
         history.append(row)
         print(
             f"Epoch {epoch:03d}: loss={row['loss']:.6f}, "
-            f"val_mAP={val_metrics['mAP']:.4f}, "
-            f"val_base_seen={val_metrics['base_seen_mAP']:.4f}, "
-            f"val_novel={val_metrics['novel_mAP']:.4f}"
+            f"val_selection_mAP={selection_score:.4f}"
         )
         if selection_score > best_score:
             best_score = selection_score
@@ -412,6 +467,7 @@ def train_adapter(
                     "selection_score": best_score,
                     "selection_split": "val",
                     "protocol": args.protocol,
+                    "fewshot": fewshot_summary,
                     "classnames": classnames,
                     "args": vars(args),
                 },
@@ -423,6 +479,7 @@ def train_adapter(
             "model": model.state_dict(),
             "epoch": args.epochs - 1,
             "protocol": args.protocol,
+            "fewshot": fewshot_summary,
             "classnames": classnames,
             "args": vars(args),
         },
@@ -432,9 +489,29 @@ def train_adapter(
         output_dir / "best_adapter.pth", map_location=device
     )
     model.load_state_dict(best_checkpoint["model"])
-    best = evaluate_splits(model, split_data, classnames, args, device)
+    best = {
+        "val": evaluate_model(
+            model, val_features, val_labels, classnames, args, device
+        ),
+        "test": evaluate_model(
+            model, test_features, test_labels, classnames, args, device
+        ),
+    }
+    # Evaluate the fixed zero-shot baseline in full only after the trained
+    # checkpoint and all active-class val-based selection are locked.
+    model.load_state_dict(initial_state)
+    zero_shot = {
+        "val": evaluate_model(
+            model, val_features, val_labels, classnames, args, device
+        ),
+        "test": evaluate_model(
+            model, test_features, test_labels, classnames, args, device
+        ),
+    }
+    model.load_state_dict(best_checkpoint["model"])
     summary = {
         "protocol": args.protocol,
+        "fewshot": fewshot_summary,
         "selection_split": "val",
         "selection_metric": (
             "mAP" if args.protocol == "all26" else "base_seen_mAP"
@@ -460,6 +537,8 @@ def main():
         raise ValueError("The EMOTIC prototype experiment expects 26 classes")
     if args.epochs <= 0:
         raise ValueError("epochs must be positive")
+    if args.shots_per_class is not None and args.shots_per_class <= 0:
+        raise ValueError("shots_per_class must be positive")
     if args.feature_batch_size <= 0 or args.adapter_batch_size <= 0:
         raise ValueError("batch sizes must be positive")
 
@@ -536,7 +615,6 @@ def main():
     print(
         f"Best epoch={summary['best_epoch']}, "
         f"test_mAP={summary['best']['test']['mAP']:.4f}, "
-        f"val+test_mAP={summary['best']['val_test']['mAP']:.4f}, "
         f"test_novel={summary['best']['test']['novel_mAP']:.4f}"
     )
 
