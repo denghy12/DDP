@@ -27,6 +27,13 @@ def parse_args():
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--name", required=True)
     parser.add_argument("--threshold", type=float, default=0.50)
+    parser.add_argument(
+        "--eval-splits",
+        nargs="+",
+        choices=("val", "test"),
+        default=("val", "test"),
+        help="EMOTIC annotation splits to evaluate",
+    )
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--t-min", type=float, default=1.0)
@@ -82,7 +89,7 @@ def main():
     model = model.module if hasattr(model, "module") else model
     model.to(device).eval()
 
-    val_transform = transforms.Compose(
+    eval_transform = transforms.Compose(
         [
             transforms.Resize(
                 256, interpolation=transforms.InterpolationMode.BICUBIC
@@ -94,9 +101,14 @@ def main():
     dataset = EMOTIC(
         args.data_root,
         train=False,
-        eval_splits=("val", "test"),
-        transform=val_transform,
+        eval_splits=tuple(args.eval_splits),
+        transform=eval_transform,
         input_mode="full",
+    )
+    print(
+        f"Evaluation splits={list(args.eval_splits)} "
+        f"person_samples={len(dataset)} threshold={args.threshold:.2f}",
+        flush=True,
     )
     os.makedirs(args.output_dir, exist_ok=True)
     write_class_order(args.output_dir, args.name, classnames)
@@ -108,6 +120,7 @@ def main():
         dataset.targets,
     )
     summary = {
+        "eval_splits": list(args.eval_splits),
         "threshold": args.threshold,
         "t_min": args.t_min,
         "t_max": args.t_max,

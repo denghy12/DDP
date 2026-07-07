@@ -28,6 +28,13 @@ def parse_args():
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument(
+        "--eval-splits",
+        nargs="+",
+        choices=("val", "test"),
+        default=("val", "test"),
+        help="EMOTIC annotation splits to evaluate",
+    )
     parser.add_argument("--threshold-start", type=float, default=0.30)
     parser.add_argument("--threshold-end", type=float, default=0.85)
     parser.add_argument("--threshold-step", type=float, default=0.01)
@@ -173,7 +180,7 @@ def main():
     dataset = EMOTIC(
         args.data_root,
         train=False,
-        eval_splits=("val", "test"),
+        eval_splits=tuple(args.eval_splits),
         transform=val_transform,
         input_mode="full",
     )
@@ -227,6 +234,7 @@ def main():
         "task": task_id,
         "seen_classes": high_range,
         "samples": len(indices),
+        "eval_splits": list(args.eval_splits),
         "temperature": temperature,
         "upper_bound": is_upper_bound,
         "best_oF1": best_of1,
