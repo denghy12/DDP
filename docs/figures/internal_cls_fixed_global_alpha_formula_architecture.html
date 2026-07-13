@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=2600, initial-scale=1" />
+  <title>Internal CLS Adapter — Formula Architecture</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --slate: #475569;
+      --blue: #2563eb;
+      --blue-bg: #eff6ff;
+      --red: #dc2626;
+      --red-bg: #fff1f2;
+      --green: #059669;
+      --green-bg: #ecfdf5;
+      --orange: #ea580c;
+      --orange-bg: #fff7ed;
+      --purple: #7c3aed;
+      --purple-bg: #f5f3ff;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 2600px; height: 1980px; overflow: hidden; }
+    body {
+      background: #f8fbff;
+      color: var(--ink);
+      font-family: "STIX Two Text", "Times New Roman", serif;
+    }
+    #canvas { position: relative; width: 2600px; height: 1980px; }
+    .title {
+      position: absolute; left: 0; top: 10px; width: 2600px;
+      text-align: center; font: 700 38px/1.15 Arial, sans-serif; color: var(--ink);
+    }
+    .subtitle {
+      position: absolute; left: 0; top: 58px; width: 2600px;
+      text-align: center; font: 600 19px/1.2 Arial, sans-serif; color: var(--slate);
+    }
+    .panel {
+      position: absolute; border: 3px solid; border-radius: 16px;
+    }
+    .panel-title {
+      position: absolute; left: 24px; right: 24px; top: 14px;
+      text-align: center; font: 700 24px/1.2 Arial, sans-serif;
+    }
+    .image-panel { left: 20px; top: 92px; width: 1530px; height: 500px; border-color: var(--blue); background: var(--blue-bg); }
+    .text-panel { left: 1570px; top: 92px; width: 1010px; height: 500px; border-color: var(--red); background: var(--red-bg); }
+    .ddp-panel { left: 20px; top: 760px; width: 1250px; height: 880px; border-color: var(--green); background: var(--green-bg); }
+    .adapter-panel { left: 1330px; top: 760px; width: 1250px; height: 880px; border-color: var(--orange); background: #fffaf0; }
+    .blue-title { color: #1d4ed8; }
+    .red-title { color: #b91c1c; }
+    .green-title { color: #047857; }
+    .orange-title { color: #9a3412; }
+    .formula-box {
+      position: absolute; z-index: 2; border: 3px solid #94a3b8; border-radius: 13px;
+      background: rgba(255,255,255,.96); display: flex; align-items: center; justify-content: center;
+      padding: 10px 18px; text-align: center;
+    }
+    .formula-box.blue { border-color: var(--blue); background: #f8fbff; }
+    .formula-box.red { border-color: var(--red); background: #fffafa; }
+    .formula-box.green { border-color: var(--green); background: #fff; }
+    .formula-box.orange { border-color: var(--orange); background: #fff; }
+    .formula-box.purple { border-color: var(--purple); background: var(--purple-bg); }
+    .formula-box .katex-display { margin: 0; }
+    .formula-box .katex { font-size: 29px; }
+    .formula-box.compact .katex { font-size: 25px; }
+    .formula-box.large .katex { font-size: 32px; }
+    .formula-box.xlarge .katex { font-size: 35px; }
+    .module-label {
+      position: absolute; z-index: 3; font: 700 19px/1.1 Arial, sans-serif; text-align: center;
+    }
+    .route-caption {
+      position: absolute; left: 20px; top: 602px; width: 2560px;
+      text-align: center; font: 600 19px/1.25 Arial, sans-serif; color: var(--slate);
+    }
+    .adapter-group {
+      position: absolute; left: 1390px; top: 855px; width: 640px; height: 700px;
+      border: 3px dashed var(--orange); border-radius: 16px; background: rgba(255,255,255,.60);
+    }
+    .adapter-group-label {
+      position: absolute; left: 1410px; top: 870px; width: 600px;
+      text-align: center; font: 700 18px/1.15 Arial, sans-serif; color: #9a3412;
+    }
+    .result-caption {
+      position: absolute; left: 700px; top: 1870px; width: 1200px;
+      text-align: center; font: 700 19px/1.2 Arial, sans-serif; color: #6d28d9;
+    }
+    .footer {
+      position: absolute; left: 20px; top: 1910px; width: 2560px; height: 55px;
+      border: 2px dashed #94a3b8; border-radius: 10px; background: rgba(255,255,255,.85);
+      display: grid; grid-template-columns: repeat(4, 1fr); align-items: center;
+      font: 600 16px/1.15 Arial, sans-serif; color: var(--slate); text-align: center;
+    }
+    .swatch { display: inline-block; width: 22px; height: 22px; margin-right: 9px; border: 3px solid; border-radius: 5px; vertical-align: middle; background: white; }
+    svg.arrows { position: absolute; left: 0; top: 0; width: 2600px; height: 1980px; z-index: 1; overflow: visible; }
+    .arrow { fill: none; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+    .blue-arrow { stroke: var(--blue); marker-end: url(#blue-head); }
+    .red-arrow { stroke: var(--red); marker-end: url(#red-head); }
+    .green-arrow { stroke: var(--green); marker-end: url(#green-head); }
+    .orange-arrow { stroke: var(--orange); marker-end: url(#orange-head); }
+    .purple-arrow { stroke: var(--purple); marker-end: url(#purple-head); }
+  </style>
+</head>
+<body>
+<div id="canvas">
+  <div class="title">CODE_DDP: EMOTIC B5-C3 Internal CLS Adapter (Fixed Global α)</div>
+  <div class="subtitle">Shared CLIP encoding · dual visual representations · parallel DDP/Adapter towers · pre-softmax path-logit correction</div>
+
+  <div class="panel image-panel"><div class="panel-title blue-title">Image branch</div></div>
+  <div class="panel text-panel"><div class="panel-title red-title">Text branch</div></div>
+  <div class="panel ddp-panel"><div class="panel-title green-title">Original DDP token-attention path</div></div>
+  <div class="panel adapter-panel"><div class="panel-title orange-title">Internal CLS residual-adapter logit-correction path</div></div>
+
+  <!-- Image branch: formulas only inside boxes. -->
+  <div class="module-label blue-title" style="left:70px;top:137px;width:280px">Input</div>
+  <div class="formula-box blue large math" style="left:70px;top:165px;width:280px;height:82px" data-tex="\mathbf{x},\quad c\in\mathcal{C}^{t}"></div>
+  <div class="module-label blue-title" style="left:410px;top:137px;width:360px">Dual visual prompts</div>
+  <div class="formula-box orange compact math" style="left:410px;top:165px;width:360px;height:82px" data-tex="\mathbf{P}_{\mathrm V}^{c}=\{\mathbf{P}_{\mathrm V}^{c+},\mathbf{P}_{\mathrm V}^{c-}\}"></div>
+  <div class="module-label blue-title" style="left:830px;top:137px;width:560px">Frozen visual encoder</div>
+  <div class="formula-box blue compact math" style="left:830px;top:165px;width:560px;height:100px" data-tex="\mathbf{F}^{c\pm}=\mathrm E_{\mathrm V}(\mathbf{P}_{\mathrm V}^{c\pm},\mathbf{x})\in\mathbb{R}^{(N+1)\times d}"></div>
+  <div class="module-label blue-title" style="left:170px;top:330px;width:540px">Full token sequence</div>
+  <div class="formula-box blue compact math" style="left:170px;top:360px;width:540px;height:120px" data-tex="\mathbf{F}^{c\pm}=\left[\mathbf{f}_{0}^{c\pm},\mathbf{f}_{1}^{c\pm},\ldots,\mathbf{f}_{N}^{c\pm}\right]"></div>
+  <div class="module-label blue-title" style="left:860px;top:330px;width:520px">CLS representation</div>
+  <div class="formula-box blue large math" style="left:860px;top:360px;width:520px;height:120px" data-tex="\mathbf{f}_{\mathrm{cls}}^{c\pm}=\mathbf{f}_{0}^{c\pm}\in\mathbb{R}^{d}"></div>
+
+  <!-- Text branch. -->
+  <div class="module-label red-title" style="left:1600px;top:137px;width:430px">Negative prompt</div>
+  <div class="formula-box red large math" style="left:1600px;top:165px;width:430px;height:90px" data-tex="\mathbf{P}_{\mathrm T}^{c-}"></div>
+  <div class="module-label red-title" style="left:2120px;top:137px;width:430px">Positive prompt</div>
+  <div class="formula-box red large math" style="left:2120px;top:165px;width:430px;height:90px" data-tex="\mathbf{P}_{\mathrm T}^{c+}"></div>
+  <div class="module-label red-title" style="left:1760px;top:315px;width:630px">Frozen text encoder</div>
+  <div class="formula-box red compact math" style="left:1760px;top:345px;width:630px;height:120px" data-tex="\mathbf{t}^{c\pm}=\mathrm E_{\mathrm T}(\mathbf{P}_{\mathrm T}^{c\pm},c),\qquad \|\mathbf{t}^{c\pm}\|_{2}=1"></div>
+
+  <!-- Explicit routing ports. -->
+  <div class="route-caption">Explicit feature ports from the image/text branches to the two model paths</div>
+  <div class="module-label blue-title" style="left:120px;top:622px;width:430px">Image → DDP</div>
+  <div class="formula-box blue large math" style="left:120px;top:648px;width:430px;height:78px" data-tex="\mathbf{F}^{c\pm}"></div>
+  <div class="module-label red-title" style="left:730px;top:622px;width:430px">Text → DDP</div>
+  <div class="formula-box red large math" style="left:730px;top:648px;width:430px;height:78px" data-tex="\mathbf{t}^{c\pm}"></div>
+  <div class="module-label blue-title" style="left:1435px;top:622px;width:430px">Image → Adapter</div>
+  <div class="formula-box blue large math" style="left:1435px;top:648px;width:430px;height:78px" data-tex="\mathbf{f}_{\mathrm{cls}}^{c\pm}"></div>
+  <div class="module-label red-title" style="left:2045px;top:622px;width:430px">Text → Adapter</div>
+  <div class="formula-box red large math" style="left:2045px;top:648px;width:430px;height:78px" data-tex="\mathbf{t}^{c\pm}"></div>
+
+  <!-- Left tower. -->
+  <div class="module-label green-title" style="left:485px;top:818px;width:300px">Scaled token–text logits</div>
+  <div class="formula-box red large math" style="left:255px;top:850px;width:760px;height:125px" data-tex="q_{n}^{c\pm}=20\left\langle\mathbf{t}^{c\pm},\mathbf{f}_{n}^{c\pm}\right\rangle"></div>
+  <div class="module-label green-title" style="left:700px;top:1010px;width:315px">Positive-path attention</div>
+  <div class="formula-box green compact math" style="left:255px;top:1040px;width:760px;height:125px" data-tex="\omega_{n}^{c}=\frac{\exp(q_{n}^{c+})}{\sum_{m=0}^{N}\exp(q_{m}^{c+})}"></div>
+  <div class="module-label green-title" style="left:700px;top:1200px;width:315px">Shared-attention pooling</div>
+  <div class="formula-box green large math" style="left:255px;top:1230px;width:760px;height:125px" data-tex="\overline{\mathbf{f}}^{c\pm}=\sum_{n=0}^{N}\omega_{n}^{c}\mathbf{f}_{n}^{c\pm}"></div>
+  <div class="module-label green-title" style="left:700px;top:1390px;width:315px">Original DDP path logits</div>
+  <div class="formula-box green compact math" style="left:255px;top:1420px;width:760px;height:125px" data-tex="\ell_{\mathrm{DDP}}^{c\pm}=5\sum_{n=0}^{N}\omega_n^c q_n^{c\pm}=100\left\langle\mathbf t^{c\pm},\overline{\mathbf f}^{c\pm}\right\rangle"></div>
+  <div class="module-label blue-title" style="left:380px;top:1548px;width:200px;font-size:15px">Two-way logit pair</div>
+  <div class="formula-box blue compact math" style="left:380px;top:1570px;width:510px;height:72px" data-tex="\boldsymbol\ell_{\mathrm{DDP}}^{c}=\left(\ell_{\mathrm{DDP}}^{c-},\ell_{\mathrm{DDP}}^{c+}\right)"></div>
+
+  <!-- Right tower. -->
+  <div class="adapter-group"></div>
+  <div class="adapter-group-label" style="left:1400px;width:210px;text-align:left">Shared adapter</div>
+  <div class="module-label orange-title" style="left:1740px;top:915px;width:210px">CLS normalization</div>
+  <div class="formula-box orange large math" style="left:1450px;top:945px;width:500px;height:100px" data-tex="\widehat{\mathbf{f}}_{\mathrm{cls}}^{c\pm}=\frac{\mathbf{f}_{\mathrm{cls}}^{c\pm}}{\|\mathbf{f}_{\mathrm{cls}}^{c\pm}\|_{2}}"></div>
+  <div class="module-label orange-title" style="left:1740px;top:1080px;width:210px">Residual mapping</div>
+  <div class="formula-box orange large math" style="left:1450px;top:1110px;width:500px;height:110px" data-tex="\mathbf{r}^{c\pm}=W_{2}\,\sigma\!\left(W_{1}\widehat{\mathbf{f}}_{\mathrm{cls}}^{c\pm}\right)"></div>
+  <div class="module-label orange-title" style="left:1740px;top:1255px;width:210px">Scaled feature residual</div>
+  <div class="formula-box purple large math" style="left:1450px;top:1285px;width:500px;height:110px" data-tex="\Delta\mathbf{f}^{c\pm}=\alpha\mathbf{r}^{c\pm},\qquad\alpha=0.03"></div>
+  <div class="module-label red-title" style="left:2070px;top:1080px;width:190px">Logit correction</div>
+  <div class="formula-box red compact math" style="left:2070px;top:1110px;width:450px;height:175px" data-tex="\Delta\ell^{c\pm}=100\left\langle\mathbf{t}^{c\pm},\Delta\mathbf{f}^{c\pm}\right\rangle"></div>
+  <div class="module-label orange-title" style="left:2070px;top:1425px;width:200px;font-size:15px">Correction pair</div>
+  <div class="formula-box orange compact math" style="left:2070px;top:1450px;width:450px;height:90px" data-tex="\Delta\boldsymbol\ell^{c}=\left(\Delta\ell^{c-},\Delta\ell^{c+}\right)"></div>
+
+  <!-- Independent final node. -->
+  <div class="module-label" style="left:790px;top:1660px;width:1020px;color:#6d28d9;font-size:24px">Add the correction before temperature-scaled softmax</div>
+  <div class="formula-box purple compact math" style="left:790px;top:1695px;width:1020px;height:165px" data-tex="\begin{aligned}\widetilde{\ell}^{c\pm}&=\ell_{\mathrm{DDP}}^{c\pm}+\Delta\ell^{c\pm},\\[3pt]\widehat{y}_{c+}^{t}&=\frac{\exp\!\left(\widetilde{\ell}^{c+}/\tau(t)\right)}{\exp\!\left(\widetilde{\ell}^{c+}/\tau(t)\right)+\exp\!\left(\widetilde{\ell}^{c-}/\tau(t)\right)},\quad c\in\mathcal{C}^{1:t}\end{aligned}"></div>
+  <div class="result-caption">Final Test mAP: 31.3129 ± 0.2036</div>
+
+  <div class="footer">
+    <div><span class="swatch" style="border-color:var(--blue)"></span>shared image representations</div>
+    <div><span class="swatch" style="border-color:var(--red)"></span>shared text representations</div>
+    <div><span class="swatch" style="border-color:var(--orange)"></span>frozen shared adapter</div>
+    <div><span class="swatch" style="border-color:var(--purple)"></span>pre-softmax path-logit addition</div>
+  </div>
+
+  <svg class="arrows" viewBox="0 0 2600 1980" aria-hidden="true">
+    <defs>
+      <marker id="blue-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#2563eb" /></marker>
+      <marker id="red-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#dc2626" /></marker>
+      <marker id="green-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#059669" /></marker>
+      <marker id="orange-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#ea580c" /></marker>
+      <marker id="purple-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#7c3aed" /></marker>
+    </defs>
+    <!-- Image/text generation. -->
+    <path class="arrow blue-arrow" d="M350 206 H410" />
+    <path class="arrow blue-arrow" d="M770 206 H830" />
+    <path class="arrow blue-arrow" d="M1110 265 V315 H110 V420 H170" />
+    <path class="arrow blue-arrow" d="M1110 265 V315 H1420 V420 H1380" />
+    <path class="arrow red-arrow" d="M1815 255 V300 H2075 V345" />
+    <path class="arrow red-arrow" d="M2335 255 V300 H2075 V345" />
+    <!-- Explicit ports into left tower. -->
+    <path class="arrow blue-arrow" d="M335 726 V800 H350 V850" />
+    <path class="arrow red-arrow" d="M945 726 V800 H920 V850" />
+    <!-- DDP vertical flow. -->
+    <path class="arrow green-arrow" d="M635 975 V1040" />
+    <path class="arrow green-arrow" d="M635 1165 V1230" />
+    <path class="arrow green-arrow" d="M635 1355 V1420" />
+    <path class="arrow blue-arrow" d="M635 1545 V1570" />
+    <!-- Explicit ports into right tower. -->
+    <path class="arrow blue-arrow" d="M1650 726 V945" />
+    <path class="arrow red-arrow" d="M2260 726 V1045 H2295 V1110" />
+    <!-- Adapter flow. -->
+    <path class="arrow orange-arrow" d="M1700 1045 V1110" />
+    <path class="arrow orange-arrow" d="M1700 1220 V1285" />
+    <path class="arrow orange-arrow" d="M1950 1340 H2020 V1198 H2070" />
+    <path class="arrow orange-arrow" d="M2295 1285 V1450" />
+    <!-- Independent final addition; the two paths meet only inside purple node. -->
+    <path class="arrow blue-arrow" d="M635 1642 V1775 H790" />
+    <path class="arrow orange-arrow" d="M2295 1540 V1775 H1810" />
+  </svg>
+</div>
+
+<script>
+  window.addEventListener('load', () => {
+    document.querySelectorAll('.math').forEach((node) => {
+      katex.render(node.dataset.tex, node, {
+        displayMode: true,
+        throwOnError: true,
+        strict: false,
+        trust: false
+      });
+    });
+    document.fonts.ready.then(() => { window.__diagramReady = true; });
+  });
+</script>
+</body>
+</html>

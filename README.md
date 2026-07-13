@@ -2,6 +2,19 @@
 
 PyTorch code for: DDP: Dual-Decoupled Prompting for Multi-Label Class-Incremental Learning
 
+# Project organization
+
+EMOTIC experiment launchers are grouped by branch under `scripts/`:
+
+- `scripts/emotic/`: baseline EMOTIC DDP and upper-bound runs.
+- `scripts/emotic-prototype-adapter/`: external CLIP Prototype Adapter and score fusion.
+- `scripts/emotic-ddp-internal-adapter/`: DDP-internal Feature Adapter / CLS gate / final ablation.
+
+See `scripts/README.md` and `docs/emotic_experiment_code_map.md` for the full
+map. Result directories keep their original `output/emotic_*` paths for
+backward compatibility; run `python tools/organize_emotic_artifacts.py` to
+regenerate the branch-oriented index at `output/by_branch/`.
+
 # Setup
 
 To set up the environment and install the necessary dependencies, follow the steps below:
