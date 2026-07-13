@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "${ROOT}"
+
 GPU="${GPU:-0}"
 SHOTS_LIST="${SHOTS_LIST:-1 2 4 8 16}"
 SEEDS_LIST="${SEEDS_LIST:-0 1 2}"
@@ -9,13 +13,13 @@ CACHE_DIR="${CACHE_DIR:-./output/emotic_clip_feature_cache}"
 
 for SHOTS in ${SHOTS_LIST}; do
   for SEED in ${SEEDS_LIST}; do
-    RUN_NAME="emotic_prototype_adapter_base5_${SHOTS}shot_seed${SEED}"
+    RUN_NAME="emotic_prototype_adapter_all26_${SHOTS}shot_seed${SEED}"
     OUTPUT_DIR="./output/${RUN_NAME}"
     mkdir -p "${OUTPUT_DIR}"
 
     PYTHONHASHSEED="${SEED}" CUDA_VISIBLE_DEVICES="${GPU}" \
     python train_emotic_prototype_adapter.py \
-      --protocol base5 \
+      --protocol all26 \
       --shots_per_class "${SHOTS}" \
       --class_balanced_bce \
       --datadir ./datasets/EMOTIC \
@@ -38,6 +42,6 @@ for SHOTS in ${SHOTS_LIST}; do
 done
 
 python summarize_emotic_prototype_fewshot.py \
-  --protocol base5 \
+  --protocol all26 \
   --shots ${SHOTS_LIST} \
   --seeds ${SEEDS_LIST}

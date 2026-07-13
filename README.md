@@ -65,13 +65,13 @@ checkpoints are not modified.
 Run the supervised 26-class feasibility upper bound first:
 
 ```
-bash run_emotic_prototype_adapter_all26.sh
+bash scripts/emotic-prototype-adapter/run_emotic_prototype_adapter_all26.sh
 ```
 
 Then run the class-incremental-safe transfer experiment:
 
 ```
-bash run_emotic_prototype_adapter_base5.sh
+bash scripts/emotic-prototype-adapter/run_emotic_prototype_adapter_base5.sh
 ```
 
 The Base5 variant uses only samples intersecting the first five alphabetical
@@ -100,13 +100,13 @@ and per-class supervised/ignored counts in every summary.
 Run the non-incremental 26-class sample-efficiency upper bound:
 
 ```
-bash run_emotic_prototype_adapter_fewshot_all26.sh
+bash scripts/emotic-prototype-adapter/run_emotic_prototype_adapter_fewshot_all26.sh
 ```
 
 Then run the class-incremental-safe Base5 transfer curve:
 
 ```
-bash run_emotic_prototype_adapter_fewshot_base5.sh
+bash scripts/emotic-prototype-adapter/run_emotic_prototype_adapter_fewshot_base5.sh
 ```
 
 Both launchers use class-balanced masked BCE, 200 epochs, the unchanged frozen
@@ -122,7 +122,7 @@ After the standalone Base5-balanced adapter has been validated, task7 can be
 evaluated by offline score fusion without retraining DDP:
 
 ```
-bash run_emotic_prototype_fusion_task7.sh
+bash scripts/emotic-prototype-adapter/run_emotic_prototype_fusion_task7.sh
 ```
 
 The fusion script verifies exact target ordering between the saved DDP scores
@@ -136,7 +136,7 @@ To evaluate the incrementally safe binary-gated fusion over all eight B5-C3
 tasks, run:
 
 ```
-bash run_emotic_prototype_fusion_all_tasks.sh
+bash scripts/emotic-prototype-adapter/run_emotic_prototype_fusion_all_tasks.sh
 ```
 
 For every task, the script reconstructs exactly the same seen-class sample
@@ -146,3 +146,125 @@ per-class gates from `{0, beta}`, and select decision thresholds. It then
 reports held-out test metrics, average task mAP, and peak-to-final old-class
 forgetting. It must not produce or use combined `val+test` metrics. This is
 offline score fusion; it does not retrain or modify DDP checkpoints.
+
+## EMOTIC DDP Internal Shared Feature Adapter
+
+The internal experiment freezes every original DDP parameter and inserts one
+shared `512 -> 128 -> 512` residual Adapter after DDP's token attention has
+formed each class-specific positive/negative visual feature. The Adapter is
+zero-initialized, so enabling it before training must preserve DDP logits
+exactly. It is trained only on 16-shot Base5 task0 supervision, selected on
+pure validation data, then frozen and attached to the original task0-task7 DDP
+checkpoints. It does not use external Prototype scores, beta fusion, future
+labels, or test data during selection.
+
+Run the identity smoke test and three seeds in tmux with:
+
+```
+bash scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_internal_adapter_tmux.sh
+```
+
+Each seed writes training/evaluation JSON, training and per-class HTML,
+`best_adapter.pth`, and eight task score files. After all seeds finish:
+
+```
+python summarize_emotic_ddp_internal_adapter.py
+```
+
+The aggregate JSON/CSV/HTML is written to
+`output/emotic_ddp_internal_adapter_16shot_summary/`. Shared deterministic
+task feature caches use a file lock so parallel seed evaluation cannot corrupt
+them.
+
+The first 16-shot internal run selected epoch 0 even though every trained
+checkpoint was worse than the untouched identity mapping on task0 validation.
+The corrected trainer includes the identity state as epoch `-1`, evaluates
+after optimizer steps, and can early-stop without forcing adaptation. Run the
+validation-only conservative screen with:
+
+```
+bash scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_internal_adapter_screen_tmux.sh
+```
+
+It compares bottleneck 16, residual scale 0.01, identity weight 1.0, learning
+rates `1e-5/3e-5/1e-4`, and balanced versus unweighted BCE. It reuses the
+existing seed0 path-feature cache, never reads test data, and writes ranked
+JSON/CSV/HTML to `output/emotic_ddp_internal_adapter_screen_summary/`. A
+configuration must improve task0 validation mAP by more than 0.1 before any
+new three-seed test evaluation is allowed.
+
+The next conditional stage first transfers the three already trained external
+Base5 16-shot Prototype Adapter `down/up` weights into the internal pooled DDP
+feature path and selects a residual scale from `0/0.001/0.003/0.01/0.03/0.1`
+using task0 validation only:
+
+```
+bash scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_internal_transfer_then_full_tmux.sh
+```
+
+Transfer proceeds to locked three-seed test evaluation only when its mean val
+mAP gain exceeds 0.1 and all three seeds improve. Otherwise the same pipeline
+trains one Full Base5 internal upper-bound run. The Full run also evaluates
+test only after exceeding +0.1 val mAP. Transfer screening writes JSON/CSV/HTML
+under `output/emotic_ddp_internal_transfer_screen/`; the fallback Full run
+writes its training JSON/HTML and optional strict evaluation under
+`output/emotic_ddp_internal_full_base5_screen/`.
+
+The class-token internalization experiment keeps the original DDP attention
+pooled logits intact and applies the transferred external 16-shot Adapter only
+to each class-specific positive/negative visual path's normalized CLS token.
+The resulting text-similarity residual is added back to the original DDP
+logits; no vanilla-CLIP branch, fixed Prototype prediction, beta fusion, or
+second image encoding is used at inference. Run:
+
+```
+bash scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_cls_internal_transfer_tmux.sh
+```
+
+Task0 validation first selects a stable residual scale across all three
+external Adapter seeds. Test evaluation is launched only when mean val gain is
+greater than 0.1 and every seed improves. CLS caches and screen JSON/CSV/HTML
+are written under `output/emotic_ddp_cls_internal_feature_cache/` and
+`output/emotic_ddp_cls_internal_transfer_screen/`; accepted three-seed results
+are summarized under `output/emotic_ddp_cls_internal_transfer_16shot_summary/`.
+
+After the ungated CLS transfer is established, task-wise residual strength and
+per-class binary residual gates can be selected without retraining:
+
+```
+bash scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_cls_internal_gate_tmux.sh
+```
+
+For each task and Adapter seed, validation selects alpha from
+`0/0.001/0.003/0.01/0.03`, requiring more than +0.1 task mAP over identity.
+Each seen class then enables the selected CLS correction only when its val AP
+gain exceeds +0.1. Held-out test is evaluated after these choices are locked.
+Outputs contain DDP-only, task-alpha, and class-gate metrics plus per-class gate
+decisions in JSON and the main class-gated DetailReport in HTML/JSON. The three
+seed aggregate is written to `output/emotic_ddp_cls_internal_gate_summary/`.
+
+The internal model is frozen after this stage: alpha candidates, the `+0.1`
+task margin, and the `+0.1 AP` class-gate margin must not be changed after
+looking at test results. Generate the final ablation, isolated-process
+batch-one GPU benchmark, and a separately labelled internal-plus-external
+upper bound with:
+
+```
+bash scripts/emotic-ddp-internal-adapter/launch_emotic_adapter_final_analysis_tmux.sh
+```
+
+The upper bound combines the frozen internal CLS class-gated scores with the
+external Base5 16-shot Prototype branch. Global beta, external class gates,
+and thresholds are selected on val independently for each task and seed;
+test is used only after selection. It is not a replacement for the standalone
+internal result because it restores a second vanilla-CLIP image encoding.
+
+Final artifacts are written to:
+
+- `output/emotic_adapter_final_ablation/ablation.{json,csv,html}`;
+- `output/emotic_adapter_inference_benchmark/benchmark.{json,csv,html}`;
+- `output/emotic_ddp_cls_external_hybrid_summary/summary.{json,csv,html}`.
+
+The latency benchmark uses batch size one, GPU forward only, ten warmups and
+fifty timed iterations. Preprocessing and host-to-device transfer are excluded;
+each method runs in a fresh process so peak allocated CUDA memory is comparable.

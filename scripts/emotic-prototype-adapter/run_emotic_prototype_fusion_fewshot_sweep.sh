@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "${ROOT}"
+
 GPU="${GPU:-0}"
 SHOTS_LIST="${SHOTS_LIST:-1 2 4 8 16}"
 SEEDS_LIST="${SEEDS_LIST:-0 1 2}"
@@ -19,6 +23,6 @@ for shots in ${SHOTS_LIST}; do
       exit 1
     fi
     GPU="${GPU}" RUN_NAME="${run_name}" PROTOTYPE_CHECKPOINT="${checkpoint}" \
-      bash run_emotic_prototype_fusion_all_tasks.sh "$@"
+      bash scripts/emotic-prototype-adapter/run_emotic_prototype_fusion_all_tasks.sh "$@"
   done
 done

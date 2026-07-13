@@ -31,12 +31,18 @@
     诊断，不作为主结果。
 12. 保留 All26-balanced 作为监督可行性上限、Base5-balanced 作为增量安全主版本、
     Base5 普通 BCE 作为排序消融；在离线融合确认稳定收益前不修改 DDP 训练目标。
+13. 离线融合严格实验已完成：Full Base5 三 seed 的 final mAP 为
+    `33.8449±0.0510`，16-shot 三 seed为 `32.4573±0.1350`。内部 CLS class-gate
+    final mAP 为 `31.8938±0.1041`；其 alpha 与门控规则已冻结，不再根据 test 调整。
+14. 生成最终消融表和独立进程 GPU 效率表；另运行“内部 CLS gate + 外部 16-shot”
+    组合上限。组合的 beta、类别门控和 threshold 只能在纯 val 选择，且必须与不含外部
+    编码器的内部主结果分开报告。
 
 ## VOC 与工程复现
 
-13. 补充 CODE_DDP semantic tau2 与 `multi-lane-main` official semantic tau2 的逐
+15. 补充 CODE_DDP semantic tau2 与 `multi-lane-main` official semantic tau2 的逐
     task/per-class 对齐分析，并检查 4-token semantic context 是否是 VOC 优势来源。
-14. 如继续复现 VOC B4-C2，显式传入
+16. 如继续复现 VOC B4-C2，显式传入
     `--base_classes 4 --task_size 2 --total_classes 20`。
-15. 所有实验保持独立 checkpoint/output 目录；启动前固定 `PYTHONHASHSEED`，并将 VOC
+17. 所有实验保持独立 checkpoint/output 目录；启动前固定 `PYTHONHASHSEED`，并将 VOC
     的 set 结果排序后构建 dataset，确保同 seed 单变量复验可信。

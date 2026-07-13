@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "${ROOT}"
+
 GPU="${GPU:-0}"
 RUN_NAME="${RUN_NAME:-emotic_b5c3_ddp_semantic_tau2}"
 OUTPUT_DIR="${OUTPUT_DIR:-./output/${RUN_NAME}}"

@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "${ROOT}"
+
 
 missing=0
 for task in 0 1 2 3 4 5 6 7; do
@@ -51,13 +54,13 @@ if [[ "${gpu0_free_mb}" -lt 12000 ]]; then
 fi
 echo "GPU0 free=${gpu0_free_mb} MiB; full seed2 assigned to GPU${full_seed2_gpu}"
 
-launch proto_zero "GPU=0 bash run_emotic_prototype_fusion_zero_shot_strict.sh"
-launch proto_k12 "GPU=0 SHOTS_LIST='1 2' bash run_emotic_prototype_fusion_fewshot_sweep.sh"
-launch proto_k48 "GPU=0 SHOTS_LIST='4 8' bash run_emotic_prototype_fusion_fewshot_sweep.sh"
-launch proto_k16 "GPU=0 SHOTS_LIST='16' bash run_emotic_prototype_fusion_fewshot_sweep.sh"
-launch proto_full0 "GPU=0 SEED=0 bash run_emotic_prototype_full_seed_pipeline.sh"
-launch proto_full1 "GPU=0 SEED=1 bash run_emotic_prototype_full_seed_pipeline.sh"
-launch proto_full2 "GPU=${full_seed2_gpu} SEED=2 bash run_emotic_prototype_full_seed_pipeline.sh"
+launch proto_zero "GPU=0 bash scripts/emotic-prototype-adapter/run_emotic_prototype_fusion_zero_shot_strict.sh"
+launch proto_k12 "GPU=0 SHOTS_LIST='1 2' bash scripts/emotic-prototype-adapter/run_emotic_prototype_fusion_fewshot_sweep.sh"
+launch proto_k48 "GPU=0 SHOTS_LIST='4 8' bash scripts/emotic-prototype-adapter/run_emotic_prototype_fusion_fewshot_sweep.sh"
+launch proto_k16 "GPU=0 SHOTS_LIST='16' bash scripts/emotic-prototype-adapter/run_emotic_prototype_fusion_fewshot_sweep.sh"
+launch proto_full0 "GPU=0 SEED=0 bash scripts/emotic-prototype-adapter/run_emotic_prototype_full_seed_pipeline.sh"
+launch proto_full1 "GPU=0 SEED=1 bash scripts/emotic-prototype-adapter/run_emotic_prototype_full_seed_pipeline.sh"
+launch proto_full2 "GPU=${full_seed2_gpu} SEED=2 bash scripts/emotic-prototype-adapter/run_emotic_prototype_full_seed_pipeline.sh"
 
 echo
 echo "Monitor: tmux list-sessions"

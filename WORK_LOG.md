@@ -2,6 +2,62 @@
 
 ## 2026-07-07
 
+- 严格离线融合已经收敛：Full Base5 三 seed 的纯 test final mAP 为
+  `33.8449±0.0510`，严格 DDP baseline 为 `30.8191`；16-shot 为
+  `32.4573±0.1350`。
+- 开始冻结 DDP 的内部共享 Feature Adapter：作用于注意力聚合后的每类正/负视觉特征，
+  共享 `512 -> 128 -> 512` 映射，残差比例 `0.1`，up projection 零初始化。
+- 内部训练仅使用 task0 Base5 的 16-shot 标签，所有 DDP 参数冻结；在 task0 纯 val
+  上选 epoch 后永久冻结，并严格评估 task0-task7 的纯 test。
+- 新增输出规范：每 seed 生成训练/评估 JSON、训练 HTML、逐类 HTML+JSON、Adapter
+  checkpoint 和八任务 score；三 seed 汇总生成 JSON/CSV/HTML。
+
+## 2026-07-08
+
+- 内部 pooled-feature Adapter 16-shot 三 seed final mAP 为
+  `30.8135±0.0030`，相对严格 DDP `30.8191` 无提升；平均任务 mAP gain 为
+  `-0.0035±0.0006`。
+- 三个 seed 的训练前 task0 val mAP 均为 `56.4141`，第一次 epoch 后已下降，旧训练器
+  却未将 Identity 初始状态纳入 checkpoint 候选；已修正为 epoch `-1` 初始最佳状态。
+- 新训练器按 optimizer step 验证并早停，记录 best val gain、是否实际选择适配、参数
+  范数和 residual/original 比例；若训练无增益则保存严格恒等 Adapter。
+- 新增 seed0 纯 val 保守筛选：dim 16、scale 0.01、identity weight 1.0，比较三档低
+  learning rate 与 balanced/unweighted BCE；复用已有特征缓存，不读取 test。
+- 六组保守筛选均未通过 `+0.1` val mAP 门槛；最佳为 `lr=1e-4` balanced，提升
+  `+0.0356`，平均 residual/original 仅 `0.0179%`，因此未运行新的 test。
+- 新增条件后续实验：先将三个外部 Base5 16-shot Prototype Adapter 权重直接迁移到
+  DDP pooled feature，纯 val 扫描安全 residual scale；只有均值提升超过 `0.1` 且三
+  seed 全正才评估 test。
+- 若权重迁移未通过，自动运行一次 Full Base5 内部上限；Full 同样只有通过纯 val
+  `+0.1` 门槛才允许运行全任务 test。训练器新增 `--full_base5` 并使用独立全量缓存。
+- 首次转移筛选暴露选择器顺序错误：无约束均值最优的 scale `0.03` 中 seed2 为负，
+  导致脚本错误拒绝了实际满足约束的 scale `0.01`。现改为先筛选“均值 gain > 0.1、
+  三 seed 全正、scale > 0”，再在合格集合中选均值最高者；锁定候选为 `0.01`。
+- 额外完成的 Full Base5 pooled-feature 训练只获得 val mAP `+0.0275`，未通过门槛且
+  未运行 test；它作为“DDP-specific pooled BCE 即使全量监督也无明显收益”的负对照。
+- 修正选择器后，pooled-feature 外部权重迁移锁定 scale `0.01`；三 seed 纯 test
+  final mAP 为 `31.0504±0.0490`，相对 DDP 提升 `+0.2313`，八个任务平均均为正且
+  old-class forgetting 基本不变，但明显弱于外部16-shot融合的 `+1.6382`。
+- 开始 class-token 内部支路：从每条 DDP 正/负 Visual Prompt 路径提取归一化 CLS
+  token，迁移外部 Prototype Adapter 权重，只将其文本相似度残差加回原始 DDP logits；
+  不运行外部CLIP分支、不使用固定Prototype预测或beta融合。
+- CLS实验沿用纯 val 稳定比例门槛，三 seed 全正且平均 gain > `0.1` 才允许运行test；
+  新增共享CLS缓存、条件三seed评估与JSON/CSV/HTML汇总。
+- CLS内部迁移锁定 scale `0.03`，三 seed final mAP 为 `31.3129±0.2036`，相对
+  DDP 提升 `+0.4938`；平均任务 mAP 提升 `+0.7833`，cF1/oF1 分别提升约
+  `+0.61/+1.84`，遗忘仅增加约 `0.06`。
+- CLS逐类结果呈明显互补：Pleasure/Annoyance/Sadness 等提升 `+4 AP` 以上，但
+  Confidence/Fatigue/Happiness 等下降明显。新增无需训练的内部残差门控：每任务先在
+  纯 val 选择 alpha，再以 `+0.1 AP` margin 决定每类是否启用，test仅在锁定后评估。
+- CLS内部模型至此冻结，不再根据 test 改动 alpha 候选、task margin 或 class margin。
+  新增统一正式消融汇总，覆盖 DDP、pooled、CLS fixed、task-alpha、class-gate、外部
+  16-shot 与外部 Full，并输出 JSON/CSV/HTML。
+- 新增 batch-one 独立进程 GPU 效率测试，比较 DDP、内部 CLS gate、外部 Prototype、
+  内外组合的参数量、forward latency 和 peak allocated CUDA memory。
+- 新增单独标记的组合上限：冻结内部 CLS class-gate 与外部 16-shot Prototype 分数，
+  每任务/seed 仅在纯 val 选择 global beta、二值外部分支类别门控和 threshold，再一次性
+  报告纯 test；不重新训练 DDP 或 Adapter，也不以该结果替代独立内部主结果。
+
 - 根据 CLIP-Adapter 的 few-shot 设定新增 Prototype Adapter 样本效率实验，shot
   取 `1/2/4/8/16`，每个配置运行 seed `0/1/2`。
 - 针对 EMOTIC 多标签共现设计严格 K-shot 采样：每个 active class 恰好使用 K 个
@@ -45,7 +101,7 @@
 - 完成 CODE_DDP EMOTIC joint-training upper bound：26 类在单一任务中联合训练，
   train 和历史合并评估集分别为 `16001/7765` 个人物样本，30 epochs，物理 batch 2、
   梯度累积 128、有效 batch 256，full-image、seed 0、semantic 正负 prompt、
-  `T=1`。启动脚本为 `run_emotic_upper_bound_semantic_threshold050.sh`。
+  `T=1`。启动脚本为 `scripts/emotic/run_emotic_upper_bound_semantic_threshold050.sh`。
 - 为 joint upper bound 增加 `--upper_bound` 协议支持：允许
   `base_classes == total_classes == 26`，只生成 `(0,26)` 一个任务，并输出与
   B5-C3 相同格式的 class-order JSON、逐类 HTML/JSON 和 checkpoint。
@@ -170,10 +226,10 @@
   - 当前 threshold 是在 val+test 上诊断/选择，不能作为无偏 test 结果，正式报告
     必须在 val 选阈值并在 test 上报告。
 - 新增工具和入口：
-  - `run_emotic_b5c3_semantic_tau2.sh`；
+  - `scripts/emotic/run_emotic_b5c3_semantic_tau2.sh`；
   - `eval_emotic_threshold_sweep.py`；
   - `eval_emotic_all_tasks.py`；
-  - `run_emotic_upper_bound_semantic_threshold050.sh`。
+  - `scripts/emotic/run_emotic_upper_bound_semantic_threshold050.sh`。
 
 ## 2026-06-24
 

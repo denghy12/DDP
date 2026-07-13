@@ -90,6 +90,20 @@
 - Upper bound 只有一个任务，`amAP == mAP`；不能与 B5-C3 跨任务 amAP 直接比较。
 - 历史 `val+test` 结果全部降级为诊断记录，不得用于论文主表、结论或 upper bound。
 
+## EMOTIC Adapter 冻结状态
+
+- 外部 Base5 16-shot Prototype 融合三 seed final mAP 为
+  `32.4573±0.1350`；外部 Full Base5 为 `33.8449±0.0510`。
+- 内部 pooled transfer final mAP 为 `31.0504±0.0490`；内部 CLS fixed-alpha 为
+  `31.3129±0.2036`；内部 CLS task-alpha + class-gate 为 `31.8938±0.1041`。
+- 内部主方案的 alpha candidates `0/0.001/0.003/0.01/0.03`、task val margin
+  `0.1 mAP` 和 class val margin `0.1 AP` 已冻结，禁止根据 test 继续调整。
+- “内部 CLS gate + 外部 16-shot Prototype”仅作为组合上限：恢复第二个 vanilla CLIP
+  图像编码分支，global beta、二值类别门控和 threshold 均只在每任务纯 val 上选择。
+- 正式消融输出为 `output/emotic_adapter_final_ablation/`，batch-one GPU 参数量/耗时/
+  显存输出为 `output/emotic_adapter_inference_benchmark/`，组合上限汇总为
+  `output/emotic_ddp_cls_external_hybrid_summary/`。
+
 ## 正式评估硬规则
 
 - 论文指标只能来自官方纯 `test` split，任何 `val+test` 拼接评估均视为无效。
@@ -99,11 +113,11 @@
 
 ## EMOTIC 输出与入口
 
-- B5-C3 训练：`run_emotic_b5c3_semantic_tau2.sh`
+- B5-C3 训练：`scripts/emotic/run_emotic_b5c3_semantic_tau2.sh`
 - B5-C3 原始输出：`output/emotic_b5c3_ddp_semantic_tau2/`
 - B5-C3 threshold 0.50 输出：
   `output/emotic_b5c3_ddp_semantic_tau2_threshold050/`
-- Joint 训练：`run_emotic_upper_bound_semantic_threshold050.sh`
+- Joint 训练：`scripts/emotic/run_emotic_upper_bound_semantic_threshold050.sh`
 - Joint 输出：`output/emotic_upper_bound_ddp_semantic_threshold050/`
 - 阈值扫描：`eval_emotic_threshold_sweep.py`
 - 全任务 checkpoint 复评：`eval_emotic_all_tasks.py`

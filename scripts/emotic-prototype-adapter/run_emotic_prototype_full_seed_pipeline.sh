@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "${ROOT}"
+
 GPU="${GPU:-0}"
 SEED="${SEED:?Set SEED to 0, 1, or 2}"
 
@@ -16,7 +20,7 @@ if [[ -s "${checkpoint}" ]]; then
 else
   echo "Training full-data Base5-balanced Adapter seed=${SEED}"
   GPU="${GPU}" RUN_NAME="${adapter_run}" \
-    bash run_emotic_prototype_adapter_base5.sh \
+    bash scripts/emotic-prototype-adapter/run_emotic_prototype_adapter_base5.sh \
     --class_balanced_bce --seed "${SEED}"
 fi
 
@@ -26,5 +30,5 @@ if [[ -s "${summary}" ]]; then
   echo "Skip completed full-data fusion: ${summary}"
 else
   GPU="${GPU}" RUN_NAME="${fusion_run}" PROTOTYPE_CHECKPOINT="${checkpoint}" \
-    bash run_emotic_prototype_fusion_all_tasks.sh
+    bash scripts/emotic-prototype-adapter/run_emotic_prototype_fusion_all_tasks.sh
 fi

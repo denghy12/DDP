@@ -227,65 +227,139 @@ class DDP(nn.Module):
 
         self.visual_prompts = nn.Parameter(nn.init.normal_(torch.empty(self.n_cls*2, self.l_vp, self.width, dtype=self.dtype), std=0.02) )
         self.text_feature_cache = {}
+        self.feature_adapter = None
 
-    def forward(self, image, cls_id=None, inference=False):
+    def enable_feature_adapter(self, bottleneck_dim=128, residual_scale=0.1):
+        from ddp_internal_adapter import SharedResidualFeatureAdapter
+
+        feature_dim = int(self.text_encoder.text_projection.shape[1])
+        self.feature_adapter = SharedResidualFeatureAdapter(
+            feature_dim=feature_dim,
+            bottleneck_dim=bottleneck_dim,
+            residual_scale=residual_scale,
+        ).to(self.visual_prompts.device)
+        return self.feature_adapter
+
+    def _text_features(self, cls_id, inference):
         if inference:
             neg_feats = []
             pos_feats = []
+            feature_device = self.visual_prompts.device
             for entry in self.text_feature_cache.values():
-                neg_feats.append(entry['neg'].to(self.device))
-                pos_feats.append(entry['pos'].to(self.device))
-            text_features = torch.cat([torch.cat(neg_feats, dim=0), torch.cat(pos_feats, dim=0)], dim=0)
-        else:
-            prompts, tokenized_prompts = self.prompt_learner(cls_id)
-            text_features = self.text_encoder(prompts, tokenized_prompts)
-            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+                neg_feats.append(entry['neg'].to(feature_device))
+                pos_feats.append(entry['pos'].to(feature_device))
+            return torch.cat(
+                [torch.cat(neg_feats, dim=0), torch.cat(pos_feats, dim=0)],
+                dim=0,
+            )
 
-            K = cls_id[1] - cls_id[0]
-            self.text_feature_cache[tuple(cls_id)] = {
-                'neg': text_features[:K].detach().cpu(),
-                'pos': text_features[K:].detach().cpu(),
-            }
+        prompts, tokenized_prompts = self.prompt_learner(cls_id)
+        text_features = self.text_encoder(prompts, tokenized_prompts)
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+        K = cls_id[1] - cls_id[0]
+        self.text_feature_cache[tuple(cls_id)] = {
+            'neg': text_features[:K].detach().cpu(),
+            'pos': text_features[K:].detach().cpu(),
+        }
+        return text_features
 
-        cls_id_range = range(cls_id[0],cls_id[1])
+    def extract_path_features(
+        self,
+        image,
+        cls_id=None,
+        inference=False,
+        return_cls_features=False,
+    ):
+        """Return DDP pooled path features and exact pre-adapter path logits."""
+        text_features = self._text_features(cls_id, inference)
+        cls_id_range = range(cls_id[0], cls_id[1])
         B = image.shape[0]
         K = len(cls_id_range)
         D = 768
-        l_vp = self.l_vp
 
-        # visual prompts
         all_cls_ids = list(cls_id_range) + [i + self.n_cls for i in cls_id_range]
         visual_prompts_all = self.visual_prompts[all_cls_ids]
-
         visual_prompts_all = visual_prompts_all.unsqueeze(0).expand(B, -1, -1, -1)
-        visual_prompts_all = visual_prompts_all.reshape(2 * K * B, l_vp, D)
-        image_expand = image.unsqueeze(1).expand(-1, 2 * K, -1, -1, -1).reshape(2 * K * B, *image.shape[1:])
+        visual_prompts_all = visual_prompts_all.reshape(
+            2 * K * B, self.l_vp, D
+        )
+        image_expand = image.unsqueeze(1).expand(
+            -1, 2 * K, -1, -1, -1
+        ).reshape(2 * K * B, *image.shape[1:])
 
-        # encode
-        image_features_all = self.image_encoder(image_expand.type(self.dtype), visual_prompts_all)
-        image_features_all = image_features_all.permute(0, 2, 1)
-        image_features_all = image_features_all / image_features_all.norm(dim=1, keepdim=True)
+        token_features = self.image_encoder(
+            image_expand.type(self.dtype), visual_prompts_all
+        )
+        token_features = token_features.permute(0, 2, 1)
+        token_features = token_features / token_features.norm(
+            dim=1, keepdim=True
+        )
+        feature_dim = token_features.shape[1]
+        token_count = token_features.shape[2]
+        token_features = token_features.view(
+            B, 2 * K, feature_dim, token_count
+        )
 
-        D_actual = image_features_all.shape[1]
-        N_actual = image_features_all.shape[2]
-        image_features_all = image_features_all.view(B, 2 * K, D_actual, N_actual)
+        token_logits = 20 * torch.einsum(
+            'bkdn,kd->bkn', token_features, text_features
+        )
+        negative_weights = F.softmax(token_logits[:, K:, :], dim=-1)
+        path_weights = torch.cat(
+            [negative_weights, negative_weights], dim=1
+        )
+        pooled_features = torch.einsum(
+            'bkdn,bkn->bkd', token_features, path_weights
+        )
+        base_path_logits = 5 * (token_logits * path_weights).sum(-1)
+        if return_cls_features:
+            cls_features = token_features[:, :, :, 0]
+            return (
+                pooled_features,
+                base_path_logits,
+                text_features,
+                cls_features,
+            )
+        return pooled_features, base_path_logits, text_features
 
-        output_all = 20 * torch.einsum('bkdn,kd->bkn', image_features_all, text_features)
+    def logits_from_path_features(
+        self,
+        pooled_features,
+        base_path_logits,
+        text_features,
+        return_adapter_aux=False,
+    ):
+        path_logits = base_path_logits
+        adapter_aux = None
+        if self.feature_adapter is not None:
+            adapted, original = self.feature_adapter(pooled_features)
+            correction = 100 * torch.einsum(
+                'bkd,kd->bk', adapted - original, text_features.float()
+            )
+            path_logits = path_logits.float() + correction
+            adapter_aux = {"adapted": adapted, "original": original}
 
-        output_pos = output_all[:, :K, :]
-        output_neg = output_all[:, K:, :]
-
-        output_list = torch.cat([output_pos, output_neg], dim=1)
-
-        b, c, _ = output_list.shape
-        output_half = output_list[:,  c // 2:]
-        w_half = F.softmax(output_half, dim=-1) 
-        w = torch.cat([w_half, w_half], dim=1)
-        output_list = 5 * (output_list * w).sum(-1)
-        b, c = output_list.shape
-        logits = output_list.reshape(b, 2, c // 2)
-
+        batch, path_count = path_logits.shape
+        logits = path_logits.reshape(batch, 2, path_count // 2)
+        if return_adapter_aux:
+            return logits, adapter_aux
         return logits
+
+    def forward(
+        self,
+        image,
+        cls_id=None,
+        inference=False,
+        return_adapter_aux=False,
+    ):
+        pooled, base_logits, text_features = self.extract_path_features(
+            image, cls_id=cls_id, inference=inference
+        )
+        return self.logits_from_path_features(
+            pooled,
+            base_logits,
+            text_features,
+            return_adapter_aux=return_adapter_aux,
+        )
 
     @property
     def network_name(self):
