@@ -10,6 +10,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Subset, TensorDataset
 
 from build_cfg import setup_cfg
+from ddp_internal_adapter import CORRECTION_MODES
 from eval_emotic_prototype_fusion import score_metrics, select_threshold
 from eval_emotic_threshold_sweep import (
     checkpoint_model_args,
@@ -48,6 +49,15 @@ def parse_args():
         help="Apply the transferred Adapter to pooled path features or CLS tokens",
     )
     parser.add_argument(
+        "--correction_mode",
+        choices=CORRECTION_MODES,
+        default=None,
+        help=(
+            "Override the Adapter checkpoint correction mode. If omitted, "
+            "use checkpoint metadata and fall back to linear_residual."
+        ),
+    )
+    parser.add_argument(
         "--baseline_scores_dir",
         default="./output/emotic_b5c3_ddp_semantic_tau2_test_threshold050",
     )
@@ -84,18 +94,28 @@ def build_model(first_checkpoint, args, device):
     return model
 
 
-def load_task_model(model, ddp_checkpoint, adapter_checkpoint, seen_classes):
+def load_task_model(
+    model,
+    ddp_checkpoint,
+    adapter_checkpoint,
+    seen_classes,
+    correction_mode=None,
+):
     model.feature_adapter = None
     model.load_state_dict(ddp_checkpoint["model"], strict=True)
     model.text_feature_cache.clear()
     rebuild_text_feature_cache(model, seen_classes)
     adapter_args = adapter_checkpoint["args"]
+    checkpoint_mode = adapter_args.get("correction_mode", "linear_residual")
+    resolved_mode = correction_mode or checkpoint_mode
     model.enable_feature_adapter(
         bottleneck_dim=int(adapter_args["adapter_dim"]),
         residual_scale=float(adapter_args["residual_scale"]),
+        correction_mode=resolved_mode,
     )
     model.feature_adapter.load_state_dict(adapter_checkpoint["model"], strict=True)
     model.eval()
+    return resolved_mode
 
 
 def task_feature_cache(
@@ -284,9 +304,20 @@ def main():
         str(output_dir), args.name, classnames, class_mask(), test_dataset.targets
     )
     rows = []
+    resolved_correction_mode = None
     for task_id, seen_classes in enumerate(TASK_SEEN_CLASSES):
         ddp_checkpoint = torch.load(checkpoint_paths[task_id], map_location="cpu")
-        load_task_model(model, ddp_checkpoint, adapter_checkpoint, seen_classes)
+        task_correction_mode = load_task_model(
+            model,
+            ddp_checkpoint,
+            adapter_checkpoint,
+            seen_classes,
+            correction_mode=args.correction_mode,
+        )
+        if resolved_correction_mode is None:
+            resolved_correction_mode = task_correction_mode
+        elif resolved_correction_mode != task_correction_mode:
+            raise RuntimeError("Correction mode changed across tasks")
         val_cache = task_feature_cache(
             model,
             val_dataset,
@@ -313,6 +344,12 @@ def main():
         test_scores, _ = predict_from_cache(model, test_cache, seen_classes, args)
         threshold, threshold_rows = select_threshold(
             val_cache["targets"][:, :seen_classes], val_scores, args
+        )
+        val_metrics = score_metrics(
+            val_cache["targets"][:, :seen_classes],
+            val_scores,
+            threshold["threshold"],
+            classnames[:seen_classes],
         )
         test_metrics = score_metrics(
             test_cache["targets"][:, :seen_classes],
@@ -342,6 +379,7 @@ def main():
             "selection_split": "val",
             "selected_threshold": threshold,
             "threshold_sweep": threshold_rows,
+            "val": val_metrics,
             "test": test_metrics,
             "baseline_ddp_test_mAP": ddp_map,
             "test_mAP_gain": test_metrics["mAP"] - ddp_map,
@@ -355,6 +393,7 @@ def main():
                 "temperature": temperature,
                 "threshold": threshold["threshold"],
                 "adapter_checkpoint": args.adapter_checkpoint,
+                "correction_mode": task_correction_mode,
             },
             output_dir / f"task{task_id}_scores.pt",
         )
@@ -372,15 +411,25 @@ def main():
             "name": "EMOTIC B5-C3 frozen DDP internal shared Adapter",
             "adapter_training_task": 0,
             "adapter_frozen_after_task0": True,
-            "validation_role": "threshold selection only",
+            "validation_role": (
+                "global residual-scale selection recorded by the Adapter "
+                "checkpoint, plus per-task decision-threshold selection"
+            ),
             "test_used_for_selection": False,
             "external_prototype_fusion": False,
+            "task_specific_alpha": False,
+            "class_specific_gate": False,
             "feature_source": args.feature_source,
+            "correction_mode": resolved_correction_mode,
         },
         "inputs": {
             "checkpoint_dir": args.checkpoint_dir,
             "adapter_checkpoint": args.adapter_checkpoint,
             "adapter_epoch": adapter_checkpoint.get("epoch"),
+            "checkpoint_correction_mode": adapter_checkpoint["args"].get(
+                "correction_mode", "linear_residual"
+            ),
+            "transfer_selection": adapter_checkpoint.get("transfer"),
         },
         "tasks": rows,
         "aggregate": {

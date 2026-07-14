@@ -241,6 +241,31 @@ are written under `output/emotic_ddp_cls_internal_feature_cache/` and
 `output/emotic_ddp_cls_internal_transfer_screen/`; accepted three-seed results
 are summarized under `output/emotic_ddp_cls_internal_transfer_16shot_summary/`.
 
+The cosine-difference readout is an isolated follow-up on the same frozen
+three Base5 16-shot Adapter weights. Instead of the historical linear residual
+projection, it adds the change between normalized adapted and original CLS
+similarities to the untouched DDP path logits:
+
+```
+delta_logit = 100 * (cos(text, adapted_cls) - cos(text, original_cls))
+```
+
+Run the pre-registered validation screen and conditional three-seed test in one
+tmux session with:
+
+```
+bash scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_cls_cosine_difference_tmux.sh
+```
+
+Only one global residual scale is selected on pure task0 validation. No
+task-specific alpha, per-class gate, external score fusion, or test-based
+selection is used. The test stage runs only if every seed improves and the
+mean validation gain exceeds 0.1 mAP. Screen artifacts are written to
+`output/emotic_ddp_cls_cosine_difference_screen/`; accepted per-seed results
+and aggregate JSON/CSV/HTML are written to
+`output/emotic_ddp_cls_cosine_difference_seed*/` and
+`output/emotic_ddp_cls_cosine_difference_summary/`.
+
 After the ungated CLS transfer is established, task-wise residual strength and
 per-class binary residual gates can be selected without retraining:
 

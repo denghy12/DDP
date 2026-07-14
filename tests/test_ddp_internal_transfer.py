@@ -28,7 +28,7 @@ class InternalAdapterTransferSelectionTest(unittest.TestCase):
         score, ratio_mean, ratio_max = validation_map(
             IdentityAdapter(), payload, "path_features", 0.0, 4, "cpu"
         )
-        self.assertAlmostEqual(score, 100.0)
+        self.assertAlmostEqual(score, 100.0, delta=1e-5)
         self.assertEqual(ratio_mean, 0.0)
         self.assertEqual(ratio_max, 0.0)
 

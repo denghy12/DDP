@@ -18,6 +18,7 @@ def parse_args():
         "--output_dir",
         default="./output/emotic_ddp_internal_adapter_16shot_summary",
     )
+    parser.add_argument("--title", default="16-shot Internal Adapter")
     return parser.parse_args()
 
 
@@ -57,7 +58,11 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     with open(output_dir / "summary.json", "w", encoding="utf-8") as fp:
-        json.dump({"runs": rows, "aggregate": summary}, fp, indent=2)
+        json.dump(
+            {"title": args.title, "runs": rows, "aggregate": summary},
+            fp,
+            indent=2,
+        )
     with open(output_dir / "summary.csv", "w", newline="", encoding="utf-8") as fp:
         writer = csv.DictWriter(fp, fieldnames=list(rows[0]))
         writer.writeheader()
@@ -76,7 +81,7 @@ def main():
         "<!doctype html><meta charset='utf-8'><title>Internal Adapter</title>"
         "<style>body{font-family:Arial;margin:24px}table{border-collapse:collapse;"
         "margin-bottom:24px}th,td{border:1px solid #ddd;padding:6px;"
-        "text-align:right}</style><h1>16-shot Internal Adapter</h1>"
+        f"text-align:right}}</style><h1>{escape(args.title)}</h1>"
         f"<table><tr>{headers}</tr>{body}</table>"
         "<h2>Mean ± std</h2><table><tr><th>metric</th><th>mean</th>"
         f"<th>std</th></tr>{aggregate_rows}</table>",

@@ -3,6 +3,64 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+CORRECTION_MODES = ("linear_residual", "cosine_difference")
+
+
+def feature_logit_correction(
+    adapted,
+    original,
+    text_features,
+    mode="linear_residual",
+    logit_scale=100.0,
+):
+    """Convert an Adapter feature change into per-path DDP logit corrections.
+
+    ``linear_residual`` exactly preserves the historical implementation:
+    scale * text^T(adapted - original).
+
+    ``cosine_difference`` measures the change in normalized CLIP similarity:
+    scale * [cos(text, adapted) - cos(text, original)].
+    """
+    if mode not in CORRECTION_MODES:
+        raise ValueError(
+            f"Unknown correction mode '{mode}'; expected one of "
+            f"{CORRECTION_MODES}"
+        )
+    if adapted.shape != original.shape:
+        raise ValueError(
+            "adapted and original features must have identical shapes; "
+            f"got {tuple(adapted.shape)} and {tuple(original.shape)}"
+        )
+    if adapted.ndim != 3 or text_features.ndim != 2:
+        raise ValueError(
+            "Expected adapted/original [batch, paths, dim] and text "
+            f"[paths, dim], got {tuple(adapted.shape)} and "
+            f"{tuple(text_features.shape)}"
+        )
+    if adapted.shape[1:] != text_features.shape:
+        raise ValueError(
+            "Feature paths/dimension must match text features; got "
+            f"{tuple(adapted.shape[1:])} and {tuple(text_features.shape)}"
+        )
+    if logit_scale <= 0:
+        raise ValueError("logit_scale must be positive")
+
+    text = text_features.float()
+    if mode == "linear_residual":
+        return float(logit_scale) * torch.einsum(
+            "bkd,kd->bk", adapted.float() - original.float(), text
+        )
+
+    text = F.normalize(text, dim=-1)
+    adapted_similarity = torch.einsum(
+        "bkd,kd->bk", F.normalize(adapted.float(), dim=-1), text
+    )
+    original_similarity = torch.einsum(
+        "bkd,kd->bk", F.normalize(original.float(), dim=-1), text
+    )
+    return float(logit_scale) * (adapted_similarity - original_similarity)
+
+
 class SharedResidualFeatureAdapter(nn.Module):
     """One residual mapping shared by every DDP class and +/- path."""
 

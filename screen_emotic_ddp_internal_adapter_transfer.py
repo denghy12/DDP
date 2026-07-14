@@ -8,7 +8,11 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from ddp_internal_adapter import SharedResidualFeatureAdapter
+from ddp_internal_adapter import (
+    CORRECTION_MODES,
+    SharedResidualFeatureAdapter,
+    feature_logit_correction,
+)
 from evaluation_metrics import mAP
 
 
@@ -38,6 +42,11 @@ def parse_args():
         "--feature_key",
         choices=("pooled_features", "path_features", "cls_features"),
         default="pooled_features",
+    )
+    parser.add_argument(
+        "--correction_mode",
+        choices=CORRECTION_MODES,
+        default="linear_residual",
     )
     parser.add_argument("--seeds", nargs="+", type=int, default=(0, 1, 2))
     parser.add_argument(
@@ -71,7 +80,15 @@ def load_external(path, device):
     return checkpoint, adapter
 
 
-def validation_map(adapter, payload, feature_key, scale, batch_size, device):
+def validation_map(
+    adapter,
+    payload,
+    feature_key,
+    scale,
+    batch_size,
+    device,
+    correction_mode="linear_residual",
+):
     if feature_key not in payload:
         raise KeyError(f"Feature cache does not contain '{feature_key}'")
     adapter.residual_scale = float(scale)
@@ -90,8 +107,12 @@ def validation_map(adapter, payload, feature_key, scale, batch_size, device):
             pooled = pooled.to(device).float()
             base_logits = base_logits.to(device).float()
             adapted, original = adapter(pooled)
-            correction = 100 * torch.einsum(
-                "bkd,kd->bk", adapted - original, text_features
+            correction = feature_logit_correction(
+                adapted,
+                original,
+                text_features,
+                mode=correction_mode,
+                logit_scale=100.0,
             )
             logits = (base_logits + correction).reshape(
                 pooled.shape[0], 2, pooled.shape[1] // 2
@@ -115,13 +136,23 @@ def validation_map(adapter, payload, feature_key, scale, batch_size, device):
     return float(score), float(ratios.mean()), float(ratios.max())
 
 
-def write_html(path, rows):
+def write_html(path, rows, correction_mode="linear_residual"):
     headers = "".join(f"<th>{escape(key)}</th>" for key in rows[0])
     body = "".join(
         "<tr>"
         + "".join(f"<td>{escape(str(row[key]))}</td>" for key in row)
         + "</tr>"
         for row in rows
+    )
+    path.write_text(
+        "<!doctype html><meta charset='utf-8'><title>Adapter Transfer</title>"
+        "<style>body{font-family:Arial;margin:24px}table{border-collapse:collapse}"
+        "th,td{border:1px solid #ddd;padding:6px;text-align:right}</style>"
+        "<h1>Prototype-to-DDP Validation Screen</h1>"
+        f"<p>Correction mode: {escape(correction_mode)}</p>"
+        f"<table><tr>{headers}</tr>"
+        f"{body}</table>",
+        encoding="utf-8",
     )
 
 
@@ -144,14 +175,6 @@ def select_stable_scale(aggregate, minimum_val_gain):
         )
     identity = next(row for row in aggregate if row["residual_scale"] == 0.0)
     return identity, unconstrained_best, False
-    path.write_text(
-        "<!doctype html><meta charset='utf-8'><title>Adapter Transfer</title>"
-        "<style>body{font-family:Arial;margin:24px}table{border-collapse:collapse}"
-        "th,td{border:1px solid #ddd;padding:6px;text-align:right}</style>"
-        f"<h1>Prototype-to-DDP Validation Screen</h1><table><tr>{headers}</tr>"
-        f"{body}</table>",
-        encoding="utf-8",
-    )
 
 
 def main():
@@ -177,6 +200,7 @@ def main():
                 scale,
                 args.batch_size,
                 device,
+                correction_mode=args.correction_mode,
             )
             if scale == 0.0:
                 identity_map = score
@@ -225,12 +249,14 @@ def main():
                 "args": {
                     "adapter_dim": adapter.bottleneck_dim,
                     "residual_scale": selected_scale,
+                    "correction_mode": args.correction_mode,
                 },
                 "transfer": {
                     "source": args.external_pattern.format(seed=seed),
                     "selection_split": "val",
                     "selected_scale": selected_scale,
                     "passes_val_gate": passes,
+                    "correction_mode": args.correction_mode,
                 },
             },
             output_dir / f"transferred_adapter_seed{seed}.pth",
@@ -239,6 +265,7 @@ def main():
     summary = {
         "selection_split": "val",
         "test_used": False,
+        "correction_mode": args.correction_mode,
         "minimum_val_gain": args.minimum_val_gain,
         "identity_val_mAP": float(identity),
         "best": best,
@@ -256,7 +283,11 @@ def main():
         writer = csv.DictWriter(fp, fieldnames=list(aggregate[0]))
         writer.writeheader()
         writer.writerows(aggregate)
-    write_html(output_dir / "transfer_screen_summary.html", aggregate)
+    write_html(
+        output_dir / "transfer_screen_summary.html",
+        aggregate,
+        correction_mode=args.correction_mode,
+    )
     print(json.dumps(summary, indent=2, ensure_ascii=False))
 
 

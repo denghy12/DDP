@@ -98,6 +98,7 @@ adapter inside DDP feature/logit flow.
 
 - `tests/test_ddp_internal_adapter.py`
 - `tests/test_ddp_internal_transfer.py`
+- `tests/test_ddp_cosine_difference.py`
 - `tests/test_ddp_cls_internal_gate.py`
 - `tests/test_ddp_cls_external_hybrid.py`
 

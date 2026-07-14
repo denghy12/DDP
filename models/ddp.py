@@ -228,9 +228,24 @@ class DDP(nn.Module):
         self.visual_prompts = nn.Parameter(nn.init.normal_(torch.empty(self.n_cls*2, self.l_vp, self.width, dtype=self.dtype), std=0.02) )
         self.text_feature_cache = {}
         self.feature_adapter = None
+        self.feature_adapter_correction = "linear_residual"
 
-    def enable_feature_adapter(self, bottleneck_dim=128, residual_scale=0.1):
-        from ddp_internal_adapter import SharedResidualFeatureAdapter
+    def enable_feature_adapter(
+        self,
+        bottleneck_dim=128,
+        residual_scale=0.1,
+        correction_mode="linear_residual",
+    ):
+        from ddp_internal_adapter import (
+            CORRECTION_MODES,
+            SharedResidualFeatureAdapter,
+        )
+
+        if correction_mode not in CORRECTION_MODES:
+            raise ValueError(
+                f"Unknown correction mode '{correction_mode}'; expected one "
+                f"of {CORRECTION_MODES}"
+            )
 
         feature_dim = int(self.text_encoder.text_projection.shape[1])
         self.feature_adapter = SharedResidualFeatureAdapter(
@@ -238,6 +253,7 @@ class DDP(nn.Module):
             bottleneck_dim=bottleneck_dim,
             residual_scale=residual_scale,
         ).to(self.visual_prompts.device)
+        self.feature_adapter_correction = correction_mode
         return self.feature_adapter
 
     def _text_features(self, cls_id, inference):
@@ -331,12 +347,26 @@ class DDP(nn.Module):
         path_logits = base_path_logits
         adapter_aux = None
         if self.feature_adapter is not None:
+            from ddp_internal_adapter import feature_logit_correction
+
             adapted, original = self.feature_adapter(pooled_features)
-            correction = 100 * torch.einsum(
-                'bkd,kd->bk', adapted - original, text_features.float()
+            correction_mode = getattr(
+                self, "feature_adapter_correction", "linear_residual"
+            )
+            correction = feature_logit_correction(
+                adapted,
+                original,
+                text_features,
+                mode=correction_mode,
+                logit_scale=100.0,
             )
             path_logits = path_logits.float() + correction
-            adapter_aux = {"adapted": adapted, "original": original}
+            adapter_aux = {
+                "adapted": adapted,
+                "original": original,
+                "correction": correction,
+                "correction_mode": correction_mode,
+            }
 
         batch, path_count = path_logits.shape
         logits = path_logits.reshape(batch, 2, path_count // 2)

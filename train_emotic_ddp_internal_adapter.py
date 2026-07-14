@@ -11,7 +11,11 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Subset, TensorDataset
 
 from build_cfg import setup_cfg
-from ddp_internal_adapter import feature_identity_loss, masked_ddp_bce
+from ddp_internal_adapter import (
+    CORRECTION_MODES,
+    feature_identity_loss,
+    masked_ddp_bce,
+)
 from eval_emotic_threshold_sweep import (
     checkpoint_model_args,
     rebuild_text_feature_cache,
@@ -52,6 +56,12 @@ def parse_args():
     parser.add_argument("--weight_decay", type=float, default=1e-4)
     parser.add_argument("--adapter_dim", type=int, default=128)
     parser.add_argument("--residual_scale", type=float, default=0.1)
+    parser.add_argument(
+        "--correction_mode",
+        choices=CORRECTION_MODES,
+        default="linear_residual",
+        help="Feature-to-logit correction used while training the Adapter",
+    )
     parser.add_argument("--identity_weight", type=float, default=0.1)
     parser.add_argument(
         "--loss_balance",
@@ -308,7 +318,11 @@ def main():
         args,
         cache_dir / "task0_val_path_features.pt",
     )
-    model.enable_feature_adapter(args.adapter_dim, args.residual_scale)
+    model.enable_feature_adapter(
+        args.adapter_dim,
+        args.residual_scale,
+        correction_mode=args.correction_mode,
+    )
     adapter = model.feature_adapter
     optimizer = torch.optim.AdamW(
         adapter.parameters(), lr=args.lr, weight_decay=args.weight_decay
