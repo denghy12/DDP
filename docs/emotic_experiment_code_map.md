@@ -84,6 +84,7 @@ adapter inside DDP feature/logit flow.
 - `screen_emotic_ddp_internal_adapter_transfer.py`
 - `summarize_emotic_ddp_internal_adapter.py`
 - `summarize_emotic_ddp_internal_adapter_screen.py`
+- `summarize_emotic_ddp_cls_full_base5_comparison.py`
 
 ### CLS internal branch and final diagnostics
 

@@ -32,7 +32,12 @@ def parse_args():
         description="Strict all-task evaluation of a frozen internal DDP Adapter"
     )
     parser.add_argument("--checkpoint_dir", required=True)
-    parser.add_argument("--adapter_checkpoint", required=True)
+    parser.add_argument("--adapter_checkpoint")
+    parser.add_argument(
+        "--ddp_only",
+        action="store_true",
+        help="Evaluate the frozen original DDP logits without an Adapter",
+    )
     parser.add_argument("--data_root", default="./datasets/EMOTIC")
     parser.add_argument(
         "--clip_model_path", default="./pretrained/clip/ViT-B-16.pt"
@@ -100,11 +105,14 @@ def load_task_model(
     adapter_checkpoint,
     seen_classes,
     correction_mode=None,
+    ddp_only=False,
 ):
     model.feature_adapter = None
     model.load_state_dict(ddp_checkpoint["model"], strict=True)
     model.text_feature_cache.clear()
     rebuild_text_feature_cache(model, seen_classes)
+    if ddp_only:
+        return "none"
     adapter_args = adapter_checkpoint["args"]
     checkpoint_mode = adapter_args.get("correction_mode", "linear_residual")
     resolved_mode = correction_mode or checkpoint_mode
@@ -223,11 +231,16 @@ def predict_from_cache(model, payload, seen_classes, args):
     scores = []
     with torch.no_grad():
         for pooled, base_logits in loader:
-            logits = model.logits_from_path_features(
-                pooled.to(args.device).float(),
-                base_logits.to(args.device),
-                text_features,
-            )
+            if args.ddp_only:
+                logits = base_logits.to(args.device).float().reshape(
+                    pooled.shape[0], 2, seen_classes
+                )
+            else:
+                logits = model.logits_from_path_features(
+                    pooled.to(args.device).float(),
+                    base_logits.to(args.device),
+                    text_features,
+                )
             scores.append(
                 torch.softmax(logits / temperature, dim=1)[:, 1, :].cpu()
             )
@@ -269,6 +282,12 @@ def forgetting(rows, classnames):
 
 def main():
     args = parse_args()
+    if args.ddp_only and args.adapter_checkpoint is not None:
+        raise ValueError("--ddp_only cannot be combined with --adapter_checkpoint")
+    if not args.ddp_only and args.adapter_checkpoint is None:
+        raise ValueError("--adapter_checkpoint is required unless --ddp_only is set")
+    if args.ddp_only and args.correction_mode is not None:
+        raise ValueError("--ddp_only cannot be combined with --correction_mode")
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_paths = [
@@ -277,10 +296,14 @@ def main():
     for path in checkpoint_paths:
         if not path.is_file():
             raise FileNotFoundError(path)
-    adapter_checkpoint = torch.load(args.adapter_checkpoint, map_location="cpu")
+    adapter_checkpoint = None
+    if not args.ddp_only:
+        adapter_checkpoint = torch.load(args.adapter_checkpoint, map_location="cpu")
     first_checkpoint = torch.load(checkpoint_paths[0], map_location="cpu")
     classnames = list(first_checkpoint["classnames"])
-    if classnames != list(adapter_checkpoint["classnames"]):
+    if adapter_checkpoint is not None and classnames != list(
+        adapter_checkpoint["classnames"]
+    ):
         raise RuntimeError("Adapter and DDP class orders differ")
     model = build_model(first_checkpoint, args, torch.device(args.device))
 
@@ -313,6 +336,7 @@ def main():
             adapter_checkpoint,
             seen_classes,
             correction_mode=args.correction_mode,
+            ddp_only=args.ddp_only,
         )
         if resolved_correction_mode is None:
             resolved_correction_mode = task_correction_mode
@@ -394,6 +418,7 @@ def main():
                 "threshold": threshold["threshold"],
                 "adapter_checkpoint": args.adapter_checkpoint,
                 "correction_mode": task_correction_mode,
+                "evaluation_mode": "ddp_only" if args.ddp_only else "adapter",
             },
             output_dir / f"task{task_id}_scores.pt",
         )
@@ -408,11 +433,17 @@ def main():
     baseline_maps = [row["baseline_ddp_test_mAP"] for row in rows]
     summary = {
         "protocol": {
-            "name": "EMOTIC B5-C3 frozen DDP internal shared Adapter",
-            "adapter_training_task": 0,
-            "adapter_frozen_after_task0": True,
+            "name": (
+                "EMOTIC B5-C3 frozen original DDP"
+                if args.ddp_only
+                else "EMOTIC B5-C3 frozen DDP internal shared Adapter"
+            ),
+            "adapter_training_task": None if args.ddp_only else 0,
+            "adapter_frozen_after_task0": None if args.ddp_only else True,
             "validation_role": (
-                "global residual-scale selection recorded by the Adapter "
+                "per-task decision-threshold selection only"
+                if args.ddp_only
+                else "global residual-scale selection recorded by the Adapter "
                 "checkpoint, plus per-task decision-threshold selection"
             ),
             "test_used_for_selection": False,
@@ -421,15 +452,26 @@ def main():
             "class_specific_gate": False,
             "feature_source": args.feature_source,
             "correction_mode": resolved_correction_mode,
+            "ddp_only": args.ddp_only,
         },
         "inputs": {
             "checkpoint_dir": args.checkpoint_dir,
             "adapter_checkpoint": args.adapter_checkpoint,
-            "adapter_epoch": adapter_checkpoint.get("epoch"),
-            "checkpoint_correction_mode": adapter_checkpoint["args"].get(
-                "correction_mode", "linear_residual"
+            "adapter_epoch": (
+                None if adapter_checkpoint is None else adapter_checkpoint.get("epoch")
             ),
-            "transfer_selection": adapter_checkpoint.get("transfer"),
+            "checkpoint_correction_mode": (
+                None
+                if adapter_checkpoint is None
+                else adapter_checkpoint["args"].get(
+                    "correction_mode", "linear_residual"
+                )
+            ),
+            "transfer_selection": (
+                None
+                if adapter_checkpoint is None
+                else adapter_checkpoint.get("transfer")
+            ),
         },
         "tasks": rows,
         "aggregate": {

@@ -28,6 +28,15 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        "--external_checkpoints",
+        nargs="+",
+        default=None,
+        help=(
+            "Explicit checkpoint paths in the same order as --seeds. "
+            "When provided, these take precedence over --external_pattern."
+        ),
+    )
+    parser.add_argument(
         "--val_cache",
         default=(
             "./output/emotic_ddp_internal_adapter_16shot_seed0/"
@@ -61,6 +70,18 @@ def parse_args():
         "--device", default="cuda" if torch.cuda.is_available() else "cpu"
     )
     return parser.parse_args()
+
+
+def resolve_external_paths(seeds, external_pattern, external_checkpoints=None):
+    seeds = list(seeds)
+    if external_checkpoints is not None:
+        checkpoints = list(external_checkpoints)
+        if len(checkpoints) != len(seeds):
+            raise ValueError(
+                "--external_checkpoints must contain exactly one path per seed"
+            )
+        return dict(zip(seeds, checkpoints))
+    return {seed: external_pattern.format(seed=seed) for seed in seeds}
 
 
 def load_external(path, device):
@@ -186,8 +207,13 @@ def main():
     checkpoints = {}
     adapters = {}
     rows = []
+    external_paths = resolve_external_paths(
+        args.seeds,
+        args.external_pattern,
+        args.external_checkpoints,
+    )
     for seed in args.seeds:
-        path = args.external_pattern.format(seed=seed)
+        path = external_paths[seed]
         checkpoint, adapter = load_external(path, device)
         checkpoints[seed] = checkpoint
         adapters[seed] = adapter
@@ -252,7 +278,7 @@ def main():
                     "correction_mode": args.correction_mode,
                 },
                 "transfer": {
-                    "source": args.external_pattern.format(seed=seed),
+                    "source": external_paths[seed],
                     "selection_split": "val",
                     "selected_scale": selected_scale,
                     "passes_val_gate": passes,

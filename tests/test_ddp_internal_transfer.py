@@ -1,8 +1,11 @@
 import unittest
+from types import SimpleNamespace
 
 import torch
 
+from eval_emotic_ddp_internal_adapter import predict_from_cache
 from screen_emotic_ddp_internal_adapter_transfer import validation_map
+from screen_emotic_ddp_internal_adapter_transfer import resolve_external_paths
 from screen_emotic_ddp_internal_adapter_transfer import select_stable_scale
 
 
@@ -15,7 +18,55 @@ class IdentityAdapter(torch.nn.Module):
         return features, features
 
 
+class AdapterMustNotRun:
+    def logits_from_path_features(self, *args, **kwargs):
+        raise AssertionError("DDP-only evaluation must not call the Adapter path")
+
+
 class InternalAdapterTransferSelectionTest(unittest.TestCase):
+    def test_ddp_only_prediction_uses_cached_original_logits(self):
+        base_logits = torch.tensor(
+            [
+                [2.0, 0.0, 1.0, -1.0, 0.5, 0.0, 2.0, -1.0, 1.0, -0.5],
+                [0.0, 1.0, -1.0, 2.0, 0.5, 2.0, 0.0, 1.0, -1.0, -0.5],
+            ]
+        )
+        payload = {
+            "path_features": torch.randn(2, 10, 3),
+            "base_path_logits": base_logits,
+            "text_features": torch.randn(10, 3),
+        }
+        args = SimpleNamespace(
+            adapter_batch_size=2,
+            device="cpu",
+            ddp_only=True,
+            t_min=1.0,
+            t_max=2.0,
+            t_gamma=0.7,
+            feature_source="cls",
+        )
+        scores, temperature = predict_from_cache(
+            AdapterMustNotRun(), payload, 5, args
+        )
+        expected = torch.softmax(
+            base_logits.reshape(2, 2, 5) / temperature, dim=1
+        )[:, 1, :]
+        self.assertTrue(torch.equal(scores, expected))
+
+    def test_explicit_external_paths_support_special_seed_zero_name(self):
+        paths = resolve_external_paths(
+            (0, 1, 2),
+            "unused_seed{seed}.pth",
+            ("full_base5.pth", "full_base5_seed1.pth", "full_base5_seed2.pth"),
+        )
+        self.assertEqual(paths[0], "full_base5.pth")
+        self.assertEqual(paths[1], "full_base5_seed1.pth")
+        self.assertEqual(paths[2], "full_base5_seed2.pth")
+
+    def test_explicit_external_path_count_must_match_seeds(self):
+        with self.assertRaisesRegex(ValueError, "one path per seed"):
+            resolve_external_paths((0, 1, 2), "unused", ("a.pth", "b.pth"))
+
     def test_validation_accepts_eval_cache_targets_key(self):
         payload = {
             "path_features": torch.randn(4, 2, 3),

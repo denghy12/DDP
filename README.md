@@ -266,6 +266,23 @@ and aggregate JSON/CSV/HTML are written to
 `output/emotic_ddp_cls_cosine_difference_seed*/` and
 `output/emotic_ddp_cls_cosine_difference_summary/`.
 
+To compare Full Base5 external Adapter transfer under the same internal CLS
+protocol, run:
+
+```
+bash scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_cls_full_base5_comparison_tmux.sh
+```
+
+The three class-balanced Full Base5 checkpoints (seeds 0/1/2) are reused; DDP
+and the external Adapters are not retrained. The pipeline first screens one
+global alpha on task0 validation for Feature difference and Cosine difference.
+Each accepted formula is then frozen and evaluated over all eight tasks. It
+also produces an explicit DDP-only run using the same caches, temperature
+schedule, validation-threshold policy, and forgetting implementation. No
+per-class gate, task-specific alpha, external score fusion, or test-based
+selection is used. The unified JSON/CSV/HTML comparison is written under
+`output/emotic_ddp_cls_full_base5_comparison/`.
+
 After the ungated CLS transfer is established, task-wise residual strength and
 per-class binary residual gates can be selected without retraining:
 
