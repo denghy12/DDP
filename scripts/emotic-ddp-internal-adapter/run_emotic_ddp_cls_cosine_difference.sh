@@ -9,7 +9,11 @@ GPU="${GPU:-0}"
 DDP_CHECKPOINT_DIR="${DDP_CHECKPOINT_DIR:-./output/emotic_b5c3_ddp_semantic_tau2/checkpoints}"
 BASELINE_SCORES_DIR="${BASELINE_SCORES_DIR:-./output/emotic_b5c3_ddp_semantic_tau2_test_threshold050}"
 CACHE_DIR="${CACHE_DIR:-./output/emotic_ddp_cls_internal_feature_cache}"
-EXTERNAL_PATTERN="${EXTERNAL_PATTERN:-./output/emotic_prototype_adapter_base5_16shot_seed{seed}/best_adapter.pth}"
+if [[ -z "${EXTERNAL_PATTERN:-}" ]]; then
+  # Keep the literal placeholder outside a ${VAR:-default} expression: the
+  # closing brace in "{seed}" would otherwise terminate that expression.
+  EXTERNAL_PATTERN='./output/emotic_prototype_adapter_base5_16shot_seed{seed}/best_adapter.pth'
+fi
 SCREEN_DIR="${SCREEN_DIR:-./output/emotic_ddp_cls_cosine_difference_screen}"
 SUMMARY_DIR="${SUMMARY_DIR:-./output/emotic_ddp_cls_cosine_difference_summary}"
 

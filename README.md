@@ -266,6 +266,34 @@ and aggregate JSON/CSV/HTML are written to
 `output/emotic_ddp_cls_cosine_difference_seed*/` and
 `output/emotic_ddp_cls_cosine_difference_summary/`.
 
+The norm-preserving Feature Correction route keeps the same frozen CLS
+Adapter, but interprets its output as an EMOTIC semantic offset applied to the
+original DDP pooled representation:
+
+```
+delta_f = adapted_cls - original_cls
+corrected_pool = norm(pool) * normalize(pool + delta_f)
+delta_logit = 100 * text.T @ (corrected_pool - pool)
+final_logit = cached_ddp_logit + delta_logit
+```
+
+The last two lines are the numerically baseline-anchored implementation of
+applying the original DDP dot-product head to `corrected_pool`. The Adapter
+weights and DDP checkpoints remain frozen. Run Full Base5 (default) or 16-shot
+transfer with:
+
+```
+GPU=0 ADAPTER_SOURCE=full_base5 bash \
+  scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_cls_feature_correction_tmux.sh
+
+GPU=0 ADAPTER_SOURCE=16shot SESSION=ddp_cls_feature_correction_16shot bash \
+  scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_cls_feature_correction_tmux.sh
+```
+
+This experiment uses a paired cache containing both class-specific CLS and DDP
+pooled features. JSON/CSV/HTML artifacts use the
+`emotic_ddp_cls_*feature_correction*` output names.
+
 To compare Full Base5 external Adapter transfer under the same internal CLS
 protocol, run:
 
@@ -275,7 +303,8 @@ bash scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_cls_full_base5_compar
 
 The three class-balanced Full Base5 checkpoints (seeds 0/1/2) are reused; DDP
 and the external Adapters are not retrained. The pipeline first screens one
-global alpha on task0 validation for Feature difference and Cosine difference.
+global alpha on task0 validation for Feature difference, Cosine difference,
+and norm-preserving Feature Correction.
 Each accepted formula is then frozen and evaluated over all eight tasks. It
 also produces an explicit DDP-only run using the same caches, temperature
 schedule, validation-threshold policy, and forgetting implementation. No
@@ -323,3 +352,38 @@ Final artifacts are written to:
 The latency benchmark uses batch size one, GPU forward only, ten warmups and
 fifty timed iterations. Preprocessing and host-to-device transfer are excluded;
 each method runs in a fresh process so peak allocated CUDA memory is comparable.
+
+### DDP-owned prompt-free auxiliary Adapter
+
+The external vanilla-CLIP training route can now be reproduced inside one DDP
+model. During Adapter training, the frozen DDP image encoder is called with
+`visual_prompts=None` and its global CLS is supervised by fixed positive and
+negative text prototypes encoded by DDP's own frozen text tower. Only the
+shared Adapter `W1/W2` is kept. At inference, the prompt-free auxiliary head is
+discarded; the same `W1/W2` is applied to class-specific prompted CLS features
+and its semantic offset corrects the original DDP pooled features.
+
+Run the equivalence audit, three Full-Base5 seeds, pure-validation global-scale
+selection, and strict eight-task evaluation in one tmux session:
+
+```bash
+GPU=0 bash \
+  scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_prompt_free_auxiliary_tmux.sh
+```
+
+This pipeline does not read `output/emotic_prototype_adapter_*` checkpoints.
+Training/evaluation JSON and HTML locations are documented in
+`docs/ddp_prompt_free_auxiliary_branch.md`.
+
+To run the complete DDP-owned Auxiliary `16-shot / Full Base5` × `Feature
+difference / Cosine difference / Feature Correction` matrix on two GPUs, use:
+
+```bash
+GPU0=0 GPU1=1 bash \
+  scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_prompt_free_auxiliary_matrix_tmux.sh
+```
+
+The launcher skips the already completed Full Base5 Feature Correction run,
+trains only missing 16-shot seeds, and assigns the remaining formula runs to
+GPU0/GPU1. A unified comparison against the legacy external Adapter results is
+written under `output/emotic_ddp_prompt_free_auxiliary_matrix_comparison/`.

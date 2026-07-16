@@ -79,8 +79,10 @@ adapter inside DDP feature/logit flow.
 
 - `ddp_internal_adapter.py`
 - `train_emotic_ddp_internal_adapter.py`
+- `train_emotic_ddp_prompt_free_auxiliary.py`
 - `eval_emotic_ddp_internal_adapter.py`
 - `smoke_emotic_ddp_internal_adapter.py`
+- `smoke_emotic_ddp_prompt_free_equivalence.py`
 - `screen_emotic_ddp_internal_adapter_transfer.py`
 - `summarize_emotic_ddp_internal_adapter.py`
 - `summarize_emotic_ddp_internal_adapter_screen.py`
@@ -98,6 +100,7 @@ adapter inside DDP feature/logit flow.
 ### Tests
 
 - `tests/test_ddp_internal_adapter.py`
+- `tests/test_ddp_prompt_free_auxiliary.py`
 - `tests/test_ddp_internal_transfer.py`
 - `tests/test_ddp_cosine_difference.py`
 - `tests/test_ddp_cls_internal_gate.py`

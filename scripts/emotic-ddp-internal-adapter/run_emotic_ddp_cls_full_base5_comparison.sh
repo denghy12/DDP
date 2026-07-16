@@ -29,7 +29,7 @@ for path in "${FULL_CHECKPOINTS[@]}"; do
   [[ -s "${path}" ]] || { echo "Missing Full Base5 Adapter ${path}" >&2; exit 1; }
 done
 
-# The two Adapter formulas are screened on task0 validation before any new
+# The three Adapter formulas are screened on task0 validation before any new
 # Adapter test evaluation. This cache is shared and does not contain test data.
 CUDA_VISIBLE_DEVICES="${GPU}" python cache_emotic_ddp_cls_features.py \
   --checkpoint_dir "${DDP_CHECKPOINT_DIR}" \
@@ -60,6 +60,7 @@ screen_method() {
 
 screen_method linear_residual feature_difference
 screen_method cosine_difference cosine_difference
+screen_method feature_correction feature_correction
 
 passes_screen() {
   local slug="$1"
@@ -74,8 +75,10 @@ PY
 
 FEATURE_PASSES="$(passes_screen feature_difference)"
 COSINE_PASSES="$(passes_screen cosine_difference)"
+CORRECTION_PASSES="$(passes_screen feature_correction)"
 echo "Feature difference passes validation gate: ${FEATURE_PASSES}"
 echo "Cosine difference passes validation gate: ${COSINE_PASSES}"
+echo "Feature correction passes validation gate: ${CORRECTION_PASSES}"
 
 # Produce an explicit original-DDP run with the same caches, temperature
 # schedule, task0-val/per-task-val threshold policy, and forgetting definition.
@@ -186,7 +189,16 @@ else
   echo "Cosine difference failed the pure-validation gate; test was not run."
 fi
 
-if [[ "${FEATURE_PASSES}" == "1" && "${COSINE_PASSES}" == "1" ]]; then
+if [[ "${CORRECTION_PASSES}" == "1" ]]; then
+  evaluate_method \
+    feature_correction \
+    feature_correction \
+    "Full Base5 → Internal CLS-to-Pooled Feature Correction"
+else
+  echo "Feature correction failed the pure-validation gate; test was not run."
+fi
+
+if [[ "${FEATURE_PASSES}" == "1" && "${COSINE_PASSES}" == "1" && "${CORRECTION_PASSES}" == "1" ]]; then
   python summarize_emotic_ddp_cls_full_base5_comparison.py \
     --output_dir "${COMPARISON_DIR}"
   echo "Comparison JSON: ${COMPARISON_DIR}/comparison_summary.json"
@@ -194,4 +206,3 @@ if [[ "${FEATURE_PASSES}" == "1" && "${COSINE_PASSES}" == "1" ]]; then
 else
   echo "Combined comparison was not generated because at least one method failed validation."
 fi
-

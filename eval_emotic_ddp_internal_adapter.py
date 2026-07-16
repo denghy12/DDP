@@ -159,7 +159,15 @@ def task_feature_cache(
             payload = torch.load(path, map_location="cpu")
             if payload.get("metadata") != metadata:
                 raise RuntimeError(f"Feature cache metadata mismatch: {path}")
-            return payload
+            if not (
+                args.feature_source == "cls"
+                and "pooled_features" not in payload
+            ):
+                return payload
+            print(
+                f"Rebuilding legacy CLS cache without pooled_features: {path}",
+                flush=True,
+            )
 
         loader = DataLoader(
             Subset(dataset, source_indices.tolist()),
@@ -169,6 +177,7 @@ def task_feature_cache(
             pin_memory=args.device.startswith("cuda"),
         )
         pooled_batches = []
+        ddp_pooled_batches = []
         base_logit_batches = []
         text_features = None
         with torch.no_grad():
@@ -186,6 +195,7 @@ def task_feature_cache(
                     if args.feature_source == "cls":
                         pooled, base_logits, batch_text, cls_features = extracted
                         selected_features = cls_features
+                        ddp_pooled_batches.append(pooled.half().cpu())
                     else:
                         pooled, base_logits, batch_text = extracted
                         selected_features = pooled
@@ -204,7 +214,10 @@ def task_feature_cache(
             "text_features": text_features,
             "targets": labels[source_indices].float(),
             "metadata": metadata,
+            "cache_schema_version": 2,
         }
+        if args.feature_source == "cls":
+            payload["pooled_features"] = torch.cat(ddp_pooled_batches)
         temporary = Path(str(path) + f".tmp.{os.getpid()}")
         torch.save(payload, temporary)
         os.replace(temporary, path)
@@ -217,10 +230,29 @@ def predict_from_cache(model, payload, seen_classes, args):
         if args.feature_source != "pooled":
             raise RuntimeError("CLS cache does not contain path_features")
         features = payload["pooled_features"]
+    correction_mode = getattr(
+        model, "feature_adapter_correction", "linear_residual"
+    )
+    uses_feature_correction = (
+        not args.ddp_only and correction_mode == "feature_correction"
+    )
+    if uses_feature_correction:
+        ddp_pooled = payload.get("pooled_features")
+        if ddp_pooled is None:
+            raise RuntimeError(
+                "feature_correction requires a CLS cache containing "
+                "pooled_features; rebuild the cache with "
+                "cache_emotic_ddp_cls_features.py"
+            )
+        dataset = TensorDataset(
+            features,
+            ddp_pooled,
+            payload["base_path_logits"],
+        )
+    else:
+        dataset = TensorDataset(features, payload["base_path_logits"])
     loader = DataLoader(
-        TensorDataset(
-            features, payload["base_path_logits"]
-        ),
+        dataset,
         batch_size=args.adapter_batch_size,
         shuffle=False,
     )
@@ -230,7 +262,12 @@ def predict_from_cache(model, payload, seen_classes, args):
     )
     scores = []
     with torch.no_grad():
-        for pooled, base_logits in loader:
+        for batch in loader:
+            if uses_feature_correction:
+                pooled, ddp_pooled, base_logits = batch
+            else:
+                pooled, base_logits = batch
+                ddp_pooled = None
             if args.ddp_only:
                 logits = base_logits.to(args.device).float().reshape(
                     pooled.shape[0], 2, seen_classes
@@ -240,6 +277,11 @@ def predict_from_cache(model, payload, seen_classes, args):
                     pooled.to(args.device).float(),
                     base_logits.to(args.device),
                     text_features,
+                    ddp_pooled_features=(
+                        None
+                        if ddp_pooled is None
+                        else ddp_pooled.to(args.device).float()
+                    ),
                 )
             scores.append(
                 torch.softmax(logits / temperature, dim=1)[:, 1, :].cpu()
@@ -418,6 +460,8 @@ def main():
                 "threshold": threshold["threshold"],
                 "adapter_checkpoint": args.adapter_checkpoint,
                 "correction_mode": task_correction_mode,
+                "norm_preserving": task_correction_mode == "feature_correction",
+                "feature_source": args.feature_source,
                 "evaluation_mode": "ddp_only" if args.ddp_only else "adapter",
             },
             output_dir / f"task{task_id}_scores.pt",
@@ -448,10 +492,34 @@ def main():
             ),
             "test_used_for_selection": False,
             "external_prototype_fusion": False,
+            "adapter_training_source": (
+                None
+                if adapter_checkpoint is None
+                else adapter_checkpoint.get("transfer", {}).get(
+                    "adapter_training_source"
+                )
+            ),
+            "training_only_prompt_free_auxiliary": (
+                False
+                if adapter_checkpoint is None
+                else adapter_checkpoint.get("transfer", {}).get(
+                    "adapter_training_source"
+                )
+                == "ddp_owned_prompt_free_auxiliary_branch"
+            ),
+            "prompt_free_auxiliary_retained_for_inference": False,
             "task_specific_alpha": False,
             "class_specific_gate": False,
             "feature_source": args.feature_source,
             "correction_mode": resolved_correction_mode,
+            "norm_preserving": (
+                resolved_correction_mode == "feature_correction"
+            ),
+            "feature_correction_target": (
+                "ddp_pooled_features"
+                if resolved_correction_mode == "feature_correction"
+                else None
+            ),
             "ddp_only": args.ddp_only,
         },
         "inputs": {

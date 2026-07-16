@@ -98,6 +98,14 @@
   `31.3129±0.2036`；内部 CLS task-alpha + class-gate 为 `31.8938±0.1041`。
 - 内部主方案的 alpha candidates `0/0.001/0.003/0.01/0.03`、task val margin
   `0.1 mAP` 和 class val margin `0.1 AP` 已冻结，禁止根据 test 继续调整。
+- DDP-owned prompt-free auxiliary 已完成 Full Base5/16-shot × Feature
+  difference/Cosine difference/Feature Correction 的三 seed 严格对照。六组实验均只在
+  task0 validation 上选择一个全局 `alpha=0.03`，无逐类 gate、无外部分数融合、
+  test 不参与选择。
+- 当前最强内置结果为 Full Base5 + Feature difference：final mAP
+  `31.4980±0.0723`，相对严格 DDP `30.8191` 提升 `+0.6789`；16-shot 版为
+  `31.2354±0.1934`，提升 `+0.4163`。内置化是对旧外部 Adapter 训练路径的
+  结构重构，不将新旧重新训练权重之间的均值差异宣称为新结构收益。
 - “内部 CLS gate + 外部 16-shot Prototype”仅作为组合上限：恢复第二个 vanilla CLIP
   图像编码分支，global beta、二值类别门控和 threshold 均只在每任务纯 val 上选择。
 - 正式消融输出为 `output/emotic_adapter_final_ablation/`，batch-one GPU 参数量/耗时/

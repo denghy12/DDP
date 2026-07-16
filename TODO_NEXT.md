@@ -37,15 +37,20 @@
 14. 生成最终消融表和独立进程 GPU 效率表；另运行“内部 CLS gate + 外部 16-shot”
     组合上限。组合的 beta、类别门控和 threshold 只能在纯 val 选择，且必须与不含外部
     编码器的内部主结果分开报告。
-15. 运行 Full Base5 外部 Adapter 到内部 CLS 的严格迁移对照：原始 DDP、Feature
-    difference、Cosine difference。两种 correction 各自在 task0 val 选择一个全局
-    alpha，三 seed 全正且平均增益超过 `+0.1` 后才运行 test；禁止逐类 gate 和 test 调参。
+15. Full Base5/16-shot × Feature difference/Cosine difference/Feature Correction
+    的 DDP-owned auxiliary 三 seed 对照已完成。六组均在 task0 val 选得全局
+    `alpha=0.03`，三 seed 全正后才运行 test；当前最强为 Full Base5 + Feature
+    difference `31.4980±0.0723`。
+16. 为“外部训练”与“DDP 内置训练”补一次严格数值等价审计：两路加载同一份
+    Adapter `W`、同一份 cached DDP features 和同一个 `alpha`，检查 logits 最大误差
+    与 mAP 完全一致。如需对训练轨迹做更强证明，两个训练器必须共用一份
+    序列化初始 Adapter、feature cache 和 DataLoader 顺序。
 
 ## VOC 与工程复现
 
-16. 补充 CODE_DDP semantic tau2 与 `multi-lane-main` official semantic tau2 的逐
+17. 补充 CODE_DDP semantic tau2 与 `multi-lane-main` official semantic tau2 的逐
     task/per-class 对齐分析，并检查 4-token semantic context 是否是 VOC 优势来源。
-17. 如继续复现 VOC B4-C2，显式传入
+18. 如继续复现 VOC B4-C2，显式传入
     `--base_classes 4 --task_size 2 --total_classes 20`。
-18. 所有实验保持独立 checkpoint/output 目录；启动前固定 `PYTHONHASHSEED`，并将 VOC
+19. 所有实验保持独立 checkpoint/output 目录；启动前固定 `PYTHONHASHSEED`，并将 VOC
     的 set 结果排序后构建 dataset，确保同 seed 单变量复验可信。

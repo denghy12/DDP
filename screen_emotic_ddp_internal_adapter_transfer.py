@@ -18,7 +18,10 @@ from evaluation_metrics import mAP
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Validation-only transfer of external Prototype Adapter weights"
+        description=(
+            "Validation-only selection for shared Adapter weights trained by "
+            "the integrated DDP auxiliary branch or a legacy external run"
+        )
     )
     parser.add_argument(
         "--external_pattern",
@@ -32,8 +35,17 @@ def parse_args():
         nargs="+",
         default=None,
         help=(
-            "Explicit checkpoint paths in the same order as --seeds. "
-            "When provided, these take precedence over --external_pattern."
+            "Deprecated alias for --adapter_checkpoints."
+        ),
+    )
+    parser.add_argument(
+        "--adapter_checkpoints",
+        nargs="+",
+        default=None,
+        help=(
+            "Explicit Adapter checkpoint paths in the same order as --seeds. "
+            "These may come from the integrated DDP auxiliary branch or from "
+            "a legacy external Prototype Adapter run."
         ),
     )
     parser.add_argument(
@@ -51,6 +63,14 @@ def parse_args():
         "--feature_key",
         choices=("pooled_features", "path_features", "cls_features"),
         default="pooled_features",
+    )
+    parser.add_argument(
+        "--pooled_feature_key",
+        default="pooled_features",
+        help=(
+            "Cache key for the original DDP pooled representation required "
+            "by feature_correction"
+        ),
     )
     parser.add_argument(
         "--correction_mode",
@@ -72,25 +92,37 @@ def parse_args():
     return parser.parse_args()
 
 
-def resolve_external_paths(seeds, external_pattern, external_checkpoints=None):
+def resolve_adapter_paths(seeds, external_pattern, adapter_checkpoints=None):
     seeds = list(seeds)
-    if external_checkpoints is not None:
-        checkpoints = list(external_checkpoints)
+    if adapter_checkpoints is not None:
+        checkpoints = list(adapter_checkpoints)
         if len(checkpoints) != len(seeds):
             raise ValueError(
-                "--external_checkpoints must contain exactly one path per seed"
+                "Adapter checkpoints must contain exactly one path per seed"
             )
         return dict(zip(seeds, checkpoints))
     return {seed: external_pattern.format(seed=seed) for seed in seeds}
 
 
-def load_external(path, device):
+def resolve_external_paths(seeds, external_pattern, external_checkpoints=None):
+    """Backward-compatible alias used by the legacy transfer tests/scripts."""
+    try:
+        return resolve_adapter_paths(
+            seeds, external_pattern, external_checkpoints
+        )
+    except ValueError as error:
+        raise ValueError(
+            "--external_checkpoints must contain exactly one path per seed"
+        ) from error
+
+
+def load_adapter_checkpoint(path, device):
     checkpoint = torch.load(path, map_location="cpu")
     state = checkpoint["model"]
     down = state["down.weight"]
     up = state["up.weight"]
     if down.shape[1] != up.shape[0] or down.shape[0] != up.shape[1]:
-        raise RuntimeError(f"Incompatible external Adapter shapes in {path}")
+        raise RuntimeError(f"Incompatible shared Adapter shapes in {path}")
     adapter = SharedResidualFeatureAdapter(
         feature_dim=down.shape[1],
         bottleneck_dim=down.shape[0],
@@ -101,6 +133,11 @@ def load_external(path, device):
     return checkpoint, adapter
 
 
+def load_external(path, device):
+    """Backward-compatible alias for legacy callers."""
+    return load_adapter_checkpoint(path, device)
+
+
 def validation_map(
     adapter,
     payload,
@@ -109,14 +146,29 @@ def validation_map(
     batch_size,
     device,
     correction_mode="linear_residual",
+    pooled_feature_key="pooled_features",
 ):
     if feature_key not in payload:
         raise KeyError(f"Feature cache does not contain '{feature_key}'")
     adapter.residual_scale = float(scale)
-    loader = DataLoader(
-        TensorDataset(
+    uses_feature_correction = correction_mode == "feature_correction"
+    if uses_feature_correction:
+        if pooled_feature_key not in payload:
+            raise KeyError(
+                "feature_correction requires cache key "
+                f"'{pooled_feature_key}' containing original DDP pooled features"
+            )
+        dataset = TensorDataset(
+            payload[feature_key],
+            payload[pooled_feature_key],
+            payload["base_path_logits"],
+        )
+    else:
+        dataset = TensorDataset(
             payload[feature_key], payload["base_path_logits"]
-        ),
+        )
+    loader = DataLoader(
+        dataset,
         batch_size=batch_size,
         shuffle=False,
     )
@@ -124,7 +176,13 @@ def validation_map(
     scores = []
     ratios = []
     with torch.no_grad():
-        for pooled, base_logits in loader:
+        for batch in loader:
+            if uses_feature_correction:
+                pooled, ddp_pooled, base_logits = batch
+                ddp_pooled = ddp_pooled.to(device).float()
+            else:
+                pooled, base_logits = batch
+                ddp_pooled = None
             pooled = pooled.to(device).float()
             base_logits = base_logits.to(device).float()
             adapted, original = adapter(pooled)
@@ -134,6 +192,7 @@ def validation_map(
                 text_features,
                 mode=correction_mode,
                 logit_scale=100.0,
+                pooled_features=ddp_pooled,
             )
             logits = (base_logits + correction).reshape(
                 pooled.shape[0], 2, pooled.shape[1] // 2
@@ -169,7 +228,7 @@ def write_html(path, rows, correction_mode="linear_residual"):
         "<!doctype html><meta charset='utf-8'><title>Adapter Transfer</title>"
         "<style>body{font-family:Arial;margin:24px}table{border-collapse:collapse}"
         "th,td{border:1px solid #ddd;padding:6px;text-align:right}</style>"
-        "<h1>Prototype-to-DDP Validation Screen</h1>"
+        "<h1>Shared Adapter Validation Screen</h1>"
         f"<p>Correction mode: {escape(correction_mode)}</p>"
         f"<table><tr>{headers}</tr>"
         f"{body}</table>",
@@ -200,6 +259,14 @@ def select_stable_scale(aggregate, minimum_val_gain):
 
 def main():
     args = parse_args()
+    if (
+        args.adapter_checkpoints is not None
+        and args.external_checkpoints is not None
+    ):
+        raise ValueError(
+            "Use only one of --adapter_checkpoints and "
+            "--external_checkpoints"
+        )
     device = torch.device(args.device)
     payload = torch.load(args.val_cache, map_location="cpu")
     output_dir = Path(args.output_dir)
@@ -207,14 +274,18 @@ def main():
     checkpoints = {}
     adapters = {}
     rows = []
-    external_paths = resolve_external_paths(
+    adapter_paths = resolve_adapter_paths(
         args.seeds,
         args.external_pattern,
-        args.external_checkpoints,
+        (
+            args.adapter_checkpoints
+            if args.adapter_checkpoints is not None
+            else args.external_checkpoints
+        ),
     )
     for seed in args.seeds:
-        path = external_paths[seed]
-        checkpoint, adapter = load_external(path, device)
+        path = adapter_paths[seed]
+        checkpoint, adapter = load_adapter_checkpoint(path, device)
         checkpoints[seed] = checkpoint
         adapters[seed] = adapter
         identity_map = None
@@ -227,6 +298,7 @@ def main():
                 args.batch_size,
                 device,
                 correction_mode=args.correction_mode,
+                pooled_feature_key=args.pooled_feature_key,
             )
             if scale == 0.0:
                 identity_map = score
@@ -266,23 +338,37 @@ def main():
     for seed in args.seeds:
         adapter = adapters[seed]
         adapter.residual_scale = selected_scale
-        external = checkpoints[seed]
+        source_checkpoint = checkpoints[seed]
         torch.save(
             {
                 "model": adapter.state_dict(),
-                "epoch": external.get("epoch"),
-                "classnames": external["classnames"],
+                "epoch": source_checkpoint.get("epoch"),
+                "classnames": source_checkpoint["classnames"],
                 "args": {
                     "adapter_dim": adapter.bottleneck_dim,
                     "residual_scale": selected_scale,
                     "correction_mode": args.correction_mode,
                 },
                 "transfer": {
-                    "source": external_paths[seed],
+                    "source": adapter_paths[seed],
+                    "adapter_training_source": source_checkpoint.get(
+                        "training_source", "legacy_external_prototype_adapter"
+                    ),
+                    "adapter_transfer_target": source_checkpoint.get(
+                        "transfer_target"
+                    ),
                     "selection_split": "val",
                     "selected_scale": selected_scale,
                     "passes_val_gate": passes,
                     "correction_mode": args.correction_mode,
+                    "norm_preserving": (
+                        args.correction_mode == "feature_correction"
+                    ),
+                    "feature_correction_target": (
+                        args.pooled_feature_key
+                        if args.correction_mode == "feature_correction"
+                        else None
+                    ),
                 },
             },
             output_dir / f"transferred_adapter_seed{seed}.pth",
@@ -292,7 +378,18 @@ def main():
         "selection_split": "val",
         "test_used": False,
         "correction_mode": args.correction_mode,
+        "norm_preserving": args.correction_mode == "feature_correction",
+        "feature_correction_target": (
+            args.pooled_feature_key
+            if args.correction_mode == "feature_correction"
+            else None
+        ),
         "minimum_val_gain": args.minimum_val_gain,
+        "checkpoint_source_kind": (
+            "explicit_integrated_or_legacy_adapter"
+            if args.adapter_checkpoints is not None
+            else "legacy_external_adapter"
+        ),
         "identity_val_mAP": float(identity),
         "best": best,
         "unconstrained_best": unconstrained_best,

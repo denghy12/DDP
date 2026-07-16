@@ -49,6 +49,16 @@ class TextEncoder(nn.Module):
         self.ln_final = clip_model.ln_final
         self.text_projection = clip_model.text_projection
         self.dtype = clip_model.dtype
+        # DDP normally receives already-embedded learnable prompts.  The
+        # training-only prompt-free auxiliary branch also needs the original
+        # CLIP token embedding in order to build fixed natural-language
+        # prototypes.  Keep a non-persistent frozen copy so old DDP
+        # checkpoints remain strictly loadable without adding checkpoint keys.
+        self.register_buffer(
+            "token_embedding_weight",
+            clip_model.token_embedding.weight.detach().clone(),
+            persistent=False,
+        )
 
 
     def forward(self, prompts, tokenized_prompts):
@@ -57,8 +67,20 @@ class TextEncoder(nn.Module):
         x = self.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x).type(self.dtype)
-        x = x[torch.arange(x.shape[0]), tokenized_prompts.argmax(dim=-1)] @ self.text_projection
+        row_indices = torch.arange(x.shape[0], device=x.device)
+        eot_indices = tokenized_prompts.argmax(dim=-1).to(x.device)
+        x = x[row_indices, eot_indices] @ self.text_projection
         return x
+
+    def encode_tokenized(self, tokenized_prompts):
+        """Encode fixed text with the same frozen CLIP text tower as DDP."""
+        tokenized_prompts = tokenized_prompts.to(
+            self.token_embedding_weight.device
+        )
+        prompts = F.embedding(
+            tokenized_prompts, self.token_embedding_weight
+        ).type(self.dtype)
+        return self.forward(prompts, tokenized_prompts)
 
 
 class MLCPromptLearner(nn.Module):
@@ -230,6 +252,71 @@ class DDP(nn.Module):
         self.feature_adapter = None
         self.feature_adapter_correction = "linear_residual"
 
+    def encode_prompt_free_image(
+        self,
+        image,
+        normalize=True,
+        return_tokens=False,
+    ):
+        """Training-only global CLIP route before visual-prompt insertion.
+
+        This calls the *same* frozen image encoder owned by DDP with
+        ``visual_prompts=None``.  For ViT-B/16, the returned global feature is
+        therefore the ordinary projected CLIP CLS token.  The method is used
+        only to train the shared Adapter; normal DDP inference does not call it.
+        """
+        token_features = self.image_encoder(image.type(self.dtype), None)
+        if token_features.ndim != 3:
+            raise RuntimeError(
+                "The prompt-free auxiliary route requires a ViT image encoder "
+                "returning [batch, tokens, feature_dim]"
+            )
+        if return_tokens:
+            return token_features
+        global_cls = token_features[:, 0, :].float()
+        if normalize:
+            global_cls = F.normalize(global_cls, dim=-1)
+        return global_cls
+
+    def encode_prompt_free_text(self, tokenized_prompts, normalize=True):
+        """Encode fixed prototype text without DDP's learnable text prompts."""
+        text_features = self.text_encoder.encode_tokenized(tokenized_prompts)
+        text_features = text_features.float()
+        if normalize:
+            text_features = F.normalize(text_features, dim=-1)
+        return text_features
+
+    def extract_three_route_features(
+        self,
+        image,
+        cls_id=None,
+        inference=False,
+    ):
+        """Expose the three representations used by the integrated design.
+
+        ``global_cls`` is the training-only prompt-free auxiliary route.
+        ``ddp_pooled`` is the original DDP token-attention route.
+        ``prompted_cls`` is the internal Adapter transfer route.  This helper
+        is intended for diagnostics; inference should call :meth:`forward`,
+        which omits the prompt-free route and its extra encoder pass.
+        """
+        global_cls = self.encode_prompt_free_image(image)
+        pooled, base_logits, text_features, prompted_cls = (
+            self.extract_path_features(
+                image,
+                cls_id=cls_id,
+                inference=inference,
+                return_cls_features=True,
+            )
+        )
+        return {
+            "global_cls": global_cls,
+            "ddp_pooled": pooled,
+            "prompted_cls": prompted_cls,
+            "base_path_logits": base_logits,
+            "text_features": text_features,
+        }
+
     def enable_feature_adapter(
         self,
         bottleneck_dim=128,
@@ -343,6 +430,7 @@ class DDP(nn.Module):
         base_path_logits,
         text_features,
         return_adapter_aux=False,
+        ddp_pooled_features=None,
     ):
         path_logits = base_path_logits
         adapter_aux = None
@@ -359,6 +447,11 @@ class DDP(nn.Module):
                 text_features,
                 mode=correction_mode,
                 logit_scale=100.0,
+                pooled_features=(
+                    pooled_features
+                    if ddp_pooled_features is None
+                    else ddp_pooled_features
+                ),
             )
             path_logits = path_logits.float() + correction
             adapter_aux = {
@@ -367,6 +460,23 @@ class DDP(nn.Module):
                 "correction": correction,
                 "correction_mode": correction_mode,
             }
+            if correction_mode == "feature_correction":
+                from ddp_internal_adapter import (
+                    norm_preserving_feature_correction,
+                )
+
+                source_pooled = (
+                    pooled_features
+                    if ddp_pooled_features is None
+                    else ddp_pooled_features
+                )
+                adapter_aux["ddp_pooled"] = source_pooled.float()
+                adapter_aux["corrected_pooled"] = (
+                    norm_preserving_feature_correction(
+                        source_pooled,
+                        adapted.float() - original.float(),
+                    )
+                )
 
         batch, path_count = path_logits.shape
         logits = path_logits.reshape(batch, 2, path_count // 2)
@@ -381,14 +491,31 @@ class DDP(nn.Module):
         inference=False,
         return_adapter_aux=False,
     ):
-        pooled, base_logits, text_features = self.extract_path_features(
-            image, cls_id=cls_id, inference=inference
+        use_cls_feature_correction = (
+            self.feature_adapter is not None
+            and getattr(
+                self, "feature_adapter_correction", "linear_residual"
+            )
+            == "feature_correction"
         )
+        extracted = self.extract_path_features(
+            image,
+            cls_id=cls_id,
+            inference=inference,
+            return_cls_features=use_cls_feature_correction,
+        )
+        if use_cls_feature_correction:
+            pooled, base_logits, text_features, cls_features = extracted
+            adapter_features = cls_features
+        else:
+            pooled, base_logits, text_features = extracted
+            adapter_features = pooled
         return self.logits_from_path_features(
-            pooled,
+            adapter_features,
             base_logits,
             text_features,
             return_adapter_aux=return_adapter_aux,
+            ddp_pooled_features=(pooled if use_cls_feature_correction else None),
         )
 
     @property

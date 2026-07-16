@@ -60,7 +60,10 @@ def parse_args():
         "--correction_mode",
         choices=CORRECTION_MODES,
         default="linear_residual",
-        help="Feature-to-logit correction used while training the Adapter",
+        help=(
+            "Adapter output rule used during internal training. "
+            "feature_correction is reserved for paired CLS-to-pooled transfer."
+        ),
     )
     parser.add_argument("--identity_weight", type=float, default=0.1)
     parser.add_argument(
@@ -233,6 +236,13 @@ def write_history_html(path, history):
 
 def main():
     args = parse_args()
+    if args.correction_mode == "feature_correction":
+        raise ValueError(
+            "feature_correction requires paired CLS and DDP pooled features. "
+            "Use screen_emotic_ddp_internal_adapter_transfer.py and "
+            "eval_emotic_ddp_internal_adapter.py for the external-to-internal "
+            "CLS transfer experiment."
+        )
     set_seed(args.seed)
     device = torch.device(args.device)
     output_dir = Path(args.output_dir)

@@ -20,6 +20,12 @@ METHODS = (
         "emotic_ddp_cls_full_base5_cosine_difference_seed",
         "emotic_ddp_cls_full_base5_cosine_difference_screen",
     ),
+    (
+        "feature_correction",
+        "Feature correction",
+        "emotic_ddp_cls_full_base5_feature_correction_seed",
+        "emotic_ddp_cls_full_base5_feature_correction_screen",
+    ),
 )
 
 
@@ -168,7 +174,12 @@ def fmt_metric(metric):
 
 
 def write_html(path, summary):
-    method_order = ("ddp", "feature_difference", "cosine_difference")
+    method_order = (
+        "ddp",
+        "feature_difference",
+        "cosine_difference",
+        "feature_correction",
+    )
     metric_keys = (
         "average_mAP",
         "final_mAP",
@@ -187,7 +198,11 @@ def write_html(path, summary):
             f"<tr><th>{escape(method['display_name'])}</th>{cells}</tr>"
         )
     selection_rows = []
-    for key in ("feature_difference", "cosine_difference"):
+    for key in (
+        "feature_difference",
+        "cosine_difference",
+        "feature_correction",
+    ):
         method = summary["methods"][key]
         selected = method["selection"]
         selection_rows.append(
@@ -208,6 +223,7 @@ def write_html(path, summary):
             f"<td>{task['ddp_mAP']:.4f}</td>"
             f"<td>{escape(fmt_metric(task['feature_difference_mAP']))}</td>"
             f"<td>{escape(fmt_metric(task['cosine_difference_mAP']))}</td>"
+            f"<td>{escape(fmt_metric(task['feature_correction_mAP']))}</td>"
             "</tr>"
         )
     path.write_text(
@@ -233,7 +249,7 @@ def write_html(path, summary):
         + "".join(selection_rows)
         + "</table><h2>Per-task test mAP</h2><table><tr><th>Task</th>"
         "<th>Seen classes</th><th>Original DDP</th><th>Feature difference</th>"
-        "<th>Cosine difference</th></tr>"
+        "<th>Cosine difference</th><th>Feature correction</th></tr>"
         + "".join(task_rows)
         + "</table>",
         encoding="utf-8",
@@ -271,6 +287,8 @@ def main():
                 [task_id]["test_mAP"],
                 "cosine_difference_mAP": methods["cosine_difference"]["tasks"]
                 [task_id]["test_mAP"],
+                "feature_correction_mAP": methods["feature_correction"]["tasks"]
+                [task_id]["test_mAP"],
             }
         )
     summary = {
@@ -293,7 +311,12 @@ def main():
     with open(output_dir / "comparison_summary.json", "w", encoding="utf-8") as fp:
         json.dump(summary, fp, indent=2, ensure_ascii=False)
     csv_rows = []
-    for key in ("ddp", "feature_difference", "cosine_difference"):
+    for key in (
+        "ddp",
+        "feature_difference",
+        "cosine_difference",
+        "feature_correction",
+    ):
         method = methods[key]
         csv_rows.append(
             {
@@ -314,7 +337,12 @@ def main():
         writer.writeheader()
         writer.writerows(csv_rows)
     write_html(output_dir / "comparison_summary.html", summary)
-    for key in ("ddp", "feature_difference", "cosine_difference"):
+    for key in (
+        "ddp",
+        "feature_difference",
+        "cosine_difference",
+        "feature_correction",
+    ):
         method = methods[key]
         print(
             f"{method['display_name']:20s} "

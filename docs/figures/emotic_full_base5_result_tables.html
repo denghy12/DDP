@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>EMOTIC Full Base5 Result Tables</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: white; }
+    body {
+      padding: 28px;
+      color: #111318;
+      font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+    .capture {
+      display: inline-block;
+      background: #fff;
+      padding: 10px 18px 20px;
+      margin-bottom: 70px;
+    }
+    .table-one { width: 1450px; }
+    .table-two { width: 1900px; }
+    .section-title {
+      margin: 0 0 28px 0;
+      font-size: 48px;
+      line-height: 1.15;
+      font-weight: 500;
+    }
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+      font-size: 27px;
+    }
+    th, td {
+      border-right: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      padding: 17px 18px;
+      vertical-align: middle;
+      text-align: center;
+      line-height: 1.24;
+    }
+    th:first-child, td:first-child { border-left: 2px solid #fff; }
+    thead th {
+      background: #4775c5;
+      color: white;
+      font-weight: 700;
+      text-align: left;
+    }
+    tbody tr:nth-child(odd) td { background: #cbd3e7; }
+    tbody tr:nth-child(even) td { background: #e3e6f1; }
+    tbody td:first-child { text-align: left; }
+    .nowrap { white-space: nowrap; }
+    .note {
+      margin: 14px 4px 0;
+      color: #4b5563;
+      font-size: 20px;
+      line-height: 1.35;
+    }
+    .table-two table { font-size: 25px; }
+    .table-two th, .table-two td { padding: 15px 16px; }
+    .table-two thead th { font-size: 26px; }
+    .table-two tbody td:first-child { padding-left: 20px; }
+  </style>
+</head>
+<body>
+  <section id="full-base5-table" class="capture table-one">
+    <h1 class="section-title">Full Base5</h1>
+    <table aria-label="Full Base5 internal CLS correction results">
+      <colgroup>
+        <col style="width:27%" />
+        <col style="width:21%" />
+        <col style="width:20%" />
+        <col style="width:16%" />
+        <col style="width:16%" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th>方法</th>
+          <th>mAP</th>
+          <th>相对 DDP</th>
+          <th>cF1</th>
+          <th>oF1</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>DDP baseline</td>
+          <td>30.8191</td>
+          <td>—</td>
+          <td>32.4708</td>
+          <td>46.6963</td>
+        </tr>
+        <tr>
+          <td>Feature difference</td>
+          <td class="nowrap">31.2078 ± 0.5606</td>
+          <td>+0.3887</td>
+          <td>33.0012</td>
+          <td>48.4481</td>
+        </tr>
+        <tr>
+          <td>Cosine difference</td>
+          <td class="nowrap">31.1321 ± 0.6225</td>
+          <td>+0.3129</td>
+          <td>32.5313</td>
+          <td>46.1027</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="ablation-table" class="capture table-two">
+    <table aria-label="Internal Adapter transfer ablation">
+      <colgroup>
+        <col style="width:22%" />
+        <col style="width:22%" />
+        <col style="width:17%" />
+        <col style="width:15%" />
+        <col style="width:14%" />
+        <col style="width:10%" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th>实验</th>
+          <th>Adapter 权重来源</th>
+          <th>Adapter 输入</th>
+          <th>内部训练数据</th>
+          <th>Final mAP</th>
+          <th>相对 DDP</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>DDP baseline</td>
+          <td>无</td>
+          <td>DDP pooled<br />feature</td>
+          <td>—</td>
+          <td>30.8191</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>内部 pooled 直接训练</td>
+          <td>DDP 内部重新训练</td>
+          <td>DDP pooled<br />feature</td>
+          <td>Base5 16-shot</td>
+          <td class="nowrap">30.8135 ± 0.0030</td>
+          <td>−0.0056</td>
+        </tr>
+        <tr>
+          <td>外部权重迁移到 pooled</td>
+          <td>外部全局 CLIP 16-shot</td>
+          <td>DDP pooled<br />feature</td>
+          <td>—</td>
+          <td class="nowrap">31.0504 ± 0.0490</td>
+          <td>+0.2313</td>
+        </tr>
+        <tr>
+          <td>迁移到 CLS<br />Feature difference</td>
+          <td>外部全局 CLIP 16-shot</td>
+          <td>DDP CLS<br />feature</td>
+          <td>—</td>
+          <td class="nowrap">31.3129 ± 0.2036</td>
+          <td>+0.4938</td>
+        </tr>
+        <tr>
+          <td>迁移到 CLS<br />Cosine difference</td>
+          <td>外部全局 CLIP 16-shot</td>
+          <td>DDP CLS<br />feature</td>
+          <td>—</td>
+          <td class="nowrap">31.2752 ± 0.1498</td>
+          <td>+0.4561</td>
+        </tr>
+        <tr>
+          <td>迁移到 CLS<br />Feature difference</td>
+          <td>外部全局 CLIP Full Base5</td>
+          <td>DDP CLS<br />feature</td>
+          <td>—</td>
+          <td class="nowrap">31.2078 ± 0.5606</td>
+          <td>+0.3887</td>
+        </tr>
+        <tr>
+          <td>迁移到 CLS<br />Cosine difference</td>
+          <td>外部全局 CLIP Full Base5</td>
+          <td>DDP CLS<br />feature</td>
+          <td>—</td>
+          <td class="nowrap">31.1321 ± 0.6225</td>
+          <td>+0.3129</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">注：16-shot 与 Full Base5 指外部 Adapter 的训练数据；迁移到 DDP 内部后不再训练。</p>
+  </section>
+</body>
+</html>

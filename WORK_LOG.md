@@ -1,5 +1,28 @@
 # WORK_LOG
 
+## 2026-07-16
+
+- 将“独立 vanilla CLIP 训练 Prototype Adapter”重构为 DDP 自身冻结 CLIP 内的
+  training-only prompt-free auxiliary route：训练时不加 visual prompt，使用全局 CLS
+  和固定正/负文本 prototype 学习共享 `512 -> 128 -> 512` Adapter；推理时丢弃
+  auxiliary head，只保留 Adapter `W1/W2` 并作用于 DDP prompted CLS。
+- 完成 prompt-free image/text 编码等价性 smoke audit：文本误差为 0，图像特征最大
+  绝对误差约 `5.7e-6`；训练和推理都不保留第二套 CLIP。
+- 完成 Full Base5/16-shot × Feature difference/Cosine difference/Feature Correction
+  六组三 seed 矩阵。全部只在 task0 纯 validation 上选择单一全局
+  `alpha=0.03`，无逐类 gate，test 不参与选择。
+- 严格 DDP baseline final mAP/cF1/oF1/forgetting 为
+  `30.8191/32.4708/46.6963/4.8993`。最强 Full Base5 + Feature difference 为
+  final mAP `31.4980±0.0723`（`+0.6789`），cF1/oF1 `33.0961/48.0274`；
+  16-shot + Feature difference 为 `31.2354±0.1934`（`+0.4163`）。
+- 16-shot 内置与旧外部权重迁移的三种公式仅相差 `0.05–0.10 mAP`，支持方法
+  路径近似等价。Full Base5 新结果的均值优势主要来自旧外部 seed0 负增益
+  异常，因此只将内置化描述为去除外部模型并复现效果的结构重构，不声称额外
+  性能贡献。
+- Final Task 分解显示，Full Feature difference 对 Base5/Novel-21 的平均 AP 变化为
+  `+3.0611/+0.1290`；16-shot 为 `+2.0775/+0.0380`。当前总体收益主要来自
+  Base5 持续增强，不将其解读为对所有未见情绪都一致有效的通用域映射。
+
 ## 2026-07-07
 
 - 严格离线融合已经收敛：Full Base5 三 seed 的纯 test final mAP 为

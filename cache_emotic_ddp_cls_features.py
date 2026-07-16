@@ -79,7 +79,8 @@ def main():
             )
             print(
                 f"Cached task={task_id} split={split} "
-                f"shape={tuple(payload['path_features'].shape)}",
+                f"cls_shape={tuple(payload['path_features'].shape)} "
+                f"pooled_shape={tuple(payload['pooled_features'].shape)}",
                 flush=True,
             )
 
