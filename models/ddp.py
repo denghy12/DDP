@@ -251,6 +251,7 @@ class DDP(nn.Module):
         self.text_feature_cache = {}
         self.feature_adapter = None
         self.feature_adapter_correction = "linear_residual"
+        self.feature_adapter_bank = None
 
     def encode_prompt_free_image(
         self,
@@ -343,6 +344,21 @@ class DDP(nn.Module):
         self.feature_adapter_correction = correction_mode
         return self.feature_adapter
 
+    def enable_task_adapter_bank(self, adapter_bank):
+        """Attach a frozen class-routed Bank to the prompted CLS route."""
+        if self.feature_adapter is not None:
+            raise RuntimeError(
+                "Disable the single feature_adapter before enabling an Adapter Bank"
+            )
+        self.feature_adapter_bank = adapter_bank
+        self.feature_adapter_bank.eval()
+        for parameter in self.feature_adapter_bank.parameters():
+            parameter.requires_grad_(False)
+        return self.feature_adapter_bank
+
+    def disable_task_adapter_bank(self):
+        self.feature_adapter_bank = None
+
     def _text_features(self, cls_id, inference):
         if inference:
             neg_feats = []
@@ -434,10 +450,29 @@ class DDP(nn.Module):
     ):
         path_logits = base_path_logits
         adapter_aux = None
-        if self.feature_adapter is not None:
+        feature_adapter = getattr(self, "feature_adapter", None)
+        feature_adapter_bank = getattr(self, "feature_adapter_bank", None)
+        if feature_adapter is not None and feature_adapter_bank is not None:
+            raise RuntimeError("A single Adapter and Adapter Bank cannot be active together")
+        if feature_adapter_bank is not None:
+            seen_classes = path_logits.shape[1] // 2
+            correction = feature_adapter_bank.feature_difference_correction(
+                pooled_features,
+                text_features,
+                seen_classes=seen_classes,
+                logit_scale=100.0,
+            )
+            path_logits = path_logits.float() + correction
+            adapter_aux = {
+                "correction": correction,
+                "correction_mode": "feature_difference",
+                "feature_source": "prompted_cls",
+                "max_adapter_task": feature_adapter_bank.max_task,
+            }
+        elif feature_adapter is not None:
             from ddp_internal_adapter import feature_logit_correction
 
-            adapted, original = self.feature_adapter(pooled_features)
+            adapted, original = feature_adapter(pooled_features)
             correction_mode = getattr(
                 self, "feature_adapter_correction", "linear_residual"
             )
@@ -491,20 +526,25 @@ class DDP(nn.Module):
         inference=False,
         return_adapter_aux=False,
     ):
+        feature_adapter = getattr(self, "feature_adapter", None)
+        feature_adapter_bank = getattr(self, "feature_adapter_bank", None)
         use_cls_feature_correction = (
-            self.feature_adapter is not None
+            feature_adapter is not None
             and getattr(
                 self, "feature_adapter_correction", "linear_residual"
             )
             == "feature_correction"
         )
+        use_cls_adapter_bank = feature_adapter_bank is not None
         extracted = self.extract_path_features(
             image,
             cls_id=cls_id,
             inference=inference,
-            return_cls_features=use_cls_feature_correction,
+            return_cls_features=(
+                use_cls_feature_correction or use_cls_adapter_bank
+            ),
         )
-        if use_cls_feature_correction:
+        if use_cls_feature_correction or use_cls_adapter_bank:
             pooled, base_logits, text_features, cls_features = extracted
             adapter_features = cls_features
         else:

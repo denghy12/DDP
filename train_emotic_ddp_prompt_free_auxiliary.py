@@ -7,6 +7,7 @@ Adapter weights are retained for prompted-CLS-to-pooled feature correction.
 """
 
 import argparse
+import fcntl
 import json
 import math
 import os
@@ -236,25 +237,30 @@ def load_or_extract_split(model, dataset, split, args, device):
         f"{split}_{args.emotic_input_mode}_{args.input_size}_vitb16.pt"
     )
     expected = cache_metadata(args, dataset.classes, split)
-    if cache_path.is_file() and not args.force_recache:
-        payload = torch.load(cache_path, map_location="cpu")
-        if payload.get("metadata") != expected:
-            raise RuntimeError(
-                f"Feature cache metadata mismatch at {cache_path}; "
-                "use --force_recache"
-            )
-        print(f"Loaded prompt-free feature cache: {cache_path}")
-        return payload["features"].float(), payload["labels"].float()
+    lock_path = Path(str(cache_path) + ".lock")
+    with open(lock_path, "w", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        if cache_path.is_file() and not args.force_recache:
+            payload = torch.load(cache_path, map_location="cpu")
+            if payload.get("metadata") != expected:
+                raise RuntimeError(
+                    f"Feature cache metadata mismatch at {cache_path}; "
+                    "use --force_recache"
+                )
+            print(f"Loaded prompt-free feature cache: {cache_path}")
+            return payload["features"].float(), payload["labels"].float()
 
-    features, labels = extract_prompt_free_features(
-        model, dataset, args, device
-    )
-    torch.save(
-        {"metadata": expected, "features": features, "labels": labels},
-        cache_path,
-    )
-    print(f"Saved prompt-free feature cache: {cache_path}")
-    return features, labels
+        features, labels = extract_prompt_free_features(
+            model, dataset, args, device
+        )
+        temporary = Path(str(cache_path) + f".tmp.{os.getpid()}")
+        torch.save(
+            {"metadata": expected, "features": features, "labels": labels},
+            temporary,
+        )
+        os.replace(temporary, cache_path)
+        print(f"Saved prompt-free feature cache: {cache_path}")
+        return features, labels
 
 
 def selection_map(objective, features, labels, active_indices, args, device):

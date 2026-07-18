@@ -17,6 +17,7 @@ class EMOTIC(torch.utils.data.Dataset):
         eval_splits=("val", "test"),
         input_mode="full",
         included=None,
+        class_names=None,
     ):
         self.root = os.path.expanduser(root)
         self.transform = transform
@@ -39,13 +40,17 @@ class EMOTIC(torch.utils.data.Dataset):
         annotation_mat = sio.loadmat(
             annotation_path, squeeze_me=True, struct_as_record=False
         )
-        category_names = set()
-        for split in ("train", "val", "test"):
-            for item in self._as_list(annotation_mat[split]):
-                for person in self._as_list(item.person):
-                    category_names.update(self._categories_from_person(person))
-
-        self.classes = sorted(category_names)
+        if class_names is None:
+            category_names = set()
+            for split in ("train", "val", "test"):
+                for item in self._as_list(annotation_mat[split]):
+                    for person in self._as_list(item.person):
+                        category_names.update(self._categories_from_person(person))
+            self.classes = sorted(category_names)
+        else:
+            self.classes = list(class_names)
+            if len(self.classes) != len(set(self.classes)):
+                raise ValueError("class_names must not contain duplicates")
         self.CLASSES = self.classes
         self.category_names = {i: name for i, name in enumerate(self.classes)}
         self.class2idx = {name: i for i, name in self.category_names.items()}
@@ -162,4 +167,3 @@ class EMOTIC(torch.utils.data.Dataset):
             else:
                 categories.extend(self._str_list(annotation))
         return categories
-

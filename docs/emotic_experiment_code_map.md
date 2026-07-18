@@ -80,12 +80,18 @@ adapter inside DDP feature/logit flow.
 - `ddp_internal_adapter.py`
 - `train_emotic_ddp_internal_adapter.py`
 - `train_emotic_ddp_prompt_free_auxiliary.py`
+- `train_emotic_ddp_task_adapter.py`
+- `emotic_task_adapter_bank.py`
+- `build_emotic_ddp_task_adapter_bank.py`
 - `eval_emotic_ddp_internal_adapter.py`
+- `eval_emotic_ddp_task_adapter_bank.py`
+- `audit_emotic_task_adapter_data.py`
 - `smoke_emotic_ddp_internal_adapter.py`
 - `smoke_emotic_ddp_prompt_free_equivalence.py`
 - `screen_emotic_ddp_internal_adapter_transfer.py`
 - `summarize_emotic_ddp_internal_adapter.py`
 - `summarize_emotic_ddp_internal_adapter_screen.py`
+- `summarize_emotic_ddp_task_adapter_bank.py`
 - `summarize_emotic_ddp_cls_full_base5_comparison.py`
 
 ### CLS internal branch and final diagnostics

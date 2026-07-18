@@ -45,12 +45,16 @@
     Adapter `W`、同一份 cached DDP features 和同一个 `alpha`，检查 logits 最大误差
     与 mAP 完全一致。如需对训练轨迹做更强证明，两个训练器必须共用一份
     序列化初始 Adapter、feature cache 和 DataLoader 顺序。
+17. Task-routed Adapter Bank 已进入实现阶段：分别训练 Full 和严格 16-shot 的
+    `A0...A7`，类别按首次出现任务路由，统一使用 prompted CLS Feature Difference
+    和固定 `alpha=0.03`。训练仅使用当前任务标签并显式 mask 旧类/未来类，训练脚本
+    不读取 test；最终对比 DDP、Base5-only、16-shot Bank 和 Full Bank。
 
 ## VOC 与工程复现
 
-17. 补充 CODE_DDP semantic tau2 与 `multi-lane-main` official semantic tau2 的逐
+18. 补充 CODE_DDP semantic tau2 与 `multi-lane-main` official semantic tau2 的逐
     task/per-class 对齐分析，并检查 4-token semantic context 是否是 VOC 优势来源。
-18. 如继续复现 VOC B4-C2，显式传入
+19. 如继续复现 VOC B4-C2，显式传入
     `--base_classes 4 --task_size 2 --total_classes 20`。
-19. 所有实验保持独立 checkpoint/output 目录；启动前固定 `PYTHONHASHSEED`，并将 VOC
+20. 所有实验保持独立 checkpoint/output 目录；启动前固定 `PYTHONHASHSEED`，并将 VOC
     的 set 结果排序后构建 dataset，确保同 seed 单变量复验可信。

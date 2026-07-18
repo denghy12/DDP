@@ -387,3 +387,24 @@ The launcher skips the already completed Full Base5 Feature Correction run,
 trains only missing 16-shot seeds, and assigns the remaining formula runs to
 GPU0/GPU1. A unified comparison against the legacy external Adapter results is
 written under `output/emotic_ddp_prompt_free_auxiliary_matrix_comparison/`.
+
+### Task-routed Adapter Bank
+
+The incremental Adapter Bank trains one prompt-free Adapter for every B5-C3
+task and routes each positive/negative prompted CLS path to the Adapter from
+that class's introduction task. Old and future labels are explicitly masked;
+the training scripts never construct or evaluate a test dataset. Inference uses only Feature
+Difference with one pre-registered global `alpha=0.03`—there is no per-task
+scale, per-class gate, or external score fusion.
+
+Run Full-data and exact 16-shot Banks in parallel on GPU0/GPU1 with:
+
+```bash
+GPU0=0 GPU1=1 bash \
+  scripts/emotic-ddp-internal-adapter/launch_emotic_ddp_task_adapter_bank_tmux.sh
+```
+
+The launcher audits cross-task multi-label sample overlap, trains three seeds
+for both Banks, performs strict all-task evaluation, and writes the combined
+JSON/CSV/HTML report to
+`output/emotic_ddp_task_adapter_bank_comparison/`.

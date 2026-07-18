@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=3200, initial-scale=1" />
+  <title>EMOTIC Task-routed Adapter Bank Architecture</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --slate: #475569;
+      --blue: #2563eb;
+      --blue-bg: #eff6ff;
+      --red: #dc2626;
+      --red-bg: #fff1f2;
+      --green: #059669;
+      --green-bg: #ecfdf5;
+      --orange: #ea580c;
+      --orange-bg: #fff7ed;
+      --purple: #7c3aed;
+      --purple-bg: #f5f3ff;
+      --cyan: #0891b2;
+      --cyan-bg: #ecfeff;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 3200px; height: 2300px; overflow: hidden; }
+    body {
+      background: #f8fbff;
+      color: var(--ink);
+      font-family: "STIX Two Text", "Times New Roman", serif;
+    }
+    #canvas { position: relative; width: 3200px; height: 2300px; }
+    .title {
+      position: absolute; left: 0; top: 12px; width: 3200px;
+      text-align: center; font: 700 42px/1.15 Arial, sans-serif; color: var(--ink);
+    }
+    .subtitle {
+      position: absolute; left: 0; top: 65px; width: 3200px;
+      text-align: center; font: 600 20px/1.2 Arial, sans-serif; color: var(--slate);
+    }
+    .panel {
+      position: absolute; top: 112px; height: 1648px;
+      border: 3px solid; border-radius: 18px;
+    }
+    .ddp-panel { left: 20px; width: 1010px; border-color: var(--green); background: var(--green-bg); }
+    .bank-panel { left: 1065px; width: 1010px; border-color: var(--orange); background: #fffaf0; }
+    .aux-panel { left: 2110px; width: 1070px; border-color: var(--cyan); background: var(--cyan-bg); }
+    .panel-title {
+      position: absolute; left: 22px; right: 22px; top: 15px;
+      text-align: center; font: 700 27px/1.2 Arial, sans-serif;
+    }
+    .panel-subtitle {
+      position: absolute; left: 30px; right: 30px; top: 50px;
+      text-align: center; font: 600 17px/1.2 Arial, sans-serif; color: var(--slate);
+    }
+    .green-title { color: #047857; }
+    .orange-title { color: #9a3412; }
+    .cyan-title { color: #0e7490; }
+    .blue-title { color: #1d4ed8; }
+    .red-title { color: #b91c1c; }
+    .purple-title { color: #6d28d9; }
+    .formula-box {
+      position: absolute; z-index: 3; border: 3px solid #94a3b8; border-radius: 14px;
+      background: rgba(255,255,255,.97); display: flex; align-items: center;
+      justify-content: center; padding: 10px 18px; text-align: center;
+    }
+    .formula-box.blue { border-color: var(--blue); background: #f8fbff; }
+    .formula-box.red { border-color: var(--red); background: #fffafa; }
+    .formula-box.green { border-color: var(--green); background: #fff; }
+    .formula-box.orange { border-color: var(--orange); background: #fff; }
+    .formula-box.purple { border-color: var(--purple); background: var(--purple-bg); }
+    .formula-box.cyan { border-color: var(--cyan); background: #fbfeff; }
+    .formula-box .katex-display { margin: 0; }
+    .formula-box .katex { font-size: 29px; }
+    .formula-box.compact .katex { font-size: 25px; }
+    .formula-box.dense .katex { font-size: 22px; }
+    .formula-box.large .katex { font-size: 32px; }
+    .formula-box.xlarge .katex { font-size: 35px; }
+    .module-label {
+      position: absolute; z-index: 4; font: 700 19px/1.15 Arial, sans-serif;
+      text-align: center;
+    }
+    .note {
+      position: absolute; z-index: 4; font: 600 16px/1.25 Arial, sans-serif;
+      color: var(--slate); text-align: center;
+    }
+    .shared-label {
+      position: absolute; left: 1040px; top: 382px; width: 1090px;
+      z-index: 5; text-align: center; font: 700 18px/1.2 Arial, sans-serif;
+      color: #334155; background: #f8fbff; padding: 4px 12px;
+    }
+    .adapter-stack {
+      position: absolute; left: 1225px; top: 745px; width: 680px; height: 330px;
+      z-index: 4;
+    }
+    .adapter-card {
+      position: absolute; width: 390px; height: 150px;
+      border: 4px solid var(--orange); border-radius: 17px;
+      background: #fff; box-shadow: 10px 12px 16px rgba(71,85,105,.20);
+      display: flex; align-items: center; justify-content: center;
+      text-align: center;
+    }
+    .adapter-card .katex { font-size: 31px; }
+    .adapter-card.a0 { left: 0; top: 0; z-index: 8; }
+    .adapter-card.a1 { left: 100px; top: 55px; z-index: 7; border-color: #f97316; justify-content: flex-end; padding-right: 18px; }
+    .adapter-card.am { left: 200px; top: 110px; z-index: 6; border-color: #fb923c; justify-content: flex-end; padding-right: 18px; }
+    .adapter-card.at { left: 300px; top: 165px; z-index: 5; border-color: #c2410c; border-style: dashed; justify-content: flex-end; padding-right: 18px; }
+    .stack-label {
+      position: absolute; left: 1195px; top: 700px; width: 740px;
+      z-index: 5; text-align: center; font: 700 21px/1.2 Arial, sans-serif;
+      color: #9a3412;
+    }
+    .training-only-tag {
+      position: absolute; left: 2890px; top: 128px; width: 260px; height: 42px;
+      z-index: 5; border: 2px solid var(--cyan); border-radius: 21px;
+      background: #fff; color: #0e7490; text-align: center;
+      font: 700 17px/38px Arial, sans-serif;
+    }
+    .final-panel {
+      position: absolute; left: 420px; top: 1830px; width: 2360px; height: 310px;
+      border: 4px solid var(--purple); border-radius: 18px; background: var(--purple-bg);
+    }
+    .result-caption {
+      position: absolute; left: 800px; top: 2110px; width: 1600px;
+      text-align: center; z-index: 4; font: 700 20px/1.2 Arial, sans-serif;
+      color: #6d28d9;
+    }
+    .footer {
+      position: absolute; left: 20px; top: 2200px; width: 3160px; height: 72px;
+      border: 2px dashed #94a3b8; border-radius: 12px; background: rgba(255,255,255,.9);
+      display: grid; grid-template-columns: repeat(5, 1fr); align-items: center;
+      font: 600 16px/1.18 Arial, sans-serif; color: var(--slate); text-align: center;
+    }
+    .swatch {
+      display: inline-block; width: 23px; height: 23px; margin-right: 9px;
+      border: 3px solid; border-radius: 5px; vertical-align: middle; background: white;
+    }
+    .dash-swatch {
+      display: inline-block; width: 42px; height: 0; margin: 0 10px 4px 0;
+      border-top: 4px dashed #64748b; vertical-align: middle;
+    }
+    svg.arrows {
+      position: absolute; left: 0; top: 0; width: 3200px; height: 2300px;
+      z-index: 2; overflow: visible;
+    }
+    .arrow { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+    .thin-arrow { fill: none; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .blue-arrow { stroke: var(--blue); marker-end: url(#blue-head); }
+    .red-arrow { stroke: var(--red); marker-end: url(#red-head); }
+    .green-arrow { stroke: var(--green); marker-end: url(#green-head); }
+    .orange-arrow { stroke: var(--orange); marker-end: url(#orange-head); }
+    .purple-arrow { stroke: var(--purple); marker-end: url(#purple-head); }
+    .cyan-arrow { stroke: var(--cyan); marker-end: url(#cyan-head); }
+    .shared-arrow {
+      stroke: #64748b; stroke-width: 4; stroke-dasharray: 13 11;
+      marker-start: url(#slate-head); marker-end: url(#slate-head);
+    }
+    .freeze-arrow {
+      stroke: var(--orange); stroke-width: 4; stroke-dasharray: 12 10;
+      marker-end: url(#orange-head);
+    }
+  </style>
+</head>
+<body>
+<div id="canvas">
+  <div class="title">CODE_DDP: EMOTIC B5-C3 Task-routed Adapter Bank</div>
+  <div class="subtitle">one frozen OpenAI CLIP · training-only prompt-free auxiliary route · deterministic class-introduction-task routing · fixed global inference scale</div>
+
+  <div class="panel ddp-panel">
+    <div class="panel-title green-title">① Original DDP prompted prediction route</div>
+    <div class="panel-subtitle">one image produces positive/negative class-specific token paths</div>
+  </div>
+  <div class="panel bank-panel">
+    <div class="panel-title orange-title">② Task-routed Adapter Bank inference route</div>
+    <div class="panel-subtitle">route every class—not the whole image—to its introduction-task Adapter</div>
+  </div>
+  <div class="panel aux-panel">
+    <div class="panel-title cyan-title">③ Prompt-free CLIP auxiliary training route</div>
+    <div class="panel-subtitle">enabled only while learning the current task Adapter; removed at inference</div>
+  </div>
+  <div class="training-only-tag">TRAINING ONLY</div>
+
+  <!-- Left column: original DDP. -->
+  <div class="module-label blue-title" style="left:80px;top:205px;width:230px">Image input</div>
+  <div class="formula-box blue large math" style="left:80px;top:235px;width:230px;height:85px" data-tex="\mathbf{x}"></div>
+  <div class="module-label orange-title" style="left:365px;top:205px;width:570px">Class-specific positive/negative visual prompts</div>
+  <div class="formula-box orange compact math" style="left:365px;top:235px;width:570px;height:85px" data-tex="\mathbf P_{\mathrm V}^{c}=\{\mathbf P_{\mathrm V}^{c-},\mathbf P_{\mathrm V}^{c+}\},\quad c\in\mathcal C^{0:t}"></div>
+  <div class="module-label green-title" style="left:145px;top:340px;width:760px">Frozen OpenAI CLIP encoders with DDP prompts</div>
+  <div class="formula-box green dense math" style="left:145px;top:370px;width:760px;height:125px" data-tex="\begin{aligned}\mathbf F^{c\pm}&=\mathrm E_{\mathrm V}(\mathbf P_{\mathrm V}^{c\pm},\mathbf x)=[\mathbf f_{0}^{c\pm},\ldots,\mathbf f_{N}^{c\pm}],\\ \mathbf t^{c\pm}&=\mathrm E_{\mathrm T}(\mathbf P_{\mathrm T}^{c\pm},c),\qquad \|\mathbf t^{c\pm}\|_2=1\end{aligned}"></div>
+  <div class="module-label blue-title" style="left:80px;top:545px;width:435px">Full token sequence</div>
+  <div class="formula-box blue compact math" style="left:80px;top:575px;width:435px;height:100px" data-tex="\mathbf F^{c\pm}=[\mathbf f_{0}^{c\pm},\ldots,\mathbf f_{N}^{c\pm}]"></div>
+  <div class="module-label blue-title" style="left:585px;top:545px;width:380px">Prompted CLS representation</div>
+  <div class="formula-box blue compact math" style="left:585px;top:575px;width:380px;height:100px" data-tex="\mathbf f_{\mathrm{cls}}^{c\pm}=\mathbf f_{0}^{c\pm}"></div>
+  <div class="module-label green-title" style="left:315px;top:720px;width:420px">Scaled token–text logits</div>
+  <div class="formula-box red large math" style="left:135px;top:750px;width:780px;height:105px" data-tex="q_n^{c\pm}=20(\mathbf t^{c\pm})^{\top}\mathbf f_n^{c\pm}"></div>
+  <div class="module-label green-title" style="left:555px;top:900px;width:360px">Positive-path attention</div>
+  <div class="formula-box green compact math" style="left:135px;top:930px;width:780px;height:110px" data-tex="\omega_n^c=\frac{\exp(q_n^{c+})}{\sum_{m=0}^{N}\exp(q_m^{c+})}"></div>
+  <div class="module-label green-title" style="left:555px;top:1080px;width:360px">Shared-attention pooling</div>
+  <div class="formula-box green large math" style="left:135px;top:1110px;width:780px;height:110px" data-tex="\overline{\mathbf f}^{c\pm}=\sum_{n=0}^{N}\omega_n^c\mathbf f_n^{c\pm}"></div>
+  <div class="module-label green-title" style="left:555px;top:1260px;width:360px">Original DDP path logits</div>
+  <div class="formula-box green compact math" style="left:135px;top:1290px;width:780px;height:125px" data-tex="\ell_{\mathrm{DDP}}^{c\pm}=5\sum_{n=0}^{N}\omega_n^c q_n^{c\pm}=100(\mathbf t^{c\pm})^{\top}\overline{\mathbf f}^{c\pm}"></div>
+  <div class="module-label green-title" style="left:250px;top:1475px;width:550px">Unchanged DDP logit pair</div>
+  <div class="formula-box green large math" style="left:250px;top:1505px;width:550px;height:105px" data-tex="\boldsymbol\ell_{\mathrm{DDP}}^c=(\ell_{\mathrm{DDP}}^{c-},\ell_{\mathrm{DDP}}^{c+})"></div>
+
+  <!-- Middle column: deterministic class routing and overlapping Adapter cards. -->
+  <div class="module-label orange-title" style="left:1190px;top:205px;width:760px">Class-to-task routing is fixed by the B5-C3 protocol</div>
+  <div class="formula-box orange compact math" style="left:1190px;top:235px;width:760px;height:100px" data-tex="\tau(c)=s\iff c\in\mathcal C^{s},\qquad c\in\mathcal C^{0:t}"></div>
+  <div class="note" style="left:1160px;top:345px;width:820px">No sample-level task prediction · no oracle label · one multi-label image can invoke several Adapters</div>
+  <div class="module-label blue-title" style="left:1130px;top:545px;width:420px">Image → Bank</div>
+  <div class="formula-box blue compact math" style="left:1130px;top:575px;width:420px;height:100px" data-tex="\mathbf f_{\mathrm{cls}}^{c\pm}"></div>
+  <div class="module-label red-title" style="left:1600px;top:545px;width:420px">Text → Bank</div>
+  <div class="formula-box red compact math" style="left:1600px;top:575px;width:420px;height:100px" data-tex="\mathbf t^{c\pm}"></div>
+  <div class="stack-label">Frozen task Adapter cards accumulated over the stream</div>
+  <div class="adapter-stack">
+    <div class="adapter-card a0 math" data-tex="A_0\;[\mathcal C^0]"></div>
+    <div class="adapter-card a1 math" data-tex="A_1"></div>
+    <div class="adapter-card am math" data-tex="\cdots"></div>
+    <div class="adapter-card at math" data-tex="A_t"></div>
+  </div>
+  <div class="module-label orange-title" style="left:1190px;top:1115px;width:760px">Apply the Adapter assigned to class <span style="font-family:serif;font-style:italic">c</span></div>
+  <div class="formula-box orange compact math" style="left:1190px;top:1145px;width:760px;height:120px" data-tex="\mathbf r_{\tau(c)}^{c\pm}=W_{2,\tau(c)}\,\sigma\!\left(W_{1,\tau(c)}\frac{\mathbf f_{\mathrm{cls}}^{c\pm}}{\|\mathbf f_{\mathrm{cls}}^{c\pm}\|_2}\right)"></div>
+  <div class="module-label purple-title" style="left:1190px;top:1300px;width:760px">Fixed Feature Difference at inference</div>
+  <div class="formula-box purple compact math" style="left:1190px;top:1330px;width:760px;height:110px" data-tex="\Delta\mathbf f^{c\pm}=\alpha\mathbf r_{\tau(c)}^{c\pm},\qquad \alpha=0.03"></div>
+  <div class="module-label orange-title" style="left:1190px;top:1475px;width:760px">Class-routed logit correction</div>
+  <div class="formula-box orange compact math" style="left:1190px;top:1505px;width:760px;height:105px" data-tex="\Delta\ell^{c\pm}=100(\mathbf t^{c\pm})^{\top}\Delta\mathbf f^{c\pm}"></div>
+
+  <!-- Right column: training-only prompt-free CLIP auxiliary route. -->
+  <div class="module-label blue-title" style="left:2170px;top:205px;width:250px">Image input</div>
+  <div class="formula-box blue large math" style="left:2170px;top:235px;width:250px;height:85px" data-tex="\mathbf x"></div>
+  <div class="module-label red-title" style="left:2475px;top:205px;width:635px">Fixed current-task positive/negative prototypes</div>
+  <div class="formula-box red compact math" style="left:2475px;top:235px;width:635px;height:85px" data-tex="\mathbf P_{\mathrm{proto}}^{c\pm},\qquad c\in\mathcal C^s"></div>
+  <div class="module-label cyan-title" style="left:2280px;top:340px;width:750px">Same frozen OpenAI CLIP encoders without DDP prompts</div>
+  <div class="formula-box cyan dense math" style="left:2280px;top:370px;width:750px;height:125px" data-tex="\begin{aligned}\mathbf z_{\mathrm g}&=\operatorname{norm}(\mathrm E_{\mathrm V}(\mathbf x)_{\mathrm{cls}}),\\ \mathbf u^{c\pm}&=\operatorname{norm}(\mathrm E_{\mathrm T}(\mathbf P_{\mathrm{proto}}^{c\pm}))\end{aligned}"></div>
+  <div class="module-label cyan-title" style="left:2225px;top:545px;width:865px">Current task data and partial-label supervision</div>
+  <div class="formula-box cyan dense math" style="left:2225px;top:575px;width:865px;height:125px" data-tex="\begin{aligned}\mathcal D_s^{\mathrm{Full}}&=\{i:\sum_{c\in\mathcal C^s}y_{ic}>0\}\quad\text{or}\quad K=16\ \text{anchors/class},\\ M_{ic}^{s}&=1\iff c\in\mathcal C^s\end{aligned}"></div>
+  <div class="module-label cyan-title" style="left:2225px;top:745px;width:865px">Train only the new task Adapter; old/future labels are masked</div>
+  <div class="formula-box cyan dense math" style="left:2225px;top:775px;width:865px;height:125px" data-tex="\mathbf z_{\mathrm g}'=\operatorname{norm}\!\left(\mathbf z_{\mathrm g}+\gamma W_{2,s}\sigma(W_{1,s}\mathbf z_{\mathrm g})\right),\qquad \gamma=0.1"></div>
+  <div class="module-label red-title" style="left:2225px;top:940px;width:865px">Current-task prototype logits</div>
+  <div class="formula-box red dense math" style="left:2225px;top:970px;width:865px;height:115px" data-tex="h_i^c=\kappa\!\left[\cos(\mathbf z_{\mathrm g,i}',\mathbf u^{c+})-\cos(\mathbf z_{\mathrm g,i}',\mathbf u^{c-})\right],\quad c\in\mathcal C^s"></div>
+  <div class="module-label cyan-title" style="left:2225px;top:1120px;width:865px">Masked multi-label objective and identity preservation</div>
+  <div class="formula-box cyan dense math" style="left:2225px;top:1150px;width:865px;height:125px" data-tex="\mathcal L_s=\operatorname{BCE}_{M^s}(\mathbf h,\mathbf y)+\mu\!\left[1-\cos(\mathbf z_{\mathrm g}',\mathbf z_{\mathrm g})\right]"></div>
+  <div class="module-label orange-title" style="left:2225px;top:1315px;width:865px">Freeze the learned mapping and insert one new card</div>
+  <div class="formula-box orange dense math" style="left:2225px;top:1345px;width:865px;height:125px" data-tex="(W_{1,s}^{\star},W_{2,s}^{\star})=\arg\min\mathcal L_s,\qquad A_s\ \xrightarrow{\text{freeze}}\ \{A_0,\ldots,A_s\}"></div>
+  <div class="module-label cyan-title" style="left:2225px;top:1510px;width:865px">Strict incremental constraints</div>
+  <div class="formula-box cyan dense math" style="left:2225px;top:1540px;width:865px;height:115px" data-tex="A_0,\ldots,A_{s-1}\ \text{frozen};\quad y^{\mathrm{old/future}}\ \text{unused};\quad \mathcal D_{\mathrm{test}}\ \text{unseen}"></div>
+
+  <!-- Independent final prediction node. -->
+  <div class="final-panel"></div>
+  <div class="module-label purple-title" style="left:700px;top:1795px;width:1800px;font-size:27px">Independent final prediction: add the class-routed correction before the original DDP softmax</div>
+  <div class="formula-box purple compact math" style="left:610px;top:1875px;width:1980px;height:205px" data-tex="\begin{aligned}\widetilde\ell^{c\pm}&=\ell_{\mathrm{DDP}}^{c\pm}+\Delta\ell^{c\pm},\qquad c\in\mathcal C^{0:t},\\ \widehat y_{c+}^{\,t}&=\frac{\exp(\widetilde\ell^{c+}/\tau(t))}{\exp(\widetilde\ell^{c-}/\tau(t))+\exp(\widetilde\ell^{c+}/\tau(t))},\\ \text{one image}&\longrightarrow\{A_{\tau(c)}:c\in\mathcal C^{0:t}\}\quad\text{(several Adapters may be used in one forward pass)}\end{aligned}"></div>
+  <div class="result-caption">Full Task-routed Adapter Bank · Final Test mAP 32.5615 ± 0.0280 · fixed global α = 0.03 · no class-specific gate</div>
+
+  <div class="shared-label">same frozen visual/text encoder parameters · different prompt usage and training role</div>
+
+  <div class="footer">
+    <div><span class="swatch" style="border-color:var(--green)"></span>original DDP token-attention path</div>
+    <div><span class="swatch" style="border-color:var(--orange)"></span>frozen task-routed Adapter Bank</div>
+    <div><span class="swatch" style="border-color:var(--cyan)"></span>training-only prompt-free route</div>
+    <div><span class="dash-swatch"></span>shared frozen CLIP parameters</div>
+    <div><span class="swatch" style="border-color:var(--purple)"></span>independent final logit addition</div>
+  </div>
+
+  <svg class="arrows" viewBox="0 0 3200 2300" aria-hidden="true">
+    <defs>
+      <marker id="blue-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#2563eb" /></marker>
+      <marker id="red-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#dc2626" /></marker>
+      <marker id="green-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#059669" /></marker>
+      <marker id="orange-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#ea580c" /></marker>
+      <marker id="purple-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#7c3aed" /></marker>
+      <marker id="cyan-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#0891b2" /></marker>
+      <marker id="slate-head" markerUnits="userSpaceOnUse" markerWidth="18" markerHeight="14" refX="16" refY="7" orient="auto-start-reverse" viewBox="0 0 18 14"><path d="M0,0 L18,7 L0,14 Z" fill="#64748b" /></marker>
+    </defs>
+
+    <!-- DDP image and prompt inputs. -->
+    <path class="arrow blue-arrow" d="M310 278 H365" />
+    <path class="arrow green-arrow" d="M650 320 V335 H110 V432 H145" />
+    <path class="arrow blue-arrow" d="M525 495 V535 H295 V575" />
+    <path class="arrow blue-arrow" d="M525 495 V535 H775 V575" />
+
+    <!-- Same frozen CLIP parameters, not two independently trained models. -->
+    <path class="arrow shared-arrow" d="M925 455 H2260" />
+
+    <!-- DDP pooling path. -->
+    <path class="arrow green-arrow" d="M295 675 V700 H100 V802 H135" />
+    <path class="arrow green-arrow" d="M525 855 V930" />
+    <path class="arrow green-arrow" d="M525 1040 V1110" />
+    <path class="arrow green-arrow" d="M525 1220 V1290" />
+    <path class="arrow green-arrow" d="M525 1415 H100 V1557 H250" />
+
+    <!-- Explicit DDP feature/text ports into the Bank. -->
+    <path class="arrow blue-arrow" d="M965 625 H1130" />
+    <path class="arrow red-arrow" d="M905 465 H1010 V520 H2040 V625 H2020" />
+
+    <!-- Deterministic routing through the Adapter cards. -->
+    <path class="arrow orange-arrow" d="M1340 675 V690 H1100 V830 H1225" />
+    <path class="arrow red-arrow" d="M2020 625 H2040 V1557 H1950" />
+    <path class="arrow orange-arrow" d="M1570 1075 H1160 V1205 H1190" />
+    <path class="arrow orange-arrow" d="M1570 1265 H1160 V1385 H1190" />
+    <path class="arrow orange-arrow" d="M1570 1440 H1160 V1557 H1190" />
+
+    <!-- Prompt-free training branch. -->
+    <path class="arrow blue-arrow" d="M2295 320 V335 H2150 V405 H2280" />
+    <path class="arrow red-arrow" d="M2792 320 V335 H3060 V405 H3030" />
+    <path class="arrow cyan-arrow" d="M2655 495 H3130 V637 H3090" />
+    <path class="arrow cyan-arrow" d="M2655 700 H3130 V837 H3090" />
+    <path class="arrow cyan-arrow" d="M2655 900 H3130 V1027 H3090" />
+    <path class="arrow cyan-arrow" d="M2655 1085 H3130 V1212 H3090" />
+    <path class="arrow cyan-arrow" d="M2655 1275 H3130 V1407 H3090" />
+    <path class="arrow cyan-arrow" d="M2655 1470 H3130 V1597 H3090" />
+
+    <!-- A newly learned Adapter is frozen and inserted into the overlapping Bank. -->
+    <path class="arrow freeze-arrow" d="M2225 1408 H2140 V1025 H1905" />
+
+    <!-- Original DDP logits and Bank correction meet only in the independent final node. -->
+    <path class="arrow green-arrow" d="M525 1610 V1780 H350 V1977 H610" />
+    <path class="arrow orange-arrow" d="M1570 1610 V1780 H2850 V1977 H2590" />
+  </svg>
+</div>
+
+<script>
+  window.addEventListener('load', () => {
+    document.querySelectorAll('.math').forEach((node) => {
+      katex.render(node.dataset.tex, node, {
+        displayMode: true,
+        throwOnError: true,
+        strict: false,
+        trust: false
+      });
+    });
+    document.fonts.ready.then(() => { window.__diagramReady = true; });
+  });
+</script>
+</body>
+</html>

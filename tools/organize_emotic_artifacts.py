@@ -37,6 +37,7 @@ BRANCHES = {
         "patterns": [
             "emotic_adapter_final_ablation",
             "emotic_adapter_inference_benchmark",
+            "emotic_b5c3_task_adapter_audit",
             "emotic_ddp*",
         ],
     },
