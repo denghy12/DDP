@@ -252,6 +252,7 @@ class DDP(nn.Module):
         self.feature_adapter = None
         self.feature_adapter_correction = "linear_residual"
         self.feature_adapter_bank = None
+        self.final_token_adapter_bank = None
 
     def encode_prompt_free_image(
         self,
@@ -359,6 +360,22 @@ class DDP(nn.Module):
     def disable_task_adapter_bank(self):
         self.feature_adapter_bank = None
 
+    def enable_final_token_adapter_bank(self, adapter_bank):
+        """Attach a frozen class-routed Adapter Bank to all final ViT tokens."""
+        if self.feature_adapter is not None or self.feature_adapter_bank is not None:
+            raise RuntimeError(
+                "Feature/CLS Adapters must be disabled before enabling the "
+                "Final-token Adapter Bank"
+            )
+        self.final_token_adapter_bank = adapter_bank
+        self.final_token_adapter_bank.eval()
+        for parameter in self.final_token_adapter_bank.parameters():
+            parameter.requires_grad_(False)
+        return self.final_token_adapter_bank
+
+    def disable_final_token_adapter_bank(self):
+        self.final_token_adapter_bank = None
+
     def _text_features(self, cls_id, inference):
         if inference:
             neg_feats = []
@@ -388,6 +405,7 @@ class DDP(nn.Module):
         cls_id=None,
         inference=False,
         return_cls_features=False,
+        return_token_features=False,
     ):
         """Return DDP pooled path features and exact pre-adapter path logits."""
         text_features = self._text_features(cls_id, inference)
@@ -419,26 +437,63 @@ class DDP(nn.Module):
             B, 2 * K, feature_dim, token_count
         )
 
-        token_logits = 20 * torch.einsum(
-            'bkdn,kd->bkn', token_features, text_features
+        from emotic_final_token_adapter import ddp_pool_final_tokens
+
+        pooled_features, base_path_logits, _, _ = ddp_pool_final_tokens(
+            token_features, text_features
         )
-        negative_weights = F.softmax(token_logits[:, K:, :], dim=-1)
-        path_weights = torch.cat(
-            [negative_weights, negative_weights], dim=1
-        )
-        pooled_features = torch.einsum(
-            'bkdn,bkn->bkd', token_features, path_weights
-        )
-        base_path_logits = 5 * (token_logits * path_weights).sum(-1)
+        outputs = [pooled_features, base_path_logits, text_features]
         if return_cls_features:
             cls_features = token_features[:, :, :, 0]
-            return (
-                pooled_features,
-                base_path_logits,
-                text_features,
-                cls_features,
+            outputs.append(cls_features)
+        if return_token_features:
+            outputs.append(token_features)
+        return tuple(outputs)
+
+    def logits_from_token_features(
+        self,
+        token_features,
+        text_features,
+        return_adapter_aux=False,
+    ):
+        """Adapt final tokens, then recompute the exact original DDP pooling."""
+        from emotic_final_token_adapter import ddp_pool_final_tokens
+
+        adapter_bank = getattr(self, "final_token_adapter_bank", None)
+        adapter_aux = None
+        adapted_tokens = token_features
+        if adapter_bank is not None:
+            seen_classes = token_features.shape[1] // 2
+            if return_adapter_aux:
+                adapted_tokens, adapter_aux = adapter_bank.adapt_token_features(
+                    token_features,
+                    seen_classes=seen_classes,
+                    return_aux=True,
+                )
+            else:
+                adapted_tokens = adapter_bank.adapt_token_features(
+                    token_features,
+                    seen_classes=seen_classes,
+                )
+        pooled, path_logits, token_logits, path_weights = ddp_pool_final_tokens(
+            adapted_tokens, text_features
+        )
+        logits = path_logits.reshape(
+            path_logits.shape[0], 2, path_logits.shape[1] // 2
+        )
+        if return_adapter_aux:
+            details = {} if adapter_aux is None else dict(adapter_aux)
+            details.update(
+                {
+                    "pooled_features": pooled,
+                    "path_weights": path_weights,
+                    "token_logits": token_logits,
+                    "feature_source": "final_197_tokens",
+                    "pooling": "original_ddp_token_attention",
+                }
             )
-        return pooled_features, base_path_logits, text_features
+            return logits, details
+        return logits
 
     def logits_from_path_features(
         self,
@@ -528,6 +583,27 @@ class DDP(nn.Module):
     ):
         feature_adapter = getattr(self, "feature_adapter", None)
         feature_adapter_bank = getattr(self, "feature_adapter_bank", None)
+        final_token_adapter_bank = getattr(
+            self, "final_token_adapter_bank", None
+        )
+        if final_token_adapter_bank is not None:
+            if feature_adapter is not None or feature_adapter_bank is not None:
+                raise RuntimeError(
+                    "Final-token and feature/CLS Adapters cannot be active together"
+                )
+            pooled, base_logits, text_features, token_features = (
+                self.extract_path_features(
+                    image,
+                    cls_id=cls_id,
+                    inference=inference,
+                    return_token_features=True,
+                )
+            )
+            return self.logits_from_token_features(
+                token_features,
+                text_features,
+                return_adapter_aux=return_adapter_aux,
+            )
         use_cls_feature_correction = (
             feature_adapter is not None
             and getattr(

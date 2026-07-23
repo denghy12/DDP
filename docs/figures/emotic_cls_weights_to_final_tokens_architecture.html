@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=3800, initial-scale=1" />
+  <title>CODE_DDP CLS-trained Adapter at Final Tokens</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --slate: #475569;
+      --blue: #2563eb;
+      --blue-bg: #eff6ff;
+      --red: #dc2626;
+      --red-bg: #fff1f2;
+      --green: #059669;
+      --green-bg: #ecfdf5;
+      --orange: #ea580c;
+      --orange-bg: #fff7ed;
+      --cyan: #0891b2;
+      --cyan-bg: #ecfeff;
+      --purple: #7c3aed;
+      --purple-bg: #f5f3ff;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; width: 3800px; height: 2850px; overflow: hidden;
+    }
+    body {
+      background: #f8fbff; color: var(--ink);
+      font-family: "STIX Two Text", "Times New Roman", serif;
+    }
+    #canvas { position: relative; width: 3800px; height: 2850px; }
+    .title {
+      position: absolute; left: 0; top: 12px; width: 3800px;
+      text-align: center; font: 700 43px/1.15 Arial, sans-serif;
+    }
+    .subtitle {
+      position: absolute; left: 0; top: 65px; width: 3800px;
+      text-align: center; font: 600 21px/1.2 Arial, sans-serif;
+      color: var(--slate);
+    }
+    .panel {
+      position: absolute; border: 3px solid; border-radius: 18px;
+    }
+    .panel-title {
+      position: absolute; left: 26px; right: 26px; top: 15px;
+      text-align: center; font: 700 27px/1.2 Arial, sans-serif;
+    }
+    .text-panel {
+      left: 25px; top: 105px; width: 1420px; height: 650px;
+      border-color: var(--red); background: var(--red-bg);
+    }
+    .image-panel {
+      left: 1475px; top: 105px; width: 2300px; height: 650px;
+      border-color: var(--blue); background: var(--blue-bg);
+    }
+    .inference-panel {
+      left: 25px; top: 990px; width: 2315px; height: 1500px;
+      border-color: var(--green); background: var(--green-bg);
+    }
+    .train-panel {
+      left: 2370px; top: 990px; width: 1405px; height: 1500px;
+      border-color: var(--cyan); background: var(--cyan-bg);
+    }
+    .blue-title { color: #1d4ed8; }
+    .red-title { color: #b91c1c; }
+    .green-title { color: #047857; }
+    .orange-title { color: #9a3412; }
+    .cyan-title { color: #0e7490; }
+    .purple-title { color: #6d28d9; }
+    .formula-box {
+      position: absolute; z-index: 3; border: 3px solid #94a3b8;
+      border-radius: 14px; background: rgba(255,255,255,.97);
+      display: flex; align-items: center; justify-content: center;
+      padding: 10px 18px; text-align: center;
+    }
+    .formula-box.blue { border-color: var(--blue); background: #f8fbff; }
+    .formula-box.red { border-color: var(--red); background: #fffafa; }
+    .formula-box.green { border-color: var(--green); background: #fff; }
+    .formula-box.orange { border-color: var(--orange); background: #fff; }
+    .formula-box.cyan { border-color: var(--cyan); background: #fff; }
+    .formula-box.purple {
+      border-color: var(--purple); background: var(--purple-bg);
+    }
+    .formula-box .katex-display { margin: 0; }
+    .formula-box .katex { font-size: 32px; }
+    .formula-box.compact .katex { font-size: 28px; }
+    .formula-box.dense .katex { font-size: 25px; }
+    .formula-box.large .katex { font-size: 36px; }
+    .formula-box.xlarge .katex { font-size: 40px; }
+    .module-label {
+      position: absolute; z-index: 4; font: 700 19px/1.12 Arial, sans-serif;
+      text-align: center;
+    }
+    .route-caption {
+      position: absolute; left: 25px; top: 770px; width: 3750px;
+      text-align: center; font: 600 20px/1.2 Arial, sans-serif;
+      color: var(--slate);
+    }
+    .port-group-label {
+      position: absolute; z-index: 4; top: 805px;
+      text-align: center; font: 700 18px/1.1 Arial, sans-serif;
+    }
+    .bank-area {
+      position: absolute; z-index: 2; left: 210px; top: 1080px;
+      width: 1900px; height: 130px; border: 3px dashed var(--orange);
+      border-radius: 16px; background: rgba(255,255,255,.74);
+    }
+    .card {
+      position: absolute; z-index: 4; width: 270px; height: 82px;
+      border: 3px solid var(--orange); border-radius: 13px; background: white;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 8px 8px 0 rgba(234,88,12,.10);
+    }
+    .card .katex { font-size: 28px; }
+    .training-only-badge {
+      position: absolute; z-index: 5; left: 3500px; top: 1025px;
+      width: 220px; height: 42px; border: 3px solid var(--cyan);
+      border-radius: 22px; background: white; color: #0e7490;
+      text-align: center; font: 800 17px/36px Arial, sans-serif;
+    }
+    .step-badge {
+      position: absolute; z-index: 5; width: 46px; height: 46px;
+      border-radius: 50%; background: white; border: 3px solid;
+      display: flex; align-items: center; justify-content: center;
+      font: 800 21px Arial, sans-serif;
+    }
+    .result-label {
+      position: absolute; left: 510px; top: 2500px; width: 2780px;
+      text-align: center; font: 700 27px/1.2 Arial, sans-serif;
+      color: #6d28d9;
+    }
+    .footer {
+      position: absolute; left: 25px; top: 2775px; width: 3750px; height: 52px;
+      border: 2px dashed #94a3b8; border-radius: 11px;
+      background: rgba(255,255,255,.88); display: grid;
+      grid-template-columns: repeat(5, 1fr); align-items: center;
+      font: 600 16px/1.15 Arial, sans-serif; color: var(--slate);
+      text-align: center;
+    }
+    .swatch {
+      display: inline-block; width: 22px; height: 22px; margin-right: 9px;
+      border: 3px solid; border-radius: 5px; vertical-align: middle;
+      background: white;
+    }
+    svg.arrows {
+      position: absolute; left: 0; top: 0; width: 3800px; height: 2850px;
+      z-index: 1; overflow: visible;
+    }
+    .arrow {
+      fill: none; stroke-width: 4.5; stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .blue-arrow { stroke: var(--blue); marker-end: url(#blue-head); }
+    .red-arrow { stroke: var(--red); marker-end: url(#red-head); }
+    .green-arrow { stroke: var(--green); marker-end: url(#green-head); }
+    .orange-arrow { stroke: var(--orange); marker-end: url(#orange-head); }
+    .cyan-arrow { stroke: var(--cyan); marker-end: url(#cyan-head); }
+    .purple-arrow { stroke: var(--purple); marker-end: url(#purple-head); }
+    .dashed { stroke-dasharray: 13 10; }
+  </style>
+</head>
+<body>
+<div id="canvas">
+  <div class="title" id="diagram-title"></div>
+  <div class="subtitle" id="diagram-subtitle"></div>
+
+  <!-- The upper feature extraction is intentionally identical across modes. -->
+  <div class="panel text-panel">
+    <div class="panel-title red-title">Text branch</div>
+  </div>
+  <div class="panel image-panel">
+    <div class="panel-title blue-title">Image branch</div>
+  </div>
+
+  <div class="module-label red-title" style="left:80px;top:166px;width:310px">
+    Negative DDP prompt
+  </div>
+  <div class="formula-box red large math"
+       style="left:80px;top:195px;width:310px;height:100px"
+       data-tex="\mathbf P_{\mathrm T}^{c-}"></div>
+  <div class="module-label red-title" style="left:425px;top:166px;width:310px">
+    Positive DDP prompt
+  </div>
+  <div class="formula-box red large math"
+       style="left:425px;top:195px;width:310px;height:100px"
+       data-tex="\mathbf P_{\mathrm T}^{c+}"></div>
+  <div class="module-label red-title" style="left:805px;top:166px;width:565px">
+    Frozen text encoder · DDP text feature
+  </div>
+  <div class="formula-box red compact math"
+       style="left:805px;top:195px;width:565px;height:125px"
+       data-tex="\mathbf t^{c\pm}=\operatorname{norm}\!\left(\mathrm E_{\mathrm T}(\mathbf P_{\mathrm T}^{c\pm},c)\right)"></div>
+
+  <div class="module-label red-title" id="aux-proto-prompt-label"
+       style="left:80px;top:450px;width:655px">
+    Fixed current-task positive / negative prototype prompts
+  </div>
+  <div class="formula-box red compact math" id="aux-proto-prompt-formula"
+       style="left:80px;top:480px;width:655px;height:120px"
+       data-tex="\mathbf P_{\mathrm{proto}}^{c\pm},\qquad c\in\mathcal C^{s}"></div>
+  <div class="module-label red-title" id="aux-proto-text-label"
+       style="left:805px;top:450px;width:565px">
+    Same frozen text encoder · auxiliary prototype
+  </div>
+  <div class="formula-box red compact math" id="aux-proto-text-formula"
+       style="left:805px;top:480px;width:565px;height:120px"
+       data-tex="\mathbf u^{c\pm}=\operatorname{norm}\!\left(\mathrm E_{\mathrm T}(\mathbf P_{\mathrm{proto}}^{c\pm})\right)"></div>
+
+  <div class="module-label blue-title" style="left:1535px;top:166px;width:250px">
+    Image input
+  </div>
+  <div class="formula-box blue xlarge math"
+       style="left:1535px;top:195px;width:250px;height:100px"
+       data-tex="\mathbf x"></div>
+  <div class="module-label orange-title" style="left:1870px;top:166px;width:405px">
+    Class-specific dual visual prompts
+  </div>
+  <div class="formula-box orange compact math"
+       style="left:1870px;top:195px;width:405px;height:100px"
+       data-tex="\mathbf P_{\mathrm V}^{c}=\{\mathbf P_{\mathrm V}^{c-},\mathbf P_{\mathrm V}^{c+}\}"></div>
+  <div class="module-label blue-title" style="left:2370px;top:166px;width:570px">
+    Frozen visual encoder with DDP prompts
+  </div>
+  <div class="formula-box blue compact math"
+       style="left:2370px;top:195px;width:570px;height:125px"
+       data-tex="\mathbf F^{c\pm}=\mathrm E_{\mathrm V}(\mathbf P_{\mathrm V}^{c\pm},\mathbf x)\in\mathbb R^{(N+1)\times d}"></div>
+  <div class="module-label blue-title" style="left:3040px;top:145px;width:650px">
+    Full projected token sequence
+  </div>
+  <div class="formula-box blue compact math"
+       style="left:3040px;top:175px;width:650px;height:125px"
+       data-tex="\mathbf F^{c\pm}=[\mathbf f_{0}^{c\pm},\ldots,\mathbf f_{N}^{c\pm}],\quad N=196"></div>
+  <div class="module-label blue-title" style="left:3040px;top:360px;width:650px">
+    Prompted CLS representation
+  </div>
+  <div class="formula-box blue large math"
+       style="left:3040px;top:390px;width:650px;height:120px"
+       data-tex="\mathbf f_{\mathrm{cls}}^{c\pm}=\mathbf f_{0}^{c\pm}"></div>
+
+  <div class="module-label cyan-title" id="aux-image-label"
+       style="left:1865px;top:490px;width:1000px">
+    Prompt-free auxiliary route — split before visual prompts; same frozen visual encoder
+  </div>
+  <div class="formula-box cyan compact math" id="aux-image-formula"
+       style="left:1865px;top:520px;width:1000px;height:125px"
+       data-tex="\mathbf z_i=\operatorname{norm}\!\left(\mathrm E_{\mathrm V}(\mathbf x_i)_{\mathrm{cls}}\right)\qquad\text{(no visual prompt)}"></div>
+
+  <div class="route-caption">
+    Explicit feature ports from the shared text/image branches into two routes
+  </div>
+  <div class="port-group-label green-title" style="left:55px;width:2250px">
+    Prompted tokens / DDP text → frozen Task-routed Adapter Bank → original DDP pooling
+  </div>
+  <div class="formula-box blue large math"
+       style="left:150px;top:845px;width:850px;height:100px"
+       data-tex="\mathbf F^{c\pm}"></div>
+  <div class="formula-box red large math"
+       style="left:1190px;top:845px;width:850px;height:100px"
+       data-tex="\mathbf t^{c\pm}"></div>
+
+  <div class="port-group-label cyan-title" id="training-port-label"
+       style="left:2400px;width:1340px">
+    Prompt-free image / fixed prototypes → auxiliary Adapter training
+  </div>
+  <div class="formula-box blue large math" id="training-image-port"
+       style="left:2475px;top:845px;width:535px;height:100px"
+       data-tex="\mathbf z_i"></div>
+  <div class="formula-box red large math" id="training-text-port"
+       style="left:3170px;top:845px;width:535px;height:100px"
+       data-tex="\mathbf u^{c\pm}"></div>
+
+  <div class="panel inference-panel">
+    <div class="panel-title green-title" id="inference-title"></div>
+  </div>
+  <div class="panel train-panel">
+    <div class="panel-title cyan-title" id="training-title">
+      Prompt-free auxiliary Adapter training route
+    </div>
+  </div>
+  <div class="training-only-badge">TRAINING ONLY</div>
+
+  <div class="bank-area"></div>
+  <div class="module-label orange-title"
+       style="left:300px;top:1045px;width:1720px">
+    Frozen Adapter cards accumulated over tasks · route each class to its introduction-task Adapter
+  </div>
+  <div class="card math" style="left:280px;top:1124px"
+       data-tex="A_0[\mathcal C^0]"></div>
+  <div class="card math" style="left:710px;top:1124px"
+       data-tex="A_1[\mathcal C^1]"></div>
+  <div class="card math" style="left:1140px;top:1124px"
+       data-tex="\cdots"></div>
+  <div class="card math" style="left:1570px;top:1124px"
+       data-tex="A_t[\mathcal C^t]"></div>
+
+  <div class="step-badge orange-title"
+       style="left:85px;top:1260px;border-color:var(--orange)">1</div>
+  <div class="module-label orange-title"
+       style="left:230px;top:1242px;width:1860px">
+    Deterministic class routing and frozen Adapter application before DDP
+  </div>
+  <div class="formula-box orange dense math" id="adapter-formula"
+       style="left:180px;top:1275px;width:1970px;height:185px"></div>
+
+  <div class="step-badge green-title"
+       style="left:85px;top:1510px;border-color:var(--green)">2</div>
+  <div class="module-label green-title"
+       style="left:300px;top:1492px;width:1720px">
+    Recompute the exact original DDP token–text logits
+  </div>
+  <div class="formula-box red compact math"
+       style="left:180px;top:1525px;width:1970px;height:125px"
+       data-tex="\widetilde q_{n}^{c\pm}=20(\mathbf t^{c\pm})^{\top}\widetilde{\mathbf f}_{n}^{c\pm}"></div>
+
+  <div class="step-badge green-title"
+       style="left:85px;top:1700px;border-color:var(--green)">3</div>
+  <div class="module-label green-title"
+       style="left:300px;top:1682px;width:1720px">
+    Positive-path attention shared by the matching negative path
+  </div>
+  <div class="formula-box green compact math"
+       style="left:180px;top:1715px;width:1970px;height:125px"
+       data-tex="\widetilde\omega_{n}^{c}=\frac{\exp(\widetilde q_{n}^{c+})}{\sum_{m=0}^{N}\exp(\widetilde q_{m}^{c+})}"></div>
+
+  <div class="step-badge green-title"
+       style="left:85px;top:1890px;border-color:var(--green)">4</div>
+  <div class="module-label green-title"
+       style="left:300px;top:1872px;width:1720px">
+    Original shared-attention pooling over the adapted token sequence
+  </div>
+  <div class="formula-box green large math"
+       style="left:180px;top:1905px;width:1970px;height:125px"
+       data-tex="\widetilde{\overline{\mathbf f}}^{c\pm}=\sum_{n=0}^{N}\widetilde\omega_{n}^{c}\widetilde{\mathbf f}_{n}^{c\pm}"></div>
+
+  <div class="step-badge green-title"
+       style="left:85px;top:2080px;border-color:var(--green)">5</div>
+  <div class="module-label green-title"
+       style="left:300px;top:2062px;width:1720px">
+    Original DDP positive / negative path-logit head
+  </div>
+  <div class="formula-box green dense math"
+       style="left:180px;top:2095px;width:1970px;height:170px"
+       data-tex="\widetilde\ell^{c\pm}=5\sum_{n=0}^{N}\widetilde\omega_n^c\widetilde q_n^{c\pm}=100(\mathbf t^{c\pm})^\top\widetilde{\overline{\mathbf f}}^{c\pm}"></div>
+
+  <div class="module-label cyan-title" id="training-step1-label"
+       style="left:2550px;top:1095px;width:1040px">
+    Current-task data and strict partial-label mask
+  </div>
+  <div class="formula-box cyan dense math" id="training-step1-formula"
+       style="left:2460px;top:1125px;width:1225px;height:145px"
+       data-tex="\begin{aligned}\mathcal D_s^{\mathrm{Full}}&=\{i:\sum_{c\in\mathcal C^s}y_{ic}>0\},\\M_{ic}^{s}&=\mathbb 1[c\in\mathcal C^s]\end{aligned}"></div>
+  <div class="module-label cyan-title" id="training-step2-label"
+       style="left:2550px;top:1305px;width:1040px">
+    Train only the new task Adapter on prompt-free global CLS
+  </div>
+  <div class="formula-box cyan compact math" id="training-step2-formula"
+       style="left:2460px;top:1335px;width:1225px;height:155px"
+       data-tex="\begin{aligned}\mathbf r_{i,s}&=W_{2,s}\sigma(W_{1,s}\mathbf z_i),\\\mathbf z'_{i,s}&=\operatorname{norm}(\mathbf z_i+\gamma\mathbf r_{i,s}),\qquad\gamma=0.1\end{aligned}"></div>
+  <div class="module-label red-title" id="training-step3-label"
+       style="left:2550px;top:1520px;width:1040px">
+    Current-task positive / negative prototype logits
+  </div>
+  <div class="formula-box red dense math" id="training-step3-formula"
+       style="left:2460px;top:1550px;width:1225px;height:155px"
+       data-tex="h_i^c=\kappa\!\left[\cos(\mathbf z'_{i,s},\mathbf u^{c+})-\cos(\mathbf z'_{i,s},\mathbf u^{c-})\right],\qquad c\in\mathcal C^s"></div>
+  <div class="module-label cyan-title" id="training-step4-label"
+       style="left:2550px;top:1735px;width:1040px">
+    Masked multi-label objective and identity preservation
+  </div>
+  <div class="formula-box cyan compact math" id="training-step4-formula"
+       style="left:2460px;top:1765px;width:1225px;height:145px"
+       data-tex="\mathcal L_s=\operatorname{BCE}_{M^s}(\mathbf h,\mathbf y)+\mu\,[1-\cos(\mathbf z'_{i,s},\mathbf z_i)]"></div>
+  <div class="module-label orange-title" id="training-step5-label"
+       style="left:2550px;top:1940px;width:1040px">
+    Freeze the learned mapping and insert one new Adapter card
+  </div>
+  <div class="formula-box orange compact math" id="training-step5-formula"
+       style="left:2460px;top:1970px;width:1225px;height:145px"
+       data-tex="(W_{1,s}^{*},W_{2,s}^{*})=\arg\min\mathcal L_s,\qquad A_s\xrightarrow{\mathrm{freeze}}\{A_0,\ldots,A_s\}"></div>
+  <div class="module-label cyan-title" id="training-step6-label"
+       style="left:2550px;top:2145px;width:1040px">
+    Strict incremental constraints
+  </div>
+  <div class="formula-box cyan dense math" id="training-step6-formula"
+       style="left:2460px;top:2175px;width:1225px;height:145px"
+       data-tex="A_0,\ldots,A_{s-1}\ \text{frozen};\quad\mathbf y^{\mathrm{old/future}}\ \text{masked};\quad\mathcal D_{\mathrm{test}}\ \text{unseen}"></div>
+
+  <div class="result-label" id="result-label"></div>
+  <div class="formula-box purple large math" id="result-formula"
+       style="left:510px;top:2580px;width:2780px;height:160px"></div>
+
+  <div class="footer">
+    <div><span class="swatch" style="border-color:var(--red)"></span>shared text representations</div>
+    <div><span class="swatch" style="border-color:var(--blue)"></span>shared image representations</div>
+    <div><span class="swatch" style="border-color:var(--orange)"></span>frozen class-routed Adapter Bank</div>
+    <div><span class="swatch" style="border-color:var(--green)"></span>original DDP pooling after adaptation</div>
+    <div id="training-footer-label"><span class="swatch" style="border-color:var(--cyan)"></span>training-only prompt-free route</div>
+  </div>
+
+  <svg class="arrows" viewBox="0 0 3800 2850" aria-hidden="true">
+    <defs>
+      <marker id="blue-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#2563eb"/></marker>
+      <marker id="red-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#dc2626"/></marker>
+      <marker id="green-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#059669"/></marker>
+      <marker id="orange-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#ea580c"/></marker>
+      <marker id="cyan-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#0891b2"/></marker>
+      <marker id="purple-head" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="16" refX="18" refY="8" orient="auto" viewBox="0 0 20 16"><path d="M0,0 L20,8 L0,16 Z" fill="#7c3aed"/></marker>
+    </defs>
+
+    <!-- Common upper encoders. -->
+    <path class="arrow red-arrow" d="M235 295 V350 H980 V195"/>
+    <path class="arrow red-arrow" d="M580 295 V350 H980 V320"/>
+    <path class="arrow red-arrow" id="aux-text-arrow" d="M407 600 V665 H1085 V600"/>
+    <path class="arrow blue-arrow" d="M1785 245 H1870"/>
+    <path class="arrow blue-arrow" d="M2275 245 H2370"/>
+    <path class="arrow blue-arrow" d="M2940 257 H2990 V237 H3040"/>
+    <path class="arrow blue-arrow" d="M2940 257 H2990 V450 H3040"/>
+    <path class="arrow cyan-arrow" id="aux-image-arrow" d="M1660 295 V582 H1865"/>
+
+    <!-- Inference ports: tokens first pass through the routed Adapter. -->
+    <path class="arrow blue-arrow" d="M575 945 V970 H150 V1368 H180"/>
+    <path class="arrow red-arrow" d="M1615 945 V970 H2250 V1588 H2150"/>
+
+    <!-- Training ports. -->
+    <path class="arrow blue-arrow" d="M2742 945 V970 H2405 V1412 H2460"/>
+    <path class="arrow red-arrow" d="M3437 945 V970 H3735 V1628 H3685"/>
+
+    <!-- Adapter Bank route and exact original DDP operations. -->
+    <path class="arrow orange-arrow" d="M1705 1206 V1275"/>
+    <path class="arrow green-arrow" d="M1165 1460 V1525"/>
+    <path class="arrow green-arrow" d="M1165 1650 V1715"/>
+    <path class="arrow green-arrow" d="M1165 1840 V1905"/>
+    <path class="arrow green-arrow" d="M1165 2030 V2095"/>
+    <path class="arrow purple-arrow" d="M1165 2265 V2555 H1900 V2580"/>
+
+    <!-- Training flow; no arrow from the loss to prediction. -->
+    <path class="arrow cyan-arrow" d="M3072 1490 V1550"/>
+    <path class="arrow cyan-arrow" d="M3072 1705 V1765"/>
+    <path class="arrow cyan-arrow" d="M3072 1910 V1970"/>
+    <path class="arrow cyan-arrow" d="M3072 2115 V2175"/>
+    <path class="arrow cyan-arrow" d="M3685 1198 H3710 V1838 H3685"/>
+
+    <!-- Training creates a frozen card for the Bank, but never enters prediction. -->
+    <path d="M2370 2042 H2335" fill="none" stroke="#fff7ed" stroke-width="16" stroke-linecap="round"/>
+    <path class="arrow orange-arrow dashed" d="M2460 2042 H2325 V1075 H1990 V1124"/>
+  </svg>
+</div>
+
+<script>
+  window.addEventListener('load', () => {
+    const mode = new URLSearchParams(window.location.search).get('mode') || 'all_tokens';
+    const poolingAware = mode === 'pooling_aware';
+    const allTokens = mode === 'all_tokens' || poolingAware;
+    if (!allTokens && mode !== 'cls_only') {
+      throw new Error(`Unknown mode: ${mode}`);
+    }
+
+    document.getElementById('diagram-title').textContent = poolingAware
+      ? 'CODE_DDP: Pooling-aware Final-token Adapter Bank on Prompted 197 Tokens'
+      : allTokens
+        ? 'CODE_DDP: Prompt-free CLS Adapter Weights Applied to All 197 Final Tokens'
+        : 'CODE_DDP: Prompt-free CLS Adapter Weights Applied to the Final CLS Token Only';
+    document.getElementById('diagram-subtitle').textContent = poolingAware
+      ? 'Task-native prompted-token training · point-wise adaptation of all 197 tokens · pooling + attention + margin preservation · exact DDP pooling'
+      : allTokens
+        ? 'Full Task-routed Adapter Bank · point-wise adaptation of CLS and 196 patch tokens · exact original DDP attention pooling after adaptation'
+        : 'Full Task-routed Adapter Bank · adapt token 0 only and preserve 196 patch tokens bitwise · exact original DDP attention pooling after adaptation';
+    document.getElementById('inference-title').textContent = poolingAware
+      ? 'Inference route: class-routed Pooling-aware Adapter on all 197 tokens → recomputed DDP pooling'
+      : allTokens
+        ? 'Inference route: class-routed frozen Adapter on all final tokens → original DDP pooling'
+        : 'Inference route: class-routed frozen Adapter on CLS token only → original DDP pooling';
+
+    const adapterFormula = document.getElementById('adapter-formula');
+    adapterFormula.dataset.tex = allTokens
+      ? String.raw`\begin{aligned}
+          \tau(c)&=s\Longleftrightarrow c\in\mathcal C^s,\qquad n=0,\ldots,N,\\
+          \mathbf r_{n,\tau(c)}^{c\pm}
+            &=W_{2,\tau(c)}\sigma\!\left(W_{1,\tau(c)}
+              \operatorname{norm}(\mathbf f_n^{c\pm})\right),\\
+          \widetilde{\mathbf f}_{n}^{c\pm}
+            &=\operatorname{norm}\!\left(\mathbf f_n^{c\pm}
+              +\alpha\mathbf r_{n,\tau(c)}^{c\pm}\right),\qquad\alpha=0.03
+        \end{aligned}`
+      : String.raw`\begin{aligned}
+          \tau(c)&=s\Longleftrightarrow c\in\mathcal C^s,\\
+          \mathbf r_{0,\tau(c)}^{c\pm}
+            &=W_{2,\tau(c)}\sigma\!\left(W_{1,\tau(c)}
+              \operatorname{norm}(\mathbf f_0^{c\pm})\right),\\
+          \widetilde{\mathbf f}_{0}^{c\pm}
+            &=\operatorname{norm}\!\left(\mathbf f_0^{c\pm}
+              +\alpha\mathbf r_{0,\tau(c)}^{c\pm}\right),\quad\alpha=0.03,
+          \qquad\widetilde{\mathbf f}_{n}^{c\pm}=\mathbf f_n^{c\pm}\ (n\ge1)
+        \end{aligned}`;
+
+    if (poolingAware) {
+      [
+        'aux-proto-text-label',
+        'aux-proto-text-formula',
+      ].forEach((id) => {
+        document.getElementById(id).style.display = 'none';
+      });
+
+      const teacherTextLabel =
+        document.getElementById('aux-proto-prompt-label');
+      teacherTextLabel.textContent =
+        'Frozen prompted-text reference shared by teacher and adapted route';
+      teacherTextLabel.style.width = '1290px';
+      const teacherTextFormula =
+        document.getElementById('aux-proto-prompt-formula');
+      teacherTextFormula.style.width = '1290px';
+      teacherTextFormula.dataset.tex = String.raw`
+        \mathbf t_{\mathrm{ref}}^{c\pm}
+          =\operatorname{sg}(\mathbf t^{c\pm}),
+        \qquad
+        \widetilde{\mathbf t}^{c\pm}=\mathbf t^{c\pm}
+        \quad\text{(frozen text side)}
+      `;
+      document.getElementById('aux-text-arrow').setAttribute(
+        'd',
+        'M1087 320 V420 H100 V480',
+      );
+
+      document.getElementById('aux-image-label').textContent =
+        'Frozen original DDP prompted-token teacher reference';
+      document.getElementById('aux-image-formula').dataset.tex = String.raw`
+        \mathbf F_{\mathrm{ref}}^{c\pm}
+          =\operatorname{sg}(\mathbf F^{c\pm}),
+        \qquad
+        \mathbf F_{\mathrm{student}}^{c\pm}=\mathbf F^{c\pm},
+        \qquad N+1=197
+      `;
+      document.getElementById('aux-image-arrow').setAttribute(
+        'd',
+        'M2655 320 V450 H1900 V520',
+      );
+
+      document.getElementById('training-port-label').textContent =
+        'Prompted 197 tokens / DDP text → Pooling-aware Final-token Adapter training';
+      document.getElementById('training-image-port').dataset.tex =
+        String.raw`\mathbf F^{c\pm}`;
+      document.getElementById('training-text-port').dataset.tex =
+        String.raw`\mathbf t^{c\pm}`;
+      document.getElementById('training-title').textContent =
+        'Pooling-aware Final-token Adapter training route';
+      document.getElementById('training-footer-label').innerHTML =
+        '<span class="swatch" style="border-color:var(--cyan)"></span>training-only prompted pooling-aware route';
+
+      document.getElementById('training-step1-label').textContent =
+        'Current-task prompted-token cache and strict partial-label mask';
+      document.getElementById('training-step1-formula').dataset.tex =
+        String.raw`\begin{aligned}
+          \mathcal D_s^{\mathrm{Full}}
+            &=\{(\mathbf F_i,\mathbf t,\mathbf y_i):
+              \sum_{c\in\mathcal C^s}y_{ic}>0\},\\
+          M_{ic}^{s}&=\mathbb 1[c\in\mathcal C^s]
+        \end{aligned}`;
+
+      document.getElementById('training-step2-label').textContent =
+        'Train the new task Adapter point-wise on all 197 prompted final tokens';
+      document.getElementById('training-step2-formula').dataset.tex =
+        String.raw`\begin{aligned}
+          \mathbf r_{i,n,s}^{c\pm}
+            &=W_{2,s}\sigma\!\left(W_{1,s}
+              \operatorname{norm}(\mathbf f_{i,n}^{c\pm})\right),\\
+          \widetilde{\mathbf f}_{i,n,s}^{c\pm}
+            &=\operatorname{norm}\!\left(
+              \mathbf f_{i,n}^{c\pm}+0.03\,\mathbf r_{i,n,s}^{c\pm}\right),
+              \quad n=0,\ldots,196
+        \end{aligned}`;
+
+      document.getElementById('training-step3-label').textContent =
+        'Frozen original DDP teacher and adapted-token student quantities';
+      document.getElementById('training-step3-formula').dataset.tex =
+        String.raw`\begin{aligned}
+          (\boldsymbol\omega_i^c,\overline{\mathbf f}_i^{c\pm},
+             \ell_i^{c\pm},m_i^c)
+            &=\operatorname{DDP}(\mathbf F_i^{c\pm},\mathbf t^{c\pm}),\\
+          (\widetilde{\boldsymbol\omega}_i^c,
+             \widetilde{\overline{\mathbf f}}_i^{c\pm},
+             \widetilde\ell_i^{c\pm},\widetilde m_i^c)
+            &=\operatorname{DDP}(\widetilde{\mathbf F}_{i,s}^{c\pm},
+              \mathbf t^{c\pm}),\quad
+          m_i^c=\ell_i^{c+}-\ell_i^{c-}
+        \end{aligned}`;
+
+      document.getElementById('training-step4-label').textContent =
+        'Masked classification with token, pooling, attention and margin preservation';
+      document.getElementById('training-step4-formula').dataset.tex =
+        String.raw`\begin{aligned}
+          \mathcal L_s
+            &=\operatorname{BCE}_{M^s}(\widetilde{\mathbf m},\mathbf y)
+              +0.1\,\mathcal L_{\mathrm{token}}
+              +100\,\mathcal L_{\mathrm{pool}}
+              +100\,\mathcal L_{\mathrm{attn}}
+              +\mathcal L_{\mathrm{margin}},\\
+          \mathcal L_{\mathrm{pool}}
+            &=1-\cos(\widetilde{\overline{\mathbf f}},
+              \overline{\mathbf f}),\quad
+          \mathcal L_{\mathrm{attn}}
+            =D_{\mathrm{KL}}(\boldsymbol\omega\|
+              \widetilde{\boldsymbol\omega}),\quad
+          \mathcal L_{\mathrm{margin}}
+            =\operatorname{SmoothL1}(\widetilde{\mathbf m}-\mathbf m)
+        \end{aligned}`;
+
+      document.getElementById('training-step5-label').textContent =
+        'Freeze the learned task mapping and insert one new Adapter card';
+      document.getElementById('training-step5-formula').dataset.tex =
+        String.raw`(W_{1,s}^{*},W_{2,s}^{*})
+          =\arg\min\mathcal L_s,\qquad
+          A_s\xrightarrow{\mathrm{freeze}}\{A_0,\ldots,A_s\}`;
+
+      document.getElementById('training-step6-label').textContent =
+        'Strict incremental constraints and fixed inference protocol';
+      document.getElementById('training-step6-formula').dataset.tex =
+        String.raw`A_{0:s-1}\ \text{frozen};\quad
+          \mathbf y^{\mathrm{old/future}}\ \text{masked};\quad
+          \alpha=0.03;\quad\mathcal D_{\mathrm{test}}\ \text{unseen}`;
+    }
+
+    document.getElementById('result-label').textContent =
+      'Final temperature-scaled two-way prediction';
+    const resultFormula = document.getElementById('result-formula');
+    resultFormula.dataset.tex = String.raw`
+      \widehat{\mathbf y}^{\,t}
+      =
+      \left[
+      \widehat y_{c+}^{\,t}
+      \right]_{c\in\mathcal C^{0:t}},
+      \qquad
+      \widehat y_{c+}^{\,t}
+      =
+      \frac{\exp\!\left(\widetilde\ell^{c+}/\tau(t)\right)}
+      {\exp\!\left(\widetilde\ell^{c+}/\tau(t)\right)
+      +\exp\!\left(\widetilde\ell^{c-}/\tau(t)\right)}
+    `;
+
+    document.querySelectorAll('.math').forEach((node) => {
+      katex.render(node.dataset.tex, node, {
+        displayMode: true,
+        throwOnError: true,
+        strict: false,
+        trust: false
+      });
+    });
+    document.fonts.ready.then(() => { window.__diagramReady = true; });
+  });
+</script>
+</body>
+</html>
