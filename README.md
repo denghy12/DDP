@@ -408,3 +408,7 @@ The launcher audits cross-task multi-label sample overlap, trains three seeds
 for both Banks, performs strict all-task evaluation, and writes the combined
 JSON/CSV/HTML report to
 `output/emotic_ddp_task_adapter_bank_comparison/`.
+
+The fixed-last ASL/BAL comparison that preserves the same deterministic routing
+and Feature Difference inference path is documented in
+`docs/ddp_task_adapter_bank_asl_bal.md`.

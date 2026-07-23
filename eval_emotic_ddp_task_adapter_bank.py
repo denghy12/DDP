@@ -53,6 +53,12 @@ def parse_args():
     parser.add_argument("--threshold_min", type=float, default=0.05)
     parser.add_argument("--threshold_max", type=float, default=0.95)
     parser.add_argument("--threshold_step", type=float, default=0.01)
+    parser.add_argument(
+        "--fixed_threshold",
+        type=float,
+        default=None,
+        help="Use one locked decision threshold and do not inspect validation labels.",
+    )
     parser.add_argument("--t_min", type=float, default=1.0)
     parser.add_argument("--t_max", type=float, default=2.0)
     parser.add_argument("--t_gamma", type=float, default=0.7)
@@ -162,6 +168,10 @@ def main():
         raise ValueError("This evaluator only accepts Feature Difference banks")
     if float(manifest.get("inference_alpha", -1)) != 0.03:
         raise ValueError("The locked experiment requires inference_alpha=0.03")
+    if manifest.get("routing_mode", "class_introduction_task") != "class_introduction_task":
+        raise ValueError("Only class-introduction task routing is supported")
+    if args.fixed_threshold is not None and not 0 < args.fixed_threshold < 1:
+        raise ValueError("fixed_threshold must be in (0, 1)")
     first_checkpoint = torch.load(checkpoint_paths[0], map_location="cpu")
     classnames = list(first_checkpoint["classnames"])
     if classnames != list(manifest.get("classnames", [])):
@@ -224,10 +234,20 @@ def main():
             bank, val_cache, seen_classes, args
         )
         test_scores, _ = predict_from_bank(bank, test_cache, seen_classes, args)
-        threshold, threshold_rows = select_threshold(
-            val_cache["targets"][:, :seen_classes], val_scores, args
-        )
-        selected_threshold = threshold["threshold"]
+        if args.fixed_threshold is None:
+            threshold, threshold_rows = select_threshold(
+                val_cache["targets"][:, :seen_classes], val_scores, args
+            )
+            selected_threshold = threshold["threshold"]
+            threshold_role = "selected_on_validation"
+        else:
+            selected_threshold = float(args.fixed_threshold)
+            threshold = {
+                "threshold": selected_threshold,
+                "source": "fixed_protocol",
+            }
+            threshold_rows = []
+            threshold_role = "fixed_protocol"
         val_metrics = score_metrics(
             val_cache["targets"][:, :seen_classes],
             val_scores,
@@ -272,7 +292,10 @@ def main():
             "adapter_tasks_loaded": list(range(task_id + 1)),
             "class_range": [low, high],
             "temperature": temperature,
-            "selection_split": "val",
+            "selection_split": (
+                "none" if args.fixed_threshold is not None else "val"
+            ),
+            "threshold_role": threshold_role,
             "selected_threshold": threshold,
             "threshold_sweep": threshold_rows,
             "val": val_metrics,
@@ -298,6 +321,12 @@ def main():
                 "correction_mode": "feature_difference",
                 "inference_alpha": 0.03,
                 "feature_source": "cls",
+                "classification_loss": manifest.get("classification_loss"),
+                "loss_config": manifest.get("loss_config"),
+                "checkpoint_rule": manifest.get("checkpoint_rule"),
+                "routing_mode": manifest.get(
+                    "routing_mode", "class_introduction_task"
+                ),
             },
             output_dir / f"task{task_id}_scores.pt",
         )
@@ -317,6 +346,9 @@ def main():
             "name": "EMOTIC B5-C3 Task-routed Adapter Bank",
             "training_mode": manifest["training_mode"],
             "seed": manifest["seed"],
+            "classification_loss": manifest.get("classification_loss", "legacy"),
+            "loss_config": manifest.get("loss_config"),
+            "checkpoint_rule": manifest.get("checkpoint_rule", "best_val"),
             "routing": "class introduction task",
             "feature_source": "prompted_cls",
             "correction_mode": "feature_difference",
@@ -324,7 +356,16 @@ def main():
             "task_specific_alpha": False,
             "class_specific_gate": False,
             "external_score_fusion": False,
-            "validation_role": "per-stage global decision threshold only",
+            "decision_threshold": (
+                float(args.fixed_threshold)
+                if args.fixed_threshold is not None
+                else "selected_per_stage_on_validation"
+            ),
+            "validation_role": (
+                "reporting only"
+                if args.fixed_threshold is not None
+                else "per-stage global decision threshold only"
+            ),
             "test_used_for_selection": False,
         },
         "inputs": {
@@ -361,4 +402,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

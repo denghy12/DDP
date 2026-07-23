@@ -33,8 +33,8 @@ TASK_CLASS_RANGES: Tuple[Tuple[int, int], ...] = (
     (23, 26),
 )
 TASK_SEEN_CLASSES: Tuple[int, ...] = tuple(high for _, high in TASK_CLASS_RANGES)
-BANK_SCHEMA_VERSION = 1
-CHECKPOINT_SCHEMA_VERSION = 1
+BANK_SCHEMA_VERSION = 2
+CHECKPOINT_SCHEMA_VERSION = 2
 
 
 def task_class_range(task_id: int) -> Tuple[int, int]:
@@ -152,6 +152,9 @@ def validate_task_adapter_checkpoint(
     training_mode: Optional[str] = None,
     seed: Optional[int] = None,
     classnames: Optional[Sequence[str]] = None,
+    classification_loss: Optional[str] = None,
+    loss_config_sha256: Optional[str] = None,
+    checkpoint_rule: Optional[str] = None,
 ) -> Mapping:
     metadata = _checkpoint_task_metadata(checkpoint)
     checkpoint_task = int(metadata["task_id"])
@@ -180,6 +183,28 @@ def validate_task_adapter_checkpoint(
         raise ValueError("Adapter and DDP class orders differ")
     if checkpoint.get("model") is None:
         raise ValueError("Adapter checkpoint does not contain model weights")
+    if (
+        classification_loss is not None
+        and metadata.get("classification_loss") != classification_loss
+    ):
+        raise ValueError(
+            f"Expected loss {classification_loss}, found "
+            f"{metadata.get('classification_loss')}"
+        )
+    checkpoint_loss_config = metadata.get("loss_config", {})
+    if (
+        loss_config_sha256 is not None
+        and checkpoint_loss_config.get("sha256") != loss_config_sha256
+    ):
+        raise ValueError("Adapter checkpoint loss configuration differs")
+    if (
+        checkpoint_rule is not None
+        and metadata.get("checkpoint_rule") != checkpoint_rule
+    ):
+        raise ValueError(
+            f"Expected checkpoint rule {checkpoint_rule}, found "
+            f"{metadata.get('checkpoint_rule')}"
+        )
     return metadata
 
 
@@ -190,12 +215,20 @@ class TaskRoutedAdapterBank(nn.Module):
         self,
         adapters: Mapping[int, nn.Module],
         inference_alpha: float = 0.03,
+        classification_loss: str = "legacy",
+        loss_config_sha256: Optional[str] = None,
+        routing_mode: str = "class_introduction_task",
+        correction_mode: str = "feature_difference",
     ):
         super().__init__()
         if inference_alpha < 0:
             raise ValueError("inference_alpha must be non-negative")
         if not adapters:
             raise ValueError("Adapter bank must contain at least task 0")
+        if routing_mode != "class_introduction_task":
+            raise ValueError("Only deterministic class-introduction routing is supported")
+        if correction_mode != "feature_difference":
+            raise ValueError("Task Adapter Bank requires Feature Difference")
         task_ids = sorted(int(task_id) for task_id in adapters)
         if task_ids != list(range(task_ids[-1] + 1)):
             raise ValueError(
@@ -206,6 +239,10 @@ class TaskRoutedAdapterBank(nn.Module):
             {str(task_id): adapters[task_id] for task_id in task_ids}
         )
         self.inference_alpha = float(inference_alpha)
+        self.classification_loss = str(classification_loss)
+        self.loss_config_sha256 = loss_config_sha256
+        self.routing_mode = routing_mode
+        self.correction_mode = correction_mode
         for adapter in self.adapters.values():
             if hasattr(adapter, "residual_scale"):
                 adapter.residual_scale = self.inference_alpha
@@ -308,8 +345,14 @@ class TaskRoutedAdapterBank(nn.Module):
     ) -> "TaskRoutedAdapterBank":
         manifest_path = Path(manifest_path)
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        if int(manifest.get("schema_version", -1)) != BANK_SCHEMA_VERSION:
+        schema_version = int(manifest.get("schema_version", -1))
+        if schema_version not in (1, BANK_SCHEMA_VERSION):
             raise ValueError("Unsupported Adapter Bank manifest schema")
+        if manifest.get("inference_formula") != "feature_difference":
+            raise ValueError("Adapter Bank manifest is not Feature Difference")
+        routing_mode = manifest.get("routing_mode", "class_introduction_task")
+        if routing_mode != "class_introduction_task":
+            raise ValueError("Adapter Bank manifest uses an unsupported route")
         manifest_classnames = manifest.get("classnames", [])
         if classnames is not None and list(manifest_classnames) != list(classnames):
             raise ValueError("Adapter Bank and DDP class orders differ")
@@ -338,6 +381,21 @@ class TaskRoutedAdapterBank(nn.Module):
                 training_mode=manifest["training_mode"],
                 seed=manifest["seed"],
                 classnames=manifest_classnames,
+                classification_loss=(
+                    manifest.get("classification_loss")
+                    if schema_version >= 2
+                    else None
+                ),
+                loss_config_sha256=(
+                    manifest.get("loss_config", {}).get("sha256")
+                    if schema_version >= 2
+                    else None
+                ),
+                checkpoint_rule=(
+                    manifest.get("checkpoint_rule")
+                    if schema_version >= 2
+                    else None
+                ),
             )
             checkpoint_args = checkpoint["args"]
             adapter = SharedResidualFeatureAdapter(
@@ -350,6 +408,10 @@ class TaskRoutedAdapterBank(nn.Module):
         return cls(
             adapters,
             inference_alpha=float(manifest["inference_alpha"]),
+            classification_loss=manifest.get("classification_loss", "legacy"),
+            loss_config_sha256=(manifest.get("loss_config") or {}).get("sha256"),
+            routing_mode=routing_mode,
+            correction_mode=manifest["inference_formula"],
         ).to(device)
 
 
@@ -359,11 +421,15 @@ def build_bank_manifest(
     seed: int,
     classnames: Sequence[str],
     inference_alpha: float = 0.03,
+    checkpoint_filename: str = "best_adapter.pth",
 ) -> dict:
     bank_dir = Path(bank_dir)
     adapters = {}
+    shared_loss_name = None
+    shared_loss_config = None
+    shared_checkpoint_rule = None
     for task_id in range(len(TASK_CLASS_RANGES)):
-        checkpoint_path = bank_dir / f"task{task_id}" / "best_adapter.pth"
+        checkpoint_path = bank_dir / f"task{task_id}" / checkpoint_filename
         if not checkpoint_path.is_file():
             raise FileNotFoundError(checkpoint_path)
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
@@ -374,22 +440,47 @@ def build_bank_manifest(
             seed=seed,
             classnames=classnames,
         )
+        loss_name = metadata.get("classification_loss")
+        loss_config = metadata.get("loss_config")
+        checkpoint_rule = metadata.get("checkpoint_rule", "best_val")
+        if shared_loss_name is None:
+            shared_loss_name = loss_name
+            shared_loss_config = loss_config
+            shared_checkpoint_rule = checkpoint_rule
+        if loss_name != shared_loss_name or loss_config != shared_loss_config:
+            raise ValueError("Task checkpoints contain different loss configurations")
+        if checkpoint_rule != shared_checkpoint_rule:
+            raise ValueError("Task checkpoints contain different checkpoint rules")
         adapters[str(task_id)] = {
             "task_id": task_id,
             "class_range": list(task_class_range(task_id)),
             "checkpoint": str(checkpoint_path.relative_to(bank_dir)),
             "sha256": file_sha256(checkpoint_path),
-            "best_epoch": checkpoint.get("epoch"),
-            "selection_score": checkpoint.get("selection_score"),
+            "epoch": checkpoint.get("epoch"),
+            "reporting_val_score": checkpoint.get(
+                "reporting_val_score", checkpoint.get("selection_score")
+            ),
             "initialization": metadata.get("initialization"),
         }
+    schema_version = BANK_SCHEMA_VERSION if shared_loss_name is not None else 1
     return {
-        "schema_version": BANK_SCHEMA_VERSION,
+        "schema_version": schema_version,
         "name": "EMOTIC B5-C3 task-routed Adapter Bank",
         "training_mode": training_mode,
         "seed": int(seed),
+        "classification_loss": (
+            shared_loss_name if shared_loss_name is not None else "legacy"
+        ),
+        "loss_config": shared_loss_config,
+        "checkpoint_rule": (
+            shared_checkpoint_rule
+            if shared_checkpoint_rule is not None
+            else "best_val"
+        ),
         "inference_formula": "feature_difference",
         "legacy_correction_mode": "linear_residual",
+        "routing_mode": "class_introduction_task",
+        "feature_source": "prompted_cls",
         "inference_alpha": float(inference_alpha),
         "class_specific_gate": False,
         "task_specific_alpha": False,

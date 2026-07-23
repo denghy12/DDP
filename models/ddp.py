@@ -350,6 +350,12 @@ class DDP(nn.Module):
             raise RuntimeError(
                 "Disable the single feature_adapter before enabling an Adapter Bank"
             )
+        if getattr(adapter_bank, "routing_mode", None) != "class_introduction_task":
+            raise ValueError(
+                "DDP only accepts deterministic class-introduction task routing"
+            )
+        if getattr(adapter_bank, "correction_mode", None) != "feature_difference":
+            raise ValueError("DDP Task Adapter Bank requires Feature Difference")
         self.feature_adapter_bank = adapter_bank
         self.feature_adapter_bank.eval()
         for parameter in self.feature_adapter_bank.parameters():
@@ -468,6 +474,10 @@ class DDP(nn.Module):
                 "correction_mode": "feature_difference",
                 "feature_source": "prompted_cls",
                 "max_adapter_task": feature_adapter_bank.max_task,
+                "routing_mode": feature_adapter_bank.routing_mode,
+                "classification_loss": feature_adapter_bank.classification_loss,
+                "loss_config_sha256": feature_adapter_bank.loss_config_sha256,
+                "inference_alpha": feature_adapter_bank.inference_alpha,
             }
         elif feature_adapter is not None:
             from ddp_internal_adapter import feature_logit_correction

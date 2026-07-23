@@ -16,6 +16,11 @@ def parse_args():
     parser.add_argument("--training_mode", choices=("full", "16shot"), required=True)
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--inference_alpha", type=float, default=0.03)
+    parser.add_argument(
+        "--checkpoint_filename",
+        default="best_adapter.pth",
+        choices=("best_adapter.pth", "last_adapter.pth"),
+    )
     return parser.parse_args()
 
 
@@ -27,8 +32,8 @@ def write_html(path, manifest):
             f"<td>{task_id}</td>"
             f"<td>{escape(str(entry['class_range']))}</td>"
             f"<td>{escape(entry['checkpoint'])}</td>"
-            f"<td>{entry['best_epoch']}</td>"
-            f"<td>{entry['selection_score']}</td>"
+            f"<td>{entry['epoch']}</td>"
+            f"<td>{entry['reporting_val_score']}</td>"
             f"<td><code>{entry['sha256'][:12]}</code></td>"
             "</tr>"
         )
@@ -41,6 +46,8 @@ def write_html(path, manifest):
         "th{background:#416fbd;color:white}</style>"
         f"<h1>{escape(manifest['name'])}</h1>"
         f"<p>Mode: {manifest['training_mode']}; seed: {manifest['seed']}; "
+        f"loss: {manifest['classification_loss']}; "
+        f"checkpoint: {manifest['checkpoint_rule']}; "
         f"fixed α: {manifest['inference_alpha']}</p>"
         "<table><tr><th>Task</th><th>Classes</th><th>Checkpoint</th>"
         "<th>Epoch</th><th>Val mAP</th><th>SHA256</th></tr>"
@@ -53,13 +60,16 @@ def write_html(path, manifest):
 def main():
     args = parse_args()
     bank_dir = Path(args.bank_dir)
-    task0 = torch.load(bank_dir / "task0" / "best_adapter.pth", map_location="cpu")
+    task0 = torch.load(
+        bank_dir / "task0" / args.checkpoint_filename, map_location="cpu"
+    )
     manifest = build_bank_manifest(
         bank_dir,
         args.training_mode,
         args.seed,
         task0["classnames"],
         inference_alpha=args.inference_alpha,
+        checkpoint_filename=args.checkpoint_filename,
     )
     json_path = bank_dir / "adapter_bank_manifest.json"
     json_path.write_text(
@@ -71,4 +81,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

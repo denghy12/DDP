@@ -5,6 +5,7 @@ in the offline EMOTIC annotation file but are explicitly masked from the loss.
 """
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -15,6 +16,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from ddp_internal_adapter import PromptFreePrototypeObjective
+from emotic_multilabel_losses import LOSS_NAMES, build_asymmetric_loss
 from emotic_task_adapter_bank import (
     CHECKPOINT_SCHEMA_VERSION,
     file_sha256,
@@ -74,12 +76,68 @@ def parse_args():
     parser.add_argument("--identity_weight", type=float, default=0.1)
     parser.add_argument("--initial_logit_scale", type=float, default=10.0)
     parser.add_argument("--shots_per_class", type=int, default=16)
+    parser.add_argument(
+        "--classification_loss",
+        choices=LOSS_NAMES,
+        default="weighted_bce",
+    )
     parser.add_argument("--class_balanced_bce", action="store_true")
+    parser.add_argument("--asl_gamma_neg", type=float, default=9.8)
+    parser.add_argument("--asl_gamma_pos", type=float, default=0.0)
+    parser.add_argument("--asl_clip", type=float, default=0.05)
+    parser.add_argument("--bal_weight_power", type=float, default=1.6)
+    parser.add_argument("--bal_label_smoothing", type=float, default=0.1)
+    parser.add_argument("--bal_smoothing_num_classes", type=int, default=26)
+    parser.add_argument(
+        "--checkpoint_rule",
+        choices=("best_val", "last_epoch"),
+        default="best_val",
+    )
     parser.add_argument("--force_recache", action="store_true")
     parser.add_argument(
         "--device", default="cuda" if torch.cuda.is_available() else "cpu"
     )
     return parser.parse_args()
+
+
+def loss_configuration(args):
+    configuration = {
+        "name": args.classification_loss,
+        "class_balanced_bce": bool(args.class_balanced_bce),
+        "asl_gamma_neg": (
+            float(args.asl_gamma_neg)
+            if args.classification_loss != "weighted_bce"
+            else None
+        ),
+        "asl_gamma_pos": (
+            float(args.asl_gamma_pos)
+            if args.classification_loss != "weighted_bce"
+            else None
+        ),
+        "asl_clip": (
+            float(args.asl_clip)
+            if args.classification_loss != "weighted_bce"
+            else None
+        ),
+        "bal_weight_power": (
+            float(args.bal_weight_power)
+            if args.classification_loss.startswith("bal")
+            else None
+        ),
+        "bal_label_smoothing": (
+            float(args.bal_label_smoothing)
+            if args.classification_loss.startswith("bal")
+            else 0.0
+        ),
+        "bal_smoothing_num_classes": (
+            int(args.bal_smoothing_num_classes)
+            if args.classification_loss.startswith("bal")
+            else None
+        ),
+    }
+    canonical = json.dumps(configuration, sort_keys=True, separators=(",", ":"))
+    configuration["sha256"] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return configuration
 
 
 def current_validation_map(
@@ -136,10 +194,44 @@ def train_task_adapter(
         objective.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
     pos_weight = None
-    if args.class_balanced_bce:
+    active_labels = train_labels[:, active]
+    active_mask = supervision_mask[:, active]
+    asymmetric_loss = None
+    loss_diagnostics = None
+    if args.classification_loss == "weighted_bce" and args.class_balanced_bce:
         pos_weight = masked_pos_weight(
             train_labels, supervision_mask, active_indices
         ).to(device)
+        positives = (active_labels.gt(0) & active_mask.bool()).sum(dim=0).float()
+        negatives = (active_labels.eq(0) & active_mask.bool()).sum(dim=0).float()
+        loss_diagnostics = {
+            "loss_name": "weighted_bce",
+            "visible_positives": positives.tolist(),
+            "visible_negatives": negatives.tolist(),
+            "pos_weight": pos_weight.cpu().tolist(),
+        }
+    elif args.classification_loss == "weighted_bce":
+        positives = (active_labels.gt(0) & active_mask.bool()).sum(dim=0).float()
+        negatives = (active_labels.eq(0) & active_mask.bool()).sum(dim=0).float()
+        loss_diagnostics = {
+            "loss_name": "weighted_bce",
+            "visible_positives": positives.tolist(),
+            "visible_negatives": negatives.tolist(),
+            "pos_weight": None,
+        }
+    else:
+        asymmetric_loss, loss_diagnostics = build_asymmetric_loss(
+            args.classification_loss,
+            active_labels,
+            active_mask,
+            gamma_neg=args.asl_gamma_neg,
+            gamma_pos=args.asl_gamma_pos,
+            clip=args.asl_clip,
+            bal_weight_power=args.bal_weight_power,
+            bal_label_smoothing=args.bal_label_smoothing,
+            smoothing_num_classes=args.bal_smoothing_num_classes,
+        )
+        asymmetric_loss = asymmetric_loss.to(device)
 
     initial_adapter = {
         key: value.detach().cpu().clone()
@@ -159,6 +251,10 @@ def train_task_adapter(
     best_adapter = None
     best_logit_scale = None
     best_per_class = None
+    last_adapter = None
+    last_logit_scale = None
+    last_score = None
+    last_per_class = None
     history = []
 
     for epoch in range(args.epochs):
@@ -170,12 +266,15 @@ def train_task_adapter(
             label_batch = label_batch[:, active].to(device)
             mask_batch = mask_batch[:, active].to(device)
             logits, adapted, original = objective(feature_batch)
-            class_loss = masked_bce_with_logits(
-                logits,
-                label_batch,
-                mask_batch,
-                pos_weight=pos_weight,
-            )
+            if asymmetric_loss is None:
+                class_loss = masked_bce_with_logits(
+                    logits,
+                    label_batch,
+                    mask_batch,
+                    pos_weight=pos_weight,
+                )
+            else:
+                class_loss = asymmetric_loss(logits, label_batch, mask_batch)
             identity_loss = 1.0 - (adapted * original).sum(dim=-1).mean()
             loss = class_loss + args.identity_weight * identity_loss
             optimizer.zero_grad(set_to_none=True)
@@ -221,10 +320,35 @@ def train_task_adapter(
             }
             best_logit_scale = objective.logit_scale.detach().cpu().clone()
             best_per_class = per_class_ap
+        last_adapter = {
+            key: value.detach().cpu().clone()
+            for key, value in objective.adapter.state_dict().items()
+        }
+        last_logit_scale = objective.logit_scale.detach().cpu().clone()
+        last_score = selection_score
+        last_per_class = per_class_ap
 
-    objective.adapter.load_state_dict(best_adapter)
-    objective.logit_scale.data.copy_(best_logit_scale.to(device))
+    if args.checkpoint_rule == "last_epoch":
+        selected_epoch = args.epochs - 1
+        selected_adapter = last_adapter
+        selected_logit_scale = last_logit_scale
+        selected_score = last_score
+        selected_per_class = last_per_class
+    else:
+        selected_epoch = best_epoch
+        selected_adapter = best_adapter
+        selected_logit_scale = best_logit_scale
+        selected_score = best_score
+        selected_per_class = best_per_class
+    objective.adapter.load_state_dict(selected_adapter)
+    objective.logit_scale.data.copy_(selected_logit_scale.to(device))
     return {
+        "checkpoint_rule": args.checkpoint_rule,
+        "selected_epoch": selected_epoch,
+        "selected_adapter": selected_adapter,
+        "selected_logit_scale": selected_logit_scale,
+        "selected_score": selected_score,
+        "selected_per_class": selected_per_class,
         "best_epoch": best_epoch,
         "zero_selection_mAP": zero_score,
         "zero_per_class_ap": zero_per_class,
@@ -235,6 +359,7 @@ def train_task_adapter(
         "best_logit_scale": best_logit_scale,
         "initial_adapter": initial_adapter,
         "initial_logit_scale": initial_logit_scale,
+        "loss_diagnostics": loss_diagnostics,
     }
 
 
@@ -273,6 +398,16 @@ def main():
         raise ValueError("Task 0 must start from the identity Adapter initialization")
     if args.task_id > 0 and not args.init_adapter_checkpoint:
         raise ValueError("Tasks 1-7 require the matching task0 Adapter checkpoint")
+    if args.classification_loss != "weighted_bce" and args.class_balanced_bce:
+        raise ValueError(
+            "--class_balanced_bce cannot be combined with ASL/BAL because it "
+            "would double-weight positive classes"
+        )
+    if args.classification_loss == "weighted_bce" and not args.class_balanced_bce:
+        raise ValueError(
+            "The locked weighted_bce baseline requires --class_balanced_bce"
+        )
+    locked_loss_config = loss_configuration(args)
 
     set_seed(args.seed)
     device = torch.device(args.device)
@@ -341,6 +476,9 @@ def main():
             training_mode=args.training_mode,
             seed=args.seed,
             classnames=classnames,
+            classification_loss=args.classification_loss,
+            loss_config_sha256=locked_loss_config["sha256"],
+            checkpoint_rule=args.checkpoint_rule,
         )
         adapter.load_state_dict(init_checkpoint["model"], strict=True)
         initialization = {
@@ -376,13 +514,21 @@ def main():
         "training_mode": args.training_mode,
         "seed": args.seed,
         "initialization": initialization,
+        "classification_loss": args.classification_loss,
+        "loss_config": locked_loss_config,
+        "checkpoint_rule": args.checkpoint_rule,
     }
     checkpoint_payload = {
-        "model": training["best_adapter"],
-        "auxiliary_logit_scale": training["best_logit_scale"],
-        "epoch": training["best_epoch"],
-        "selection_score": training["best_selection_mAP"],
-        "selection_split": "val_current_task",
+        "model": training["selected_adapter"],
+        "auxiliary_logit_scale": training["selected_logit_scale"],
+        "epoch": training["selected_epoch"],
+        "reporting_val_score": training["selected_score"],
+        "checkpoint_rule": args.checkpoint_rule,
+        "selection_split": (
+            "none_fixed_last_epoch"
+            if args.checkpoint_rule == "last_epoch"
+            else "val_current_task"
+        ),
         "classnames": classnames,
         "task_adapter": task_adapter,
         "args": {
@@ -397,8 +543,14 @@ def main():
         "sampling": sampling,
         "training_source": "ddp_owned_prompt_free_task_adapter_branch",
         "transfer_target": "task_routed_prompted_cls_feature_difference",
+        "loss_diagnostics": training["loss_diagnostics"],
     }
-    checkpoint_path = output_dir / "best_adapter.pth"
+    checkpoint_name = (
+        "last_adapter.pth"
+        if args.checkpoint_rule == "last_epoch"
+        else "best_adapter.pth"
+    )
+    checkpoint_path = output_dir / checkpoint_name
     torch.save(checkpoint_payload, checkpoint_path)
     protocol = {
         "dataset": "EMOTIC",
@@ -413,7 +565,15 @@ def main():
         "test_examples_iterated": False,
         "test_labels_used": False,
         "test_used_for_selection": False,
-        "selection_split": "current-task validation",
+        "checkpoint_rule": args.checkpoint_rule,
+        "selection_split": (
+            "none; validation is reporting-only"
+            if args.checkpoint_rule == "last_epoch"
+            else "current-task validation"
+        ),
+        "validation_used_for_checkpoint_selection": (
+            args.checkpoint_rule == "best_val"
+        ),
         "single_frozen_ddp_owned_clip": True,
         "visual_prompts_during_auxiliary_training": False,
         "adapter_initialization": initialization,
@@ -422,11 +582,15 @@ def main():
         "inference_formula_locked": "feature_difference",
         "class_specific_gate": False,
         "task_specific_alpha": False,
+        "classification_loss": args.classification_loss,
+        "loss_config": locked_loss_config,
     }
     summary = {
         "protocol": protocol,
         "task_adapter": task_adapter,
         "best_epoch": training["best_epoch"],
+        "selected_epoch": training["selected_epoch"],
+        "checkpoint_rule": training["checkpoint_rule"],
         "zero_selection_mAP": training["zero_selection_mAP"],
         "best_selection_mAP": training["best_selection_mAP"],
         "selection_gain": (
@@ -438,8 +602,12 @@ def main():
         "best_per_class_ap": dict(
             zip(current_classnames, training["best_per_class_ap"])
         ),
+        "selected_per_class_ap": dict(
+            zip(current_classnames, training["selected_per_class"])
+        ),
         "adapter_parameters": sum(p.numel() for p in adapter.parameters()),
         "sampling": sampling,
+        "loss_diagnostics": training["loss_diagnostics"],
         "history": training["history"],
         "checkpoint": {
             "path": os.path.abspath(checkpoint_path),
@@ -449,6 +617,55 @@ def main():
     }
     with open(output_dir / "training_summary.json", "w", encoding="utf-8") as fp:
         json.dump(summary, fp, indent=2, ensure_ascii=False)
+    loss_diagnostics = {
+        **training["loss_diagnostics"],
+        "class_names": current_classnames,
+        "loss_config": locked_loss_config,
+        "training_mode": args.training_mode,
+        "task_id": args.task_id,
+        "seed": args.seed,
+        "source_split": "train",
+        "old_and_future_entries_included": False,
+    }
+    with open(
+        output_dir / "loss_diagnostics.json", "w", encoding="utf-8"
+    ) as fp:
+        json.dump(loss_diagnostics, fp, indent=2, ensure_ascii=False)
+    distribution_rows = []
+    visible_positives = training["loss_diagnostics"]["visible_positives"]
+    visible_negatives = training["loss_diagnostics"]["visible_negatives"]
+    class_weights = training["loss_diagnostics"].get("class_weights")
+    pos_weights = training["loss_diagnostics"].get("pos_weight")
+    for index, name in enumerate(current_classnames):
+        distribution_rows.append(
+            {
+                "class_id": int(active_indices[index]),
+                "class_name": name,
+                "visible_positives": visible_positives[index],
+                "visible_negatives": visible_negatives[index],
+                "bal_class_weight": (
+                    None if class_weights is None else class_weights[index]
+                ),
+                "bce_pos_weight": (
+                    None if pos_weights is None else pos_weights[index]
+                ),
+            }
+        )
+    with open(
+        output_dir / "class_distribution.json", "w", encoding="utf-8"
+    ) as fp:
+        json.dump(
+            {
+                "task_id": args.task_id,
+                "training_mode": args.training_mode,
+                "classification_loss": args.classification_loss,
+                "train_only": True,
+                "classes": distribution_rows,
+            },
+            fp,
+            indent=2,
+            ensure_ascii=False,
+        )
     write_training_html(output_dir / "training_history.html", summary)
     print(
         json.dumps(
@@ -457,7 +674,11 @@ def main():
                 "classes": current_classnames,
                 "training_mode": args.training_mode,
                 "best_epoch": training["best_epoch"],
+                "selected_epoch": training["selected_epoch"],
+                "checkpoint_rule": args.checkpoint_rule,
+                "classification_loss": args.classification_loss,
                 "best_val_mAP": training["best_selection_mAP"],
+                "reporting_val_mAP": training["selected_score"],
                 "checkpoint": str(checkpoint_path),
             },
             indent=2,
