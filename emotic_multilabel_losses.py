@@ -13,7 +13,20 @@ import torch
 from torch import nn
 
 
-LOSS_NAMES = ("weighted_bce", "asl", "bal_paper", "bal_release")
+LOSS_NAMES = (
+    "weighted_bce",
+    "asl",
+    "asl_smoothing",
+    "asl_positive_weight",
+    "bal_paper",
+    "bal_release",
+)
+POSITIVE_WEIGHT_LOSSES = frozenset(
+    ("asl_positive_weight", "bal_paper", "bal_release")
+)
+LABEL_SMOOTHING_LOSSES = frozenset(
+    ("asl_smoothing", "bal_paper", "bal_release")
+)
 
 
 def visible_class_statistics(
@@ -210,21 +223,24 @@ def build_asymmetric_loss(
 ) -> tuple[MaskedAsymmetricLoss, Dict]:
     """Build one loss and return JSON-serializable train-only diagnostics."""
 
-    if loss_name not in ("asl", "bal_paper", "bal_release"):
+    if loss_name not in LOSS_NAMES or loss_name == "weighted_bce":
         raise ValueError(f"Unsupported asymmetric loss: {loss_name}")
     statistics = visible_class_statistics(targets, supervision_mask)
     weights = None
     positive_weight_mode = "paper"
     normalize_logits = False
     smoothing = 0.0
-    if loss_name.startswith("bal"):
+    uses_positive_weight = loss_name in POSITIVE_WEIGHT_LOSSES
+    uses_label_smoothing = loss_name in LABEL_SMOOTHING_LOSSES
+    if uses_positive_weight:
         weights = balanced_positive_class_weights(
             targets, supervision_mask, power=bal_weight_power
         )
+    if uses_label_smoothing:
         smoothing = float(bal_label_smoothing)
-        if loss_name == "bal_release":
-            positive_weight_mode = "one_plus"
-            normalize_logits = True
+    if loss_name == "bal_release":
+        positive_weight_mode = "one_plus"
+        normalize_logits = True
 
     loss = MaskedAsymmetricLoss(
         gamma_neg=gamma_neg,
@@ -242,10 +258,14 @@ def build_asymmetric_loss(
         "gamma_pos": float(gamma_pos),
         "clip": float(clip),
         "bal_weight_power": (
-            float(bal_weight_power) if loss_name.startswith("bal") else None
+            float(bal_weight_power) if uses_positive_weight else None
         ),
         "label_smoothing": smoothing,
-        "smoothing_num_classes": int(smoothing_num_classes),
+        "smoothing_num_classes": (
+            int(smoothing_num_classes) if uses_label_smoothing else None
+        ),
+        "uses_positive_class_weights": uses_positive_weight,
+        "uses_label_smoothing": uses_label_smoothing,
         "positive_weight_mode": positive_weight_mode,
         "normalize_logits_by_batch_max": normalize_logits,
         "visible_positives": statistics["positives"].tolist(),

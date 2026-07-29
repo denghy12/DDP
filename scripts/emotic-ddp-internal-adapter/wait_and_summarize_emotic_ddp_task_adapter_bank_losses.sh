@@ -5,9 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${ROOT}"
 
-STATE_DIR="./output/emotic_ddp_task_adapter_bank_loss_pipeline"
+STATE_DIR="${STATE_DIR:-./output/emotic_ddp_task_adapter_bank_loss_pipeline}"
 MODES="${MODES:-full}"
 LOSSES="${LOSSES:-weighted_bce asl bal_paper}"
+WAIT_LOSSES="${WAIT_LOSSES:-${LOSSES}}"
 SEEDS="${SEEDS:-0 1 2}"
 SUMMARY_OUTPUT_DIR="${SUMMARY_OUTPUT_DIR:-./output/emotic_ddp_task_adapter_bank_loss_comparison}"
 mkdir -p "${STATE_DIR}"
@@ -15,7 +16,7 @@ mkdir -p "${STATE_DIR}"
 while true; do
   pending=0
   for mode in ${MODES}; do
-    for loss_name in ${LOSSES}; do
+    for loss_name in ${WAIT_LOSSES}; do
       for seed in ${SEEDS}; do
         key="${loss_name}_${mode}_seed${seed}"
         if [[ -f "${STATE_DIR}/${key}.failed" ]]; then

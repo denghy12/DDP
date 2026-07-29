@@ -107,6 +107,50 @@ class MaskedAsymmetricLossTest(unittest.TestCase):
         self.assertEqual(diagnostics["visible_negatives"], [1.0, 2.0])
         self.assertEqual(diagnostics["smoothing_num_classes"], 26)
 
+    def test_bal_component_ablation_activates_one_component_at_a_time(self):
+        targets = torch.tensor(
+            [[1.0, 0.0], [1.0, 1.0], [0.0, 0.0]]
+        )
+        mask = torch.ones_like(targets, dtype=torch.bool)
+        common = {
+            "targets": targets,
+            "supervision_mask": mask,
+            "gamma_neg": 9.8,
+            "gamma_pos": 0.0,
+            "clip": 0.05,
+            "bal_weight_power": 1.6,
+            "bal_label_smoothing": 0.1,
+            "smoothing_num_classes": 26,
+        }
+        expected = {
+            "asl": (False, False),
+            "asl_smoothing": (False, True),
+            "asl_positive_weight": (True, False),
+            "bal_paper": (True, True),
+        }
+        for loss_name, components in expected.items():
+            with self.subTest(loss_name=loss_name):
+                _, diagnostics = build_asymmetric_loss(
+                    loss_name, **common
+                )
+                uses_positive_weight, uses_smoothing = components
+                self.assertEqual(
+                    diagnostics["uses_positive_class_weights"],
+                    uses_positive_weight,
+                )
+                self.assertEqual(
+                    diagnostics["uses_label_smoothing"],
+                    uses_smoothing,
+                )
+                self.assertEqual(
+                    diagnostics["class_weights"] is not None,
+                    uses_positive_weight,
+                )
+                self.assertEqual(
+                    diagnostics["label_smoothing"] > 0,
+                    uses_smoothing,
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

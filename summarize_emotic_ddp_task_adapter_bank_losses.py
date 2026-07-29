@@ -175,6 +175,113 @@ def frequency_groups(output_root, loss_name, mode, seed):
     }
 
 
+def bal_component_effects(run_rows, training_modes):
+    """Return the locked 2x2 BAL component contrasts when all cells exist."""
+
+    required = (
+        "asl",
+        "asl_smoothing",
+        "asl_positive_weight",
+        "bal_paper",
+    )
+    metrics = (
+        "average_mAP",
+        "final_mAP",
+        "final_cF1",
+        "final_oF1",
+        "forgetting",
+    )
+    rows = []
+    index = {
+        (row["loss"], row["mode"], int(row["seed"])): row
+        for row in run_rows
+    }
+    for mode in training_modes:
+        seeds = sorted(
+            {
+                int(row["seed"])
+                for row in run_rows
+                if row["mode"] == mode and row["loss"] == "asl"
+            }
+        )
+        if not seeds or not all(
+            (loss, mode, seed) in index
+            for loss in required
+            for seed in seeds
+        ):
+            continue
+        contrasts = {
+            "label_smoothing_without_weight": (
+                "asl_smoothing",
+                "asl",
+            ),
+            "positive_weight_without_smoothing": (
+                "asl_positive_weight",
+                "asl",
+            ),
+            "label_smoothing_with_weight": (
+                "bal_paper",
+                "asl_positive_weight",
+            ),
+            "positive_weight_with_smoothing": (
+                "bal_paper",
+                "asl_smoothing",
+            ),
+        }
+        for effect_name, (high, low) in contrasts.items():
+            deltas = {
+                metric: [
+                    float(index[(high, mode, seed)][metric])
+                    - float(index[(low, mode, seed)][metric])
+                    for seed in seeds
+                ]
+                for metric in metrics
+            }
+            rows.append(
+                {
+                    "mode": mode,
+                    "effect": effect_name,
+                    "seeds": ",".join(str(seed) for seed in seeds),
+                    **{
+                        f"{metric}_{statistic}": float(function(values))
+                        for metric in metrics
+                        for statistic, function in (
+                            ("mean", np.mean),
+                            ("std", np.std),
+                        )
+                        for values in (deltas[metric],)
+                    },
+                }
+            )
+        interaction_deltas = {
+            metric: [
+                float(index[("bal_paper", mode, seed)][metric])
+                - float(index[("asl_smoothing", mode, seed)][metric])
+                - float(index[("asl_positive_weight", mode, seed)][metric])
+                + float(index[("asl", mode, seed)][metric])
+                for seed in seeds
+            ]
+            for metric in metrics
+        }
+        rows.append(
+            {
+                "mode": mode,
+                "effect": "weight_smoothing_interaction",
+                "seeds": ",".join(str(seed) for seed in seeds),
+                **{
+                    f"{metric}_{statistic}": float(function(values))
+                    for metric in metrics
+                    for statistic, function in (
+                        ("mean", np.mean),
+                        ("std", np.std),
+                    )
+                    for values in (interaction_deltas[metric],)
+                },
+            }
+        )
+    return rows
+
+
 def write_html(path, summary):
     aggregate_rows = []
     for key, group in summary["groups"].items():
@@ -204,6 +311,34 @@ def write_html(path, summary):
             f"<td>{row['ddp_mAP']:.4f}</td><td>{row['gain_mean']:+.4f}</td>"
             "</tr>"
         )
+    component_rows = []
+    for row in summary["bal_component_effects"]:
+        component_rows.append(
+            "<tr>"
+            f"<td>{escape(row['mode'])}</td>"
+            f"<td>{escape(row['effect'])}</td>"
+            f"<td>{row['average_mAP_mean']:+.4f} ± "
+            f"{row['average_mAP_std']:.4f}</td>"
+            f"<td>{row['final_mAP_mean']:+.4f} ± "
+            f"{row['final_mAP_std']:.4f}</td>"
+            f"<td>{row['final_cF1_mean']:+.4f} ± "
+            f"{row['final_cF1_std']:.4f}</td>"
+            f"<td>{row['final_oF1_mean']:+.4f} ± "
+            f"{row['final_oF1_std']:.4f}</td>"
+            f"<td>{row['forgetting_mean']:+.4f} ± "
+            f"{row['forgetting_std']:.4f}</td>"
+            "</tr>"
+        )
+    component_html = ""
+    if component_rows:
+        component_html = (
+            "<h2>BAL component contrasts</h2><table><tr>"
+            "<th>Mode</th><th>Effect</th><th>Δ Average mAP</th>"
+            "<th>Δ Final mAP</th><th>Δ cF1</th><th>Δ oF1</th>"
+            "<th>Δ Forgetting</th></tr>"
+            + "".join(component_rows)
+            + "</table>"
+        )
     path.write_text(
         "<!doctype html><meta charset='utf-8'>"
         "<title>EMOTIC Task Adapter Bank Loss Comparison</title>"
@@ -222,7 +357,8 @@ def write_html(path, summary):
         "<th>Mode</th><th>Task</th><th>Seen mAP</th><th>Current mAP</th>"
         "<th>DDP mAP</th><th>Gain</th></tr>"
         + "".join(task_rows)
-        + "</table>",
+        + "</table>"
+        + component_html,
         encoding="utf-8",
     )
 
@@ -267,6 +403,9 @@ def main():
                         "final_mAP": float(np.mean(values)),
                     }
                 )
+    component_effect_rows = bal_component_effects(
+        run_rows, args.training_modes
+    )
     summary = {
         "protocol": {
             "losses": list(args.losses),
@@ -288,6 +427,7 @@ def main():
         "per_class": per_class,
         "frequency_group_definitions": group_definitions,
         "frequency_groups": frequency_group_rows,
+        "bal_component_effects": component_effect_rows,
     }
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -298,6 +438,9 @@ def main():
     write_csv(output_dir / "per_task_results.csv", per_task)
     write_csv(output_dir / "per_class_results.csv", per_class)
     write_csv(output_dir / "frequency_group_results.csv", frequency_group_rows)
+    write_csv(
+        output_dir / "bal_component_effects.csv", component_effect_rows
+    )
     write_html(output_dir / "comparison_summary.html", summary)
     for key, group in groups.items():
         metrics = group["aggregate"]

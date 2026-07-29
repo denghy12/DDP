@@ -7,7 +7,7 @@ cd "${ROOT}"
 
 GPU="${GPU:?Set GPU to the physical GPU index}"
 TRAINING_MODE="${TRAINING_MODE:?Set TRAINING_MODE to full or 16shot}"
-LOSS_NAME="${LOSS_NAME:?Set LOSS_NAME to weighted_bce, asl, or bal_paper}"
+LOSS_NAME="${LOSS_NAME:?Set LOSS_NAME}"
 SEED="${SEED:?Set SEED to 0, 1, or 2}"
 DDP_CHECKPOINT="${DDP_CHECKPOINT:-./output/emotic_b5c3_ddp_semantic_tau2/checkpoints/task0.pth}"
 CACHE_DIR="${CACHE_DIR:-./output/emotic_ddp_prompt_free_auxiliary_feature_cache}"
@@ -18,7 +18,7 @@ case "${TRAINING_MODE}" in
   *) echo "TRAINING_MODE must be full or 16shot" >&2; exit 2 ;;
 esac
 case "${LOSS_NAME}" in
-  weighted_bce|asl|bal_paper|bal_release) ;;
+  weighted_bce|asl|asl_smoothing|asl_positive_weight|bal_paper|bal_release) ;;
   *) echo "Unsupported LOSS_NAME=${LOSS_NAME}" >&2; exit 2 ;;
 esac
 
@@ -36,9 +36,15 @@ else
     --asl_clip 0.05
   )
 fi
-if [[ "${LOSS_NAME}" == bal_* ]]; then
+if [[ "${LOSS_NAME}" == "asl_positive_weight" \
+  || "${LOSS_NAME}" == "bal_paper" \
+  || "${LOSS_NAME}" == "bal_release" ]]; then
+  LOSS_ARGS+=(--bal_weight_power 1.6)
+fi
+if [[ "${LOSS_NAME}" == "asl_smoothing" \
+  || "${LOSS_NAME}" == "bal_paper" \
+  || "${LOSS_NAME}" == "bal_release" ]]; then
   LOSS_ARGS+=(
-    --bal_weight_power 1.6
     --bal_label_smoothing 0.1
     --bal_smoothing_num_classes 26
   )

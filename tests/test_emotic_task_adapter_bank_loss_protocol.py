@@ -32,6 +32,42 @@ class TaskAdapterLossProtocolTest(unittest.TestCase):
         self.assertEqual(first["sha256"], second["sha256"])
         self.assertNotEqual(first["sha256"], bal["sha256"])
 
+    def test_bal_component_ablation_has_four_distinct_locked_configs(self):
+        configurations = {
+            name: loss_configuration(self._args(name))
+            for name in (
+                "asl",
+                "asl_smoothing",
+                "asl_positive_weight",
+                "bal_paper",
+            )
+        }
+        self.assertEqual(
+            len({config["sha256"] for config in configurations.values()}),
+            4,
+        )
+        self.assertIsNone(configurations["asl"]["bal_weight_power"])
+        self.assertEqual(configurations["asl"]["bal_label_smoothing"], 0.0)
+        self.assertIsNone(
+            configurations["asl_smoothing"]["bal_weight_power"]
+        )
+        self.assertEqual(
+            configurations["asl_smoothing"]["bal_label_smoothing"], 0.1
+        )
+        self.assertEqual(
+            configurations["asl_positive_weight"]["bal_weight_power"], 1.6
+        )
+        self.assertEqual(
+            configurations["asl_positive_weight"][
+                "bal_label_smoothing"
+            ],
+            0.0,
+        )
+        self.assertEqual(configurations["bal_paper"]["bal_weight_power"], 1.6)
+        self.assertEqual(
+            configurations["bal_paper"]["bal_label_smoothing"], 0.1
+        )
+
     def test_checkpoint_rejects_a_mixed_loss_bank(self):
         configuration = loss_configuration(self._args("asl"))
         checkpoint = {

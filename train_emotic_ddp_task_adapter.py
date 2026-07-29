@@ -16,7 +16,12 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from ddp_internal_adapter import PromptFreePrototypeObjective
-from emotic_multilabel_losses import LOSS_NAMES, build_asymmetric_loss
+from emotic_multilabel_losses import (
+    LABEL_SMOOTHING_LOSSES,
+    LOSS_NAMES,
+    POSITIVE_WEIGHT_LOSSES,
+    build_asymmetric_loss,
+)
 from emotic_task_adapter_bank import (
     CHECKPOINT_SCHEMA_VERSION,
     file_sha256,
@@ -121,17 +126,17 @@ def loss_configuration(args):
         ),
         "bal_weight_power": (
             float(args.bal_weight_power)
-            if args.classification_loss.startswith("bal")
+            if args.classification_loss in POSITIVE_WEIGHT_LOSSES
             else None
         ),
         "bal_label_smoothing": (
             float(args.bal_label_smoothing)
-            if args.classification_loss.startswith("bal")
+            if args.classification_loss in LABEL_SMOOTHING_LOSSES
             else 0.0
         ),
         "bal_smoothing_num_classes": (
             int(args.bal_smoothing_num_classes)
-            if args.classification_loss.startswith("bal")
+            if args.classification_loss in LABEL_SMOOTHING_LOSSES
             else None
         ),
     }
