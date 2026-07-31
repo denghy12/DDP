@@ -25,3 +25,9 @@ added to this frozen protocol file because doing so would invalidate comparison
 with the registered DDP protocol hash. The runner instead writes each
 baseline's registered architecture, optimizer, LwF, and EWC settings to
 `config_resolved.json` and `run_manifest.json` as method configuration.
+
+The only registered tuning override is runner option `--ewc-lambda`. It is
+kept outside the frozen protocol object, validated as finite and positive, and
+written into method configuration. The official tuning launcher permits this
+option only during validation candidates, records the selection decision, and
+then reuses the locked value for formal test runs.

@@ -59,7 +59,7 @@ from benchmarks.emotic_mlcil.runner import (
     _current_source_state,
 )
 
-expected = "0.3.0"
+expected = "0.3.1"
 if CORE_RUNTIME_VERSION != expected:
     raise RuntimeError(
         f"Server benchmark runtime {CORE_RUNTIME_VERSION!r} != {expected!r}"

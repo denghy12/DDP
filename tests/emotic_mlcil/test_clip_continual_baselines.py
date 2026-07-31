@@ -257,6 +257,29 @@ class CLIPContinualBaselineTest(unittest.TestCase):
                     parameter.add_(0.1)
         self.assertGreater(float(method._ewc_penalty().detach()), 0.0)
 
+    def test_ewc_runtime_lambda_override_is_resolved_without_protocol_change(self):
+        protocol = tiny_protocol()
+        original_hash = protocol.protocol_hash
+        method = ElasticWeightConsolidationMethod(
+            protocol,
+            device="cpu",
+            feature_extractor=IdentityFeatureExtractor(),
+            option_overrides={"ewc_lambda": 1.0e6},
+        )
+        self.assertEqual(method.options.ewc_lambda, 1.0e6)
+        self.assertEqual(
+            method.resolved_method_config()["ewc_lambda"],
+            1.0e6,
+        )
+        self.assertEqual(protocol.protocol_hash, original_hash)
+        with self.assertRaisesRegex(ValueError, "Unknown"):
+            ElasticWeightConsolidationMethod(
+                protocol,
+                device="cpu",
+                feature_extractor=IdentityFeatureExtractor(),
+                option_overrides={"not_an_option": 1},
+            )
+
     def test_checkpoint_contains_visual_encoder_and_classifier(self):
         method = self.make_method(SequentialFineTuningMethod)
         self.train_one_task(method, 0)

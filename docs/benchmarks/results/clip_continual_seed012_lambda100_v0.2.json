@@ -1,0 +1,33 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "run_id": "clip_no_adapter_3seed_20260731_172200",
+  "git_commit": "8b7300deaee9ac5990174f7e9c6ce01eefcacb56",
+  "git_dirty": false,
+  "core_runtime_version": "0.3.0",
+  "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+  "seeds": [0, 1, 2],
+  "aggregation": "mean_and_sample_standard_deviation",
+  "methods": {
+    "Sequential Fine-Tuning": {
+      "final_mAP": {"mean": 18.1787888608347, "std": 0.822246808498927},
+      "average_mAP": {"mean": 23.80120497339645, "std": 0.444046587611474},
+      "forgetting": {"mean": 8.198012905362175, "std": 1.347140614434329}
+    },
+    "LwF": {
+      "final_mAP": {"mean": 23.328940583549763, "std": 1.3573509039126674},
+      "average_mAP": {"mean": 28.632823629768072, "std": 1.1302397277402687},
+      "forgetting": {"mean": 5.5684793671433095, "std": 0.39509493982084654}
+    },
+    "EWC": {
+      "ewc_lambda": 100.0,
+      "status": "diagnostic_not_final",
+      "reason": "weighted EWC penalty was approximately 1e-6 to 7e-6 of classification loss",
+      "final_mAP": {"mean": 18.010879509960006, "std": 1.0735705399017996},
+      "average_mAP": {"mean": 23.523119571125083, "std": 0.5109825521792328},
+      "forgetting": {"mean": 8.931760430253345, "std": 1.5096091129027722}
+    }
+  },
+  "archive_sha256": "eabcdecabeb3ab8b5cbfc3763a4f6d09a41aa066eca55b6bd4476dbcaa7ed949"
+}

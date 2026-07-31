@@ -19,6 +19,9 @@ REPORTING_SPLIT="${REPORTING_SPLIT:-test}"
 TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-32}"
 EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-64}"
 WORKERS="${WORKERS:-2}"
+EWC_LAMBDA="${EWC_LAMBDA:-}"
+EXPORT_SYNC_RESULTS="${EXPORT_SYNC_RESULTS:-1}"
+STATE_KEY="${STATE_KEY:-}"
 
 case "${METHOD}" in
   finetune|lwf|ewc) ;;
@@ -39,9 +42,17 @@ esac
   echo "REPORTING_SPLIT must be val or test" >&2
   exit 2
 }
+[[ "${EXPORT_SYNC_RESULTS}" == "0" || "${EXPORT_SYNC_RESULTS}" == "1" ]] || {
+  echo "EXPORT_SYNC_RESULTS must be 0 or 1" >&2
+  exit 2
+}
+if [[ -n "${EWC_LAMBDA}" && "${METHOD}" != "ewc" ]]; then
+  echo "EWC_LAMBDA is valid only for METHOD=ewc" >&2
+  exit 2
+fi
 
 mkdir -p "${STATE_DIR}"
-key="${METHOD}_seed${SEED}"
+key="${STATE_KEY:-${METHOD}_seed${SEED}}"
 rm -f "${STATE_DIR}/${key}.done" "${STATE_DIR}/${key}.failed"
 
 runner_args=(
@@ -60,9 +71,17 @@ runner_args=(
 if [[ "${REPORTING_SPLIT}" == "test" ]]; then
   runner_args+=(--configuration-locked)
 fi
+if [[ -n "${EWC_LAMBDA}" ]]; then
+  runner_args+=(--ewc-lambda "${EWC_LAMBDA}")
+fi
 
 if CUDA_VISIBLE_DEVICES="${GPU}" "${PYTHON}" \
   -m benchmarks.emotic_mlcil.runner "${runner_args[@]}"; then
+  if [[ "${EXPORT_SYNC_RESULTS}" == "0" ]]; then
+    touch "${STATE_DIR}/${key}.done"
+    echo "Completed ${key} on physical GPU ${GPU}"
+    exit 0
+  fi
   if "${PYTHON}" -m benchmarks.emotic_mlcil.runner \
     --protocol "${PROTOCOL}" \
     --method "${METHOD}" \

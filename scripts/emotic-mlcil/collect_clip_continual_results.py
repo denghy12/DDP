@@ -15,6 +15,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run-output-root", required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--expected-bundles", type=int, required=True)
+    parser.add_argument(
+        "--extra-dir",
+        action="append",
+        default=[],
+        help="Copy a checkpoint-free metadata directory into the bundle",
+    )
     return parser.parse_args()
 
 
@@ -60,6 +66,19 @@ def main() -> None:
                 "relative_path": str(target.relative_to(destination)),
             }
         )
+
+    for raw_extra in args.extra_dir:
+        source = Path(raw_extra).resolve()
+        if not source.is_dir():
+            raise FileNotFoundError(f"Missing extra metadata directory: {source}")
+        if list(source.rglob("*.pth")):
+            raise RuntimeError(
+                f"Extra metadata directory contains checkpoints: {source}"
+            )
+        target = destination / source.name
+        if target.exists():
+            raise FileExistsError(f"Duplicate bundle destination: {target}")
+        shutil.copytree(source, target)
 
     checkpoint_files = list(destination.rglob("*.pth"))
     if checkpoint_files:

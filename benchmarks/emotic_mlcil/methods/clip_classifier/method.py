@@ -149,15 +149,26 @@ class CLIPContinualMethod(BenchmarkMethod):
         device: Optional[Union[str, torch.device]] = None,
         feature_extractor: Optional[torch.nn.Module] = None,
         model: Optional[GrowingMultiLabelClassifier] = None,
+        option_overrides: Optional[Mapping[str, Any]] = None,
     ) -> None:
         if protocol.track not in self.supported_tracks:
             raise ValueError(
                 f"{self.method_name} supports Track A only, got {protocol.track}"
             )
         self.protocol = protocol
-        self.options = CLIPClassifierOptions.from_mapping(
+        configured_options = dict(
             protocol.method_options("clip_classifier")
         )
+        if option_overrides:
+            known_options = set(CLIPClassifierOptions.__dataclass_fields__)
+            unknown = sorted(set(option_overrides).difference(known_options))
+            if unknown:
+                raise ValueError(
+                    "Unknown CLIP classifier option override(s): "
+                    + ", ".join(unknown)
+                )
+            configured_options.update(dict(option_overrides))
+        self.options = CLIPClassifierOptions.from_mapping(configured_options)
         self._set_seed(protocol.seed)
         self.clip_model_path = str(clip_model_path)
         self.device = torch.device(
@@ -428,12 +439,22 @@ class CLIPContinualMethod(BenchmarkMethod):
             if batches == 0:
                 raise ValueError("Training loader produced no samples")
             selection_map = self._selection_map(val_loader)
+            classification_mean = classification_total / batches
+            distillation_mean = distillation_total / batches
+            ewc_mean = ewc_total / batches
+            weighted_ewc = self.options.ewc_lambda * ewc_mean
             self.training_history.append(
                 {
                     "epoch": float(epoch),
-                    "classification_loss": classification_total / batches,
-                    "distillation_loss": distillation_total / batches,
-                    "ewc_penalty": ewc_total / batches,
+                    "classification_loss": classification_mean,
+                    "distillation_loss": distillation_mean,
+                    "ewc_penalty": ewc_mean,
+                    "ewc_weighted_penalty": weighted_ewc,
+                    "ewc_to_classification_ratio": (
+                        weighted_ewc / classification_mean
+                        if classification_mean > 0
+                        else 0.0
+                    ),
                     "selection_mAP": selection_map,
                 }
             )

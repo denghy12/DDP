@@ -19,6 +19,7 @@ for job in "${jobs[@]}"; do
   echo "Starting ${key} on physical GPU ${GPU}"
   set +e
   METHOD="${method}" SEED="${seed}" GPU="${GPU}" \
+    EWC_LAMBDA="${EWC_LAMBDA:-}" \
     bash "${SCRIPT_DIR}/run_clip_continual_baseline.sh" \
     2>&1 | tee "${log}"
   code=${PIPESTATUS[0]}

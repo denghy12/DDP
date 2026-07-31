@@ -93,7 +93,7 @@ echo "Verifying runtime and running CPU tests..."
 from benchmarks.emotic_mlcil import method_names
 from benchmarks.emotic_mlcil.runner import CORE_BASE_COMMIT, CORE_RUNTIME_VERSION
 
-if CORE_RUNTIME_VERSION != "0.3.0":
+if CORE_RUNTIME_VERSION != "0.3.1":
     raise RuntimeError(f"Unexpected runtime: {CORE_RUNTIME_VERSION}")
 if CORE_BASE_COMMIT != "00f399f13bc7552c254c8f6e6c095a8be4f56146":
     raise RuntimeError(f"Unexpected Core base: {CORE_BASE_COMMIT}")

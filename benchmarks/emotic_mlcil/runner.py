@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence
@@ -35,7 +36,7 @@ from .types import (
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
 CORE_BASE_COMMIT = "00f399f13bc7552c254c8f6e6c095a8be4f56146"
-CORE_RUNTIME_VERSION = "0.3.0"
+CORE_RUNTIME_VERSION = "0.3.1"
 
 
 def _current_git_commit() -> str:
@@ -800,6 +801,14 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--device")
     parser.add_argument(
+        "--ewc-lambda",
+        type=float,
+        help=(
+            "Runtime EWC coefficient override. This is method metadata, not "
+            "part of the frozen dataset protocol hash."
+        ),
+    )
+    parser.add_argument(
         "--input-mode",
         choices=("full", "person_crop"),
         default="full",
@@ -885,6 +894,11 @@ def main() -> None:
             "Continual training depends on prior tasks and cannot use "
             "independent task shards"
         )
+    if args.ewc_lambda is not None:
+        if args.method != "ewc":
+            raise ValueError("--ewc-lambda is valid only with --method ewc")
+        if not math.isfinite(args.ewc_lambda) or args.ewc_lambda <= 0:
+            raise ValueError("--ewc-lambda must be finite and positive")
     method_classes = {
         "ddp": DDPBenchmarkMethod,
         "finetune": SequentialFineTuningMethod,
@@ -947,10 +961,16 @@ def main() -> None:
             device=args.device,
         )
     else:
+        option_overrides = (
+            {"ewc_lambda": args.ewc_lambda}
+            if args.ewc_lambda is not None
+            else None
+        )
         method = method_class(
             protocol,
             clip_model_path=args.clip_model_path,
             device=args.device,
+            option_overrides=option_overrides,
         )
     runner = BenchmarkRunner(
         protocol,

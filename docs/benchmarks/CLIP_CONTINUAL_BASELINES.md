@@ -54,8 +54,10 @@ implementation estimates a diagonal empirical Fisher over the trainable visual
 encoder and existing heads from current-task multi-label BCE gradients. Online
 Fisher values are accumulated with decay `1.0`, and the next task adds a
 Fisher-weighted quadratic penalty anchored at the consolidated parameters. New
-head parameters are not penalized until they have completed a task. The
-configured coefficient is `100.0`.
+head parameters are not penalized until they have completed a task. The first
+formal diagnostic used coefficient `100.0`; its weighted penalty was only
+about `1e-6` of classification loss, so that run is retained as a diagnostic
+rather than presented as the final EWC baseline.
 
 ## Registered optimization settings
 
@@ -79,7 +81,8 @@ unchanged. Every run writes the fully resolved values into both
 | Gradient-norm clipping | 1.0 |
 | CUDA AMP / TF32 | Enabled |
 | LwF temperature / weight | 2.0 / 1.0 |
-| EWC coefficient / online decay | 100.0 / 1.0 |
+| EWC coefficient | Validation-selected from a locked logarithmic grid |
+| EWC online decay | 1.0 |
 
 Validation checkpoint selection uses current-label validation mAP only. Strict
 improvement replaces the best state, so ties retain the earliest epoch. Test is
@@ -115,3 +118,36 @@ That directory is validated to contain no `.pth` file.
 The server development mirror is:
 
 `/mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1`
+
+## EWC validation tuning and formal rerun
+
+EWC coefficient selection is a two-stage protocol-safe workflow. Candidate
+coefficients `1e2`, `1e4`, `1e5`, `1e6`, and `1e7` run with seed 0 and
+`reporting_split=val`. These artifacts explicitly have
+`configuration_locked=false` and `eligible_for_main_table=false`. The selector
+maximizes final validation mAP and breaks an exact tie in favor of the smaller
+coefficient. It verifies that every candidate has identical source, protocol,
+class-order, and validation-split provenance and that no test metric was used.
+
+After selection, the launcher freezes the selected coefficient and
+automatically starts formal test runs for seeds 0, 1, and 2. GPU slots are
+derived from currently free memory. The defaults reserve 2 GiB per GPU, assume
+5.2 GiB per EWC job, and permit at most two concurrent jobs per physical GPU:
+
+```bash
+SESSION=emotic_ewc_lambda_v03 \
+RUN_ID=ewc_lambda_v03_<timestamp> \
+GPU_LIST="0 1 2 3 4 5 6 7" \
+bash scripts/emotic-mlcil/launch_ewc_lambda_tune_and_run_tmux.sh
+```
+
+With the observed server state where only GPU 0 has sufficient free memory,
+the launcher creates two GPU-0 tuning workers and distributes the five
+candidates between them. GPUs with less than the safety threshold are reported
+and skipped. An explicit `GPU_SLOTS="0 0"` override is available, but automatic
+capacity checks are preferred.
+
+Heavy tuning state and `.pth` checkpoints remain under the run root. Only the
+formal metrics, scores, logs, manifests, reports, and `tuning_selection` record
+are copied into `formal/download_ready/<run-id>/`. The download directory is
+validated to contain no `.pth` file.

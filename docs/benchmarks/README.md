@@ -47,6 +47,7 @@ remain a reserved extension point.
 - [Implementation status](BASELINE_STATUS.md)
 - [CLIP-visual Fine-Tuning/LwF/EWC design](CLIP_CONTINUAL_BASELINES.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
+- [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -58,8 +59,10 @@ development line implements repository-native Sequential Fine-Tuning, LwF,
 and EWC controls without vendoring external repositories.
 
 The baseline branch removes the earlier benchmark-added residual Adapter.
-Local and server test counts are recorded in `BASELINE_STATUS.md`; a real
-one-batch GPU memory smoke is required before formal multi-seed execution.
+Fine-Tuning, LwF, and the initial EWC coefficient diagnostic have completed
+three-seed execution. The EWC coefficient is now selected through a
+validation-only workflow before its replacement formal run; details and the
+tmux entry point are recorded in `CLIP_CONTINUAL_BASELINES.md`.
 
 ## Standard run and output
 
