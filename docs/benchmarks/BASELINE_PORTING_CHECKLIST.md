@@ -41,7 +41,11 @@ table.
 
 ## Fairness and resource accounting
 
-- [ ] Track A uses the unified frozen CLIP ViT-B/16 backbone.
+- [ ] Track A uses the unified CLIP ViT-B/16 visual architecture,
+      initialization, and preprocessing; trainability follows the audited
+      method.
+- [ ] No common Adapter or hidden module is added unless it belongs to the
+      audited method itself.
 - [ ] Track B preserves and reports the audited original backbone.
 - [ ] Replay sample count and replay byte count are both reported.
 - [ ] Replay budget is compared under both sample and byte views.

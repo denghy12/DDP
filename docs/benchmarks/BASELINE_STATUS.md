@@ -7,9 +7,9 @@ approved external source port has occurred.
 | Method | Paper audit | Unified interface | Unit tests | Smoke test | 3 seeds | Results summary | Current blocker |
 |---|---|---|---|---|---|---|---|
 | Joint Training | Not started | Reserved | Not started | Not started | Not started | Not started | Source/protocol audit |
-| Sequential Fine-Tuning | Repository-native control specified | Implemented on shared frozen-CLIP classifier | 47 Core/baseline tests passed locally; server validation pending | Pending | Not started | Pending | Run server tests, then one seed-0 smoke |
-| LwF | ECCV 2016 paper and author repository audited; adaptation differences documented | Implemented with old-model sigmoid distillation | 47 Core/baseline tests passed locally; server validation pending | Pending | Not started | Pending | Run server tests, then one seed-0 smoke |
-| EWC | PNAS 2017 paper audited; supervised multi-label Fisher adaptation documented | Implemented with online diagonal Fisher | 47 Core/baseline tests passed locally; server validation pending | Pending | Not started | Pending | Run server tests, then one seed-0 smoke |
+| Sequential Fine-Tuning | Repository-native control specified | Trainable CLIP visual encoder + expanding linear heads; no common Adapter | 47 Core/baseline tests and 17 legacy regressions passed locally; server validation pending | Pending | Not started | Pending | Run real GPU memory smoke, then formal jobs |
+| LwF | ECCV 2016 paper and author repository audited; adaptation differences documented | Old-model sigmoid distillation over the same trainable CLIP visual model | 47 Core/baseline tests and 17 legacy regressions passed locally; server validation pending | Pending | Not started | Pending | Run real GPU memory smoke, then formal jobs |
+| EWC | PNAS 2017 paper audited; supervised multi-label Fisher adaptation documented | Online diagonal Fisher over trainable visual encoder and existing heads | 47 Core/baseline tests and 17 legacy regressions passed locally; server validation pending | Pending | Not started | Pending | Run real GPU memory smoke, then formal jobs |
 | ER | Not started | Reserved | Not started | Not started | Not started | Not started | Source/protocol audit and fair memory budget |
 | DER++ | Not started | Reserved | Not started | Not started | Not started | Not started | Multi-label source/protocol audit |
 | PRS | Not started | Reserved | Not started | Not started | Not started | Not started | Source/protocol audit |

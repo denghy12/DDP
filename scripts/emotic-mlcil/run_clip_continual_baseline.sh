@@ -13,17 +13,17 @@ STATE_DIR="${STATE_DIR:?STATE_DIR is required}"
 PYTHON="${PYTHON:-/opt/conda/envs/ddp/bin/python}"
 DATA_ROOT="${DATA_ROOT:-/mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC}"
 CLIP_MODEL_PATH="${CLIP_MODEL_PATH:-${ROOT}/pretrained/clip/ViT-B-16.pt}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-/mnt/haoyuan/workspace/emotic_benchmark_runs/baselines_v0.1}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-/mnt/haoyuan/workspace/emotic_benchmark_runs/clip_continual_v0.2}"
 PROTOCOL="${PROTOCOL:-${ROOT}/configs/emotic_mlcil/protocol_b5c3.yaml}"
 REPORTING_SPLIT="${REPORTING_SPLIT:-test}"
-TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-64}"
+TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-32}"
 EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-64}"
-WORKERS="${WORKERS:-0}"
+WORKERS="${WORKERS:-2}"
 
 case "${METHOD}" in
   finetune|lwf|ewc) ;;
   *)
-    echo "Unsupported frozen-CLIP baseline: ${METHOD}" >&2
+    echo "Unsupported CLIP continual baseline: ${METHOD}" >&2
     exit 2
     ;;
 esac

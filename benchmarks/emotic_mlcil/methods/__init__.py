@@ -1,7 +1,7 @@
 """Built-in benchmark method adapters."""
 
 from .ddp import DDPBenchmarkMethod
-from .frozen_clip import (
+from .clip_classifier import (
     ElasticWeightConsolidationMethod,
     LearningWithoutForgettingMethod,
     SequentialFineTuningMethod,

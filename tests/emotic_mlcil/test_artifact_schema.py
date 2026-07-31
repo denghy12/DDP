@@ -158,7 +158,7 @@ class ArtifactSchemaTest(unittest.TestCase):
             store.write_summary(
                 summary,
                 method_family="Fine-Tuning",
-                backbone="OpenAI CLIP ViT-B/16 (frozen)",
+                backbone="OpenAI CLIP ViT-B/16 visual encoder (fine-tuned)",
                 replay_memory_samples=0,
                 replay_memory_bytes=0,
                 parameter_growth=0,

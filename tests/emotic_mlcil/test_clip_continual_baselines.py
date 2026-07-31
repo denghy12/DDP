@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import torch
 from torch import nn
 
-from benchmarks.emotic_mlcil.methods.frozen_clip import (
+from benchmarks.emotic_mlcil.methods.clip_classifier import (
     ElasticWeightConsolidationMethod,
     LearningWithoutForgettingMethod,
     SequentialFineTuningMethod,
@@ -36,14 +36,16 @@ def tiny_protocol():
         class_order=("a", "b", "c", "d"),
         tasks=(("a", "b"), ("c", "d")),
     )
-    config["method_options"]["frozen_clip_classifier"] = {
+    config["method_options"]["clip_classifier"] = {
         "feature_dim": 4,
-        "bottleneck_dim": 2,
-        "residual_scale": 0.5,
         "epochs": 3,
-        "optimization_batch_size": 2,
-        "learning_rate": 0.05,
+        "early_stopping_patience": 3,
+        "backbone_learning_rate": 0.05,
+        "head_learning_rate": 0.05,
         "weight_decay": 0.0,
+        "gradient_clip_norm": 10.0,
+        "amp": False,
+        "tf32": False,
         "lwf_temperature": 2.0,
         "lwf_weight": 1.0,
         "ewc_lambda": 10.0,
@@ -139,7 +141,7 @@ class TinyDataModule:
         ]
 
 
-class FrozenCLIPBaselineTest(unittest.TestCase):
+class CLIPContinualBaselineTest(unittest.TestCase):
     def make_method(self, method_class):
         return method_class(
             tiny_protocol(),
@@ -161,18 +163,32 @@ class FrozenCLIPBaselineTest(unittest.TestCase):
         self.assertIs(method_class("lwf"), LearningWithoutForgettingMethod)
         self.assertIs(method_class("ewc"), ElasticWeightConsolidationMethod)
 
-    def test_frozen_extractor_and_exact_optimizer_parameter_scope(self):
+    def test_visual_encoder_is_trainable_and_no_adapter_is_present(self):
         method = self.make_method(SequentialFineTuningMethod)
-        self.assertFalse(
-            any(
+        self.assertTrue(
+            all(
                 parameter.requires_grad
-                for parameter in method._feature_extractor.parameters()
+                for parameter in method.model.visual_encoder.parameters()
             )
         )
+        self.assertFalse(hasattr(method.model, "adapter"))
+        initial = (
+            method.model.visual_encoder.projection.weight.detach().clone()
+        )
         self.train_one_task(method, 0)
+        self.assertEqual(
+            set(method._optimizer_parameter_names),
+            set(dict(method.model.named_parameters())),
+        )
+        self.assertFalse(
+            torch.equal(
+                initial,
+                method.model.visual_encoder.projection.weight.detach(),
+            )
+        )
         stats = method.parameter_statistics()
-        self.assertEqual(stats.total_parameters, 48)
-        self.assertEqual(stats.trainable_parameters, 32)
+        self.assertEqual(stats.total_parameters, 26)
+        self.assertEqual(stats.trainable_parameters, 26)
         self.assertEqual(stats.incremental_parameters, 0)
         self.assertEqual(stats.per_task_incremental_parameters, {0: 0, 1: 10})
 
@@ -241,13 +257,22 @@ class FrozenCLIPBaselineTest(unittest.TestCase):
                     parameter.add_(0.1)
         self.assertGreater(float(method._ewc_penalty().detach()), 0.0)
 
-    def test_checkpoint_contains_trainables_but_not_frozen_clip(self):
+    def test_checkpoint_contains_visual_encoder_and_classifier(self):
         method = self.make_method(SequentialFineTuningMethod)
         self.train_one_task(method, 0)
         with tempfile.TemporaryDirectory() as directory:
             checkpoint = Path(directory) / "task0.pth"
             method.save_checkpoint(checkpoint)
             self.assertLess(checkpoint.stat().st_size, 1_000_000)
+            payload = torch.load(checkpoint, map_location="cpu")
+            self.assertEqual(payload["schema_version"], 2)
+            self.assertIn(
+                "visual_encoder.projection.weight",
+                payload["model"],
+            )
+            self.assertFalse(
+                any("adapter" in name for name in payload["model"])
+            )
             restored = self.make_method(SequentialFineTuningMethod)
             restored.load_checkpoint(checkpoint)
             self.assertEqual(restored.model.head_sizes, (2,))
@@ -282,6 +307,15 @@ class FrozenCLIPBaselineTest(unittest.TestCase):
             self.assertEqual(
                 manifest["method_configuration"]["strategy"],
                 "finetune",
+            )
+            self.assertTrue(
+                manifest["method_configuration"]["visual_encoder_trainable"]
+            )
+            self.assertFalse(
+                manifest["method_configuration"]["clip_text_encoder_used"]
+            )
+            self.assertFalse(
+                manifest["method_configuration"]["benchmark_added_adapter"]
             )
             self.assertFalse(manifest["eligible_for_main_table"])
             self.assertIn("selection_mAP", (store.root / "train.log").read_text())

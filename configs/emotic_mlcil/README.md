@@ -23,5 +23,5 @@ per-task/per-class threshold scans are rejected during protocol validation.
 already-frozen DDP temperature schedule there. New baseline settings must not be
 added to this frozen protocol file because doing so would invalidate comparison
 with the registered DDP protocol hash. The runner instead writes each
-baseline's frozen architecture, optimizer, LwF, and EWC settings to
+baseline's registered architecture, optimizer, LwF, and EWC settings to
 `config_resolved.json` and `run_manifest.json` as method configuration.

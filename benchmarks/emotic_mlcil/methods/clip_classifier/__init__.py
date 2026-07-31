@@ -1,18 +1,17 @@
-"""Repository-native frozen-CLIP continual classifier baselines."""
+"""Repository-native CLIP-visual continual classifier baselines."""
 
 from .method import (
+    CLIPContinualMethod,
     ElasticWeightConsolidationMethod,
-    FrozenCLIPContinualMethod,
     LearningWithoutForgettingMethod,
     SequentialFineTuningMethod,
 )
-from .model import GrowingMultiLabelClassifier, ResidualFeatureAdapter
+from .model import GrowingMultiLabelClassifier
 
 __all__ = [
+    "CLIPContinualMethod",
     "ElasticWeightConsolidationMethod",
-    "FrozenCLIPContinualMethod",
     "GrowingMultiLabelClassifier",
     "LearningWithoutForgettingMethod",
-    "ResidualFeatureAdapter",
     "SequentialFineTuningMethod",
 ]

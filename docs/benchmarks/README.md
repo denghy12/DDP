@@ -20,16 +20,18 @@ The authoritative local repository is:
 
 The server development mirror is:
 
-`/mnt/haoyuan/workspace/CODE_DDP-benchmark`
+`/mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1`
 
 The old `/Users/denghaoyuan/workspace/MyCode/CODE_DDP` tree is not part of this
 work.
 
 ## Comparison tracks
 
-- **Track A — unified backbone:** every method uses the same frozen OpenAI CLIP
-  ViT-B/16 image/text backbone. Method-specific incremental components may be
-  trained, but the shared backbone and preprocessing stay fixed.
+- **Track A — unified visual initialization:** every method starts from the
+  same OpenAI CLIP ViT-B/16 visual architecture, checkpoint, and EMOTIC
+  preprocessing. Backbone trainability follows the audited method: DDP freezes
+  it, while Fine-Tuning/LwF/EWC update it. Text features are used only by
+  methods whose audited algorithm requires them.
 - **Track B — original backbone:** a method keeps the backbone and preprocessing
   required by its audited upstream implementation. Backbone differences must be
   reported and Track A and Track B numbers must not be mixed in one ranking.
@@ -43,7 +45,7 @@ remain a reserved extension point.
 - [Baseline source audit](BASELINE_SOURCE_AUDIT.md)
 - [Baseline porting checklist](BASELINE_PORTING_CHECKLIST.md)
 - [Implementation status](BASELINE_STATUS.md)
-- [Frozen-CLIP Fine-Tuning/LwF/EWC design](FROZEN_CLIP_BASELINES.md)
+- [CLIP-visual Fine-Tuning/LwF/EWC design](CLIP_CONTINUAL_BASELINES.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
@@ -55,10 +57,9 @@ from that exact commit on `codex/emotic-baseline-finetune-lwf-ewc`. The first
 development line implements repository-native Sequential Fine-Tuning, LwF,
 and EWC controls without vendoring external repositories.
 
-The baseline branch currently passes 47 Core/baseline tests (one opt-in real
-checkpoint test skipped) and all 17 selected legacy regressions in a temporary
-local CPU environment. Server-side PyTorch 2.0.1 validation and the first
-seed-0 GPU smoke remain required before the implementation can be frozen.
+The baseline branch removes the earlier benchmark-added residual Adapter.
+Local and server test counts are recorded in `BASELINE_STATUS.md`; a real
+one-batch GPU memory smoke is required before formal multi-seed execution.
 
 ## Standard run and output
 
@@ -84,7 +85,7 @@ For the frozen eight-task DDP checkpoints on an eight-GPU server, use the
 parallel tmux launcher:
 
 ```bash
-cd /mnt/haoyuan/workspace/CODE_DDP-benchmark
+cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1
 
 EVAL_BATCH_SIZE=4 WORKERS=0 \
   bash scripts/emotic-mlcil/launch_ddp_b5c3_8gpu_tmux.sh
@@ -207,7 +208,7 @@ legacy model path and benchmark wrapper on the same deterministic dataloader.
 After PyCharm synchronizes the local tree, run:
 
 ```bash
-cd /mnt/haoyuan/workspace/CODE_DDP-benchmark
+cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1
 
 find benchmarks/emotic_mlcil tests/emotic_mlcil -name '*.py' -print0 \
   | xargs -0 /opt/conda/envs/ddp/bin/python -m py_compile
@@ -224,7 +225,7 @@ find benchmarks/emotic_mlcil tests/emotic_mlcil -name '*.py' -print0 \
 The strict real-checkpoint task-7 comparison is:
 
 ```bash
-cd /mnt/haoyuan/workspace/CODE_DDP-benchmark
+cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1
 
 EMOTIC_DDP_CHECKPOINT="$PWD/output/emotic_b5c3_ddp_semantic_tau2/checkpoints/task7.pth" \
 EMOTIC_DATA_ROOT="/mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC" \

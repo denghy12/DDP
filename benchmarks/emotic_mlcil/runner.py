@@ -16,7 +16,7 @@ from .data_module import EMOTICMLCILDataModule
 from .evaluator import BenchmarkEvaluator
 from .method_base import BenchmarkMethod
 from .methods.ddp import DDPBenchmarkMethod
-from .methods.frozen_clip import (
+from .methods.clip_classifier import (
     ElasticWeightConsolidationMethod,
     LearningWithoutForgettingMethod,
     SequentialFineTuningMethod,
@@ -35,7 +35,7 @@ from .types import (
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
 CORE_BASE_COMMIT = "00f399f13bc7552c254c8f6e6c095a8be4f56146"
-CORE_RUNTIME_VERSION = "0.2.0"
+CORE_RUNTIME_VERSION = "0.3.0"
 
 
 def _current_git_commit() -> str:
