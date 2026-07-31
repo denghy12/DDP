@@ -6,10 +6,17 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import sys
+from pathlib import Path
 
 import torch
 import torch.nn.functional as F
 from torch import nn
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
 
 
 def parse_args() -> argparse.Namespace:
