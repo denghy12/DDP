@@ -10,6 +10,7 @@ from benchmarks.emotic_mlcil.artifacts import ArtifactStore
 from benchmarks.emotic_mlcil.evaluator import BenchmarkEvaluator
 from benchmarks.emotic_mlcil.runner import (
     BASE_COMMIT,
+    CORE_BASE_COMMIT,
     CORE_RUNTIME_VERSION,
     _current_source_state,
     merge_task_shards,
@@ -62,6 +63,7 @@ class ParallelShardTest(unittest.TestCase):
                 "git_dirty": False,
                 "source_tree_hash": "a" * 64,
                 "base_commit": BASE_COMMIT,
+                "core_base_commit": CORE_BASE_COMMIT,
                 "core_runtime_version": CORE_RUNTIME_VERSION,
                 "method": {
                     "name": "DDP",

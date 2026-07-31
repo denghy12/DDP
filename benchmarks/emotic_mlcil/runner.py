@@ -16,6 +16,11 @@ from .data_module import EMOTICMLCILDataModule
 from .evaluator import BenchmarkEvaluator
 from .method_base import BenchmarkMethod
 from .methods.ddp import DDPBenchmarkMethod
+from .methods.frozen_clip import (
+    ElasticWeightConsolidationMethod,
+    LearningWithoutForgettingMethod,
+    SequentialFineTuningMethod,
+)
 from .protocol import BenchmarkProtocol
 from .protocol import load_protocol
 from .types import (
@@ -29,7 +34,8 @@ from .types import (
 
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
-CORE_RUNTIME_VERSION = "0.1.1"
+CORE_BASE_COMMIT = "00f399f13bc7552c254c8f6e6c095a8be4f56146"
+CORE_RUNTIME_VERSION = "0.2.0"
 
 
 def _current_git_commit() -> str:
@@ -107,7 +113,7 @@ def _validate_reporting_split(
         raise ValueError("reporting_split must be protocol validation or test")
 
 
-def _method_metadata(method: BenchmarkMethod) -> Dict[str, str]:
+def _method_metadata(method: BenchmarkMethod) -> Dict[str, Any]:
     return {
         "name": method.method_name,
         "family": method.method_family,
@@ -116,6 +122,7 @@ def _method_metadata(method: BenchmarkMethod) -> Dict[str, str]:
             method, "upstream_repository", "TBD"
         ),
         "upstream_commit": getattr(method, "upstream_commit", "TBD"),
+        "resolved_method_config": dict(method.resolved_method_config()),
     }
 
 
@@ -126,7 +133,7 @@ def _finalize_run(
     task_rows: Sequence[TaskMetrics],
     parameter_stats: ParameterStatistics,
     memory_stats: MemoryStatistics,
-    method_metadata: Mapping[str, str],
+    method_metadata: Mapping[str, Any],
     reporting_split: str,
     configuration_locked: bool,
     train_batch_size: int,
@@ -153,6 +160,7 @@ def _finalize_run(
         "git_dirty": git_dirty,
         "source_tree_hash": source_tree_hash,
         "base_commit": BASE_COMMIT,
+        "core_base_commit": CORE_BASE_COMMIT,
         "core_runtime_version": CORE_RUNTIME_VERSION,
         "backbone": method_metadata["backbone"],
         "class_order_hash": protocol.class_order_hash,
@@ -173,6 +181,9 @@ def _finalize_run(
         ),
         "upstream_repository": method_metadata["upstream_repository"],
         "upstream_commit": method_metadata["upstream_commit"],
+        "method_configuration": dict(
+            method_metadata.get("resolved_method_config", {})
+        ),
         "test_labels_used_for_selection": False,
         "checkpoint_selection_split": protocol.validation_split,
         "reporting_split": reporting_split,
@@ -207,6 +218,9 @@ def _finalize_run(
             "name": method_metadata["name"],
             "family": method_metadata["family"],
             "backbone": method_metadata["backbone"],
+            "options": dict(
+                method_metadata.get("resolved_method_config", {})
+            ),
         },
     }
     if shard_run_id is not None:
@@ -328,6 +342,15 @@ class BenchmarkRunner:
                     shuffle=False,
                 )
                 self.method.train_task(train_loader, selection_loader)
+                for record in self.method.training_log_records():
+                    self.artifact_store.append_log(
+                        f"task={task_id} training="
+                        + json.dumps(
+                            dict(record),
+                            ensure_ascii=False,
+                            sort_keys=True,
+                        )
+                    )
 
                 evaluation_loader = self.data_module.evaluator_loader(
                     task_id,
@@ -483,6 +506,7 @@ class BenchmarkRunner:
                 "configuration_locked": self._configuration_locked,
                 **source_state,
                 "base_commit": BASE_COMMIT,
+                "core_base_commit": CORE_BASE_COMMIT,
                 "core_runtime_version": CORE_RUNTIME_VERSION,
                 "method": _method_metadata(self.method),
                 "runner": {
@@ -611,6 +635,7 @@ def merge_task_shards(
             "reporting_split": reporting_split,
             "configuration_locked": configuration_locked,
             "base_commit": BASE_COMMIT,
+            "core_base_commit": CORE_BASE_COMMIT,
             "core_runtime_version": CORE_RUNTIME_VERSION,
             "score_file": "scores.pt",
             "checkpoint_file": "checkpoint.pth",
@@ -747,7 +772,11 @@ def _parse_args() -> argparse.Namespace:
         "--protocol",
         default="configs/emotic_mlcil/protocol_b5c3.yaml",
     )
-    parser.add_argument("--method", choices=("ddp",), default="ddp")
+    parser.add_argument(
+        "--method",
+        choices=("ddp", "finetune", "lwf", "ewc"),
+        default="ddp",
+    )
     parser.add_argument("--data-root")
     parser.add_argument("--checkpoint-dir")
     parser.add_argument(
@@ -756,6 +785,11 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output-root", default="./output")
     parser.add_argument("--reporting-split", default="val")
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="Override only the registered protocol seed (for multi-seed runs)",
+    )
     parser.add_argument(
         "--configuration-locked",
         action="store_true",
@@ -823,6 +857,8 @@ def _legacy_emotic_transforms():
 def main() -> None:
     args = _parse_args()
     protocol = load_protocol(args.protocol)
+    if args.seed is not None:
+        protocol = protocol.with_seed(args.seed)
     if args.reporting_split not in {
         protocol.validation_split,
         protocol.test_split,
@@ -830,8 +866,6 @@ def main() -> None:
         raise ValueError(
             "--reporting-split must match the loaded protocol's val or test split"
         )
-    if args.method != "ddp":
-        raise ValueError("Core v0.1 CLI currently exposes only the DDP wrapper")
     uses_shards = (
         args.task_id is not None
         or args.merge_shards
@@ -841,13 +875,28 @@ def main() -> None:
         raise ValueError("--shard-run-id is required for shard execution")
     if not uses_shards and args.shard_run_id:
         raise ValueError(
-            "--shard-run-id requires --task-id or --merge-shards"
+            "--shard-run-id requires --task-id, --merge-shards, or "
+            "--export-sync-results"
         )
+    if args.method != "ddp" and (
+        args.task_id is not None or args.merge_shards
+    ):
+        raise ValueError(
+            "Continual training depends on prior tasks and cannot use "
+            "independent task shards"
+        )
+    method_classes = {
+        "ddp": DDPBenchmarkMethod,
+        "finetune": SequentialFineTuningMethod,
+        "lwf": LearningWithoutForgettingMethod,
+        "ewc": ElasticWeightConsolidationMethod,
+    }
+    method_class = method_classes[args.method]
     artifacts = ArtifactStore(
         args.output_root,
         protocol,
         track=protocol.track,
-        method_name=DDPBenchmarkMethod.method_name,
+        method_name=method_class.method_name,
         seed=protocol.seed,
     )
     if args.export_sync_results:
@@ -873,15 +922,8 @@ def main() -> None:
         )
         print(json.dumps(summary.as_dict(), indent=2, ensure_ascii=False))
         return
-    if not args.data_root or not args.checkpoint_dir:
-        raise ValueError(
-            "--data-root and --checkpoint-dir are required for evaluation"
-        )
-    checkpoint_dir = Path(args.checkpoint_dir)
-    checkpoint_paths = {
-        task_id: checkpoint_dir / f"task{task_id}.pth"
-        for task_id in range(protocol.num_tasks)
-    }
+    if not args.data_root:
+        raise ValueError("--data-root is required for benchmark execution")
     train_transform, eval_transform = _legacy_emotic_transforms()
     data_module = EMOTICMLCILDataModule(
         protocol,
@@ -890,12 +932,26 @@ def main() -> None:
         eval_transform=eval_transform,
         input_mode=args.input_mode,
     )
-    method = DDPBenchmarkMethod(
-        protocol,
-        checkpoint_paths=checkpoint_paths,
-        clip_model_path=args.clip_model_path,
-        device=args.device,
-    )
+    if args.method == "ddp":
+        if not args.checkpoint_dir:
+            raise ValueError("--checkpoint-dir is required for DDP evaluation")
+        checkpoint_dir = Path(args.checkpoint_dir)
+        checkpoint_paths = {
+            task_id: checkpoint_dir / f"task{task_id}.pth"
+            for task_id in range(protocol.num_tasks)
+        }
+        method = DDPBenchmarkMethod(
+            protocol,
+            checkpoint_paths=checkpoint_paths,
+            clip_model_path=args.clip_model_path,
+            device=args.device,
+        )
+    else:
+        method = method_class(
+            protocol,
+            clip_model_path=args.clip_model_path,
+            device=args.device,
+        )
     runner = BenchmarkRunner(
         protocol,
         data_module,

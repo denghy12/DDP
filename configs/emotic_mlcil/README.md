@@ -18,3 +18,10 @@ Required top-level keys are:
 The main-table policy is intentionally strict: threshold-independent mAP and a
 single global threshold of `0.5` for cF1/oF1. Test-based selection and
 per-task/per-class threshold scans are rejected during protocol validation.
+
+`method_options` is part of the protocol hash. Core v0.1 records only the
+already-frozen DDP temperature schedule there. New baseline settings must not be
+added to this frozen protocol file because doing so would invalidate comparison
+with the registered DDP protocol hash. The runner instead writes each
+baseline's frozen architecture, optimizer, LwF, and EWC settings to
+`config_resolved.json` and `run_manifest.json` as method configuration.

@@ -58,6 +58,14 @@ class ProtocolTest(unittest.TestCase):
         self.assertEqual(first.class_order_hash, third.class_order_hash)
         self.assertNotEqual(first.protocol_hash, third.protocol_hash)
 
+    def test_seed_override_changes_only_seed_and_protocol_hash(self):
+        protocol = make_protocol()
+        changed = protocol.with_seed(2)
+        self.assertEqual(changed.seed, 2)
+        self.assertEqual(changed.class_order, protocol.class_order)
+        self.assertEqual(changed.class_order_hash, protocol.class_order_hash)
+        self.assertNotEqual(changed.protocol_hash, protocol.protocol_hash)
+
     def test_flattened_tasks_must_equal_class_order(self):
         config = protocol_config()
         config["tasks"][1][0], config["tasks"][1][1] = (

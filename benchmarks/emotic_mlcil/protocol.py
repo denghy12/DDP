@@ -301,6 +301,15 @@ class BenchmarkProtocol:
             raise ValueError(f"method_options.{method_name} must be a mapping")
         return copy.deepcopy(value)
 
+    def with_seed(self, seed: int) -> "BenchmarkProtocol":
+        """Return the same protocol with one explicitly registered run seed."""
+
+        if not isinstance(seed, int) or seed < 0:
+            raise ValueError("seed must be a non-negative integer")
+        resolved = copy.deepcopy(dict(self._resolved))
+        resolved["seed"] = seed
+        return BenchmarkProtocol.from_dict(resolved)
+
     def as_dict(self) -> Dict[str, Any]:
         resolved = copy.deepcopy(dict(self._resolved))
         resolved["class_order_hash"] = self.class_order_hash

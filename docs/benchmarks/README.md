@@ -43,14 +43,22 @@ remain a reserved extension point.
 - [Baseline source audit](BASELINE_SOURCE_AUDIT.md)
 - [Baseline porting checklist](BASELINE_PORTING_CHECKLIST.md)
 - [Implementation status](BASELINE_STATUS.md)
+- [Frozen-CLIP Fine-Tuning/LwF/EWC design](FROZEN_CLIP_BASELINES.md)
+- [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
 
-Core v0.1 freezes the B5-C3 protocol, structured data boundary, method
-interface, evaluator, artifact schema, registry/runner, and a wrapper for the
-existing DDP model. It does not vendor external repositories or implement new
-baseline algorithms.
+Core v0.1 is frozen at commit
+`00f399f13bc7552c254c8f6e6c095a8be4f56146`. Baseline development continues
+from that exact commit on `codex/emotic-baseline-finetune-lwf-ewc`. The first
+development line implements repository-native Sequential Fine-Tuning, LwF,
+and EWC controls without vendoring external repositories.
+
+The baseline branch currently passes 47 Core/baseline tests (one opt-in real
+checkpoint test skipped) and all 17 selected legacy regressions in a temporary
+local CPU environment. Server-side PyTorch 2.0.1 validation and the first
+seed-0 GPU smoke remain required before the implementation can be frozen.
 
 ## Standard run and output
 
@@ -178,9 +186,12 @@ metrics, report, logs, and SHA-256 file manifest. Its main summary was:
 - Final oF1: `49.31224209078405`;
 - Forgetting: `4.899014227592711`.
 
-That smoke reused the already validated shard predictions and ran from the
-uncommitted Core tree, so it is validation evidence rather than an eligible
-main-table result. A formal result must be rerun from the frozen clean commit.
+The formal eight-task DDP run completed on 2026-07-31 from the clean frozen
+commit `00f399f13bc7552c254c8f6e6c095a8be4f56146`. Its manifest records
+`git_dirty: false`, no reused predictions, corrected trainable parameter count
+`825344`, and `eligible_for_main_table: true`. It reproduced the same summary
+values listed above and is the registered seed-0 DDP result. The earlier
+uncommitted/reused-prediction run remains smoke evidence only.
 
 Legacy reference values (`Final mAP ≈ 30.82`, `Average mAP ≈ 37.71`,
 `Final cF1 ≈ 32.4708`, `Final oF1 ≈ 46.6963`) are anomaly-detection hints only.

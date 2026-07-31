@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Iterable, Union
+from typing import Any, Iterable, Mapping, Sequence, Union
 
 from .types import (
     MemoryStatistics,
@@ -19,6 +19,16 @@ class BenchmarkMethod(ABC):
     method_family = "unregistered"
     backbone = "TBD"
     supported_tracks = ("A", "B")
+
+    def training_log_records(self) -> Sequence[Mapping[str, Any]]:
+        """Return task-local selection/loss records for the standard log."""
+
+        return ()
+
+    def resolved_method_config(self) -> Mapping[str, Any]:
+        """Return method settings that are not part of the dataset protocol."""
+
+        return {}
 
     @abstractmethod
     def begin_task(self, task_context: TaskContext) -> None:

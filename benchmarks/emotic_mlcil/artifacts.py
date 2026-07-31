@@ -311,7 +311,12 @@ class ArtifactStore:
                     output.write(source.read_text(encoding="utf-8"))
 
     def export_sync_results(self, shard_run_id: str) -> Path:
-        """Create one download-ready folder containing no checkpoint weights."""
+        """Create one download-ready folder containing no checkpoint weights.
+
+        Parallel DDP runs additionally include shard metadata and per-task
+        console logs. Sequentially trained methods export the same canonical
+        config/manifest/metrics/scores contract without inventing task shards.
+        """
 
         run_id = self.validate_shard_run_id(shard_run_id)
         destination = self.root / "results_to_sync" / run_id
@@ -328,6 +333,15 @@ class ArtifactStore:
             raise FileNotFoundError(
                 "Cannot export incomplete benchmark artifacts: "
                 + ", ".join(missing)
+            )
+        with (self.root / "run_manifest.json").open(
+            "r", encoding="utf-8"
+        ) as stream:
+            run_manifest = json.load(stream)
+        expects_shards = "shard_run_id" in run_manifest
+        if expects_shards and run_manifest["shard_run_id"] != run_id:
+            raise ValueError(
+                "Export run ID differs from the completed shard run ID"
             )
         state_dir = self.shard_dir / run_id / "_state"
         failed = sorted(state_dir.glob("task*.failed"))
@@ -348,17 +362,23 @@ class ArtifactStore:
             copy_file(source, Path("metrics") / source.name)
         for task_id in range(self.protocol.num_tasks):
             score = self.score_dir / f"task{task_id}_scores.pt"
+            if not score.is_file():
+                raise FileNotFoundError(
+                    f"Cannot export missing task artifact: {score}"
+                )
+            copy_file(score, Path("scores") / score.name)
+            if not expects_shards:
+                continue
             metadata = (
                 self.task_shard_dir(run_id, task_id) / "metadata.json"
             )
             shard_log = self.task_shard_dir(run_id, task_id) / "train.log"
             console_log = state_dir / f"task{task_id}.log"
-            for required in (score, metadata, shard_log, console_log):
+            for required in (metadata, shard_log, console_log):
                 if not required.is_file():
                     raise FileNotFoundError(
                         f"Cannot export missing task artifact: {required}"
                     )
-            copy_file(score, Path("scores") / score.name)
             copy_file(
                 metadata,
                 Path("shard_metadata") / f"task{task_id}.json",
@@ -401,6 +421,11 @@ class ArtifactStore:
                 "method": self.method_name,
                 "seed": self.seed,
                 "shard_run_id": run_id,
+                "execution_mode": (
+                    "parallel_task_shards"
+                    if expects_shards
+                    else "sequential"
+                ),
                 "contains_pth": False,
                 "download_this_directory": str(destination),
                 "excluded_heavy_artifacts": [

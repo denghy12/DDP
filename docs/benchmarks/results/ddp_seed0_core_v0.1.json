@@ -1,0 +1,47 @@
+{
+  "record_schema_version": 1,
+  "method": "DDP",
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "seed": 0,
+  "run_id": "core_v01_clean_20260731_115242",
+  "status": "eligible_for_main_table",
+  "source": {
+    "git_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+    "git_dirty": false,
+    "source_tree_hash": "5ab84b58360fb6fc4615db6c268e9cfb5681b66efb44df0d905c0d9b36798aa8",
+    "core_runtime_version": "0.1.1",
+    "protocol_hash": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+    "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee"
+  },
+  "eligibility": {
+    "reporting_split": "test",
+    "configuration_locked": true,
+    "test_labels_used_for_selection": false,
+    "prediction_reused_task_ids": [],
+    "eligible_for_main_table": true
+  },
+  "resources": {
+    "backbone": "OpenAI CLIP ViT-B/16",
+    "total_parameters": 125149184,
+    "trainable_parameters": 825344,
+    "incremental_parameters": 0,
+    "replay_memory_samples": 0,
+    "replay_memory_bytes": 0
+  },
+  "main_table": {
+    "final_mAP": 30.805144470640787,
+    "final_cF1": 31.492723345851537,
+    "final_oF1": 49.31224209078405,
+    "average_mAP": 37.737386721952674,
+    "forgetting": 4.899014227592711,
+    "parameter_growth": 0
+  },
+  "sync_bundle": {
+    "local_path": "/Users/denghaoyuan/workspace/MyCode/emotic_benchmark_runs/core_v0.1/benchmarks/emotic_b5c3_v0.1/A/DDP/seed0/results_to_sync/core_v01_clean_20260731_115242",
+    "files": 40,
+    "bytes": 8572784,
+    "contains_pth": false,
+    "sha256_manifest_verified": true
+  }
+}

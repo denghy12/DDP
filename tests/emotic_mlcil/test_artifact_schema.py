@@ -115,6 +115,68 @@ class ArtifactSchemaTest(unittest.TestCase):
                 MAIN_TABLE_FIELDS,
             )
 
+    def test_sequential_export_separates_results_from_checkpoints(self):
+        protocol = make_protocol()
+        row = TaskMetrics(
+            task_id=0,
+            seen_classes=5,
+            samples=2,
+            threshold=0.5,
+            per_class_ap=[100.0] * 5,
+            mAP=100.0,
+            cPrecision=100.0,
+            cRecall=100.0,
+            cF1=100.0,
+            oPrecision=100.0,
+            oRecall=100.0,
+            oF1=100.0,
+            class_order_hash=protocol.class_order_hash,
+            split_hash="hash",
+        )
+        summary = BenchmarkSummary(
+            task_metrics=[row],
+            final_mAP=100.0,
+            average_mAP=100.0,
+            final_cF1=100.0,
+            final_oF1=100.0,
+            forgetting=0.0,
+            per_class_forgetting={},
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            store = ArtifactStore(
+                directory,
+                protocol,
+                track="A",
+                method_name="Sequential Fine-Tuning",
+                seed=0,
+            )
+            payload = manifest(protocol)
+            payload["method"] = "Sequential Fine-Tuning"
+            payload["method_family"] = "Fine-Tuning"
+            store.initialize(protocol.as_dict(), payload)
+            store.write_task_metrics([row])
+            store.write_summary(
+                summary,
+                method_family="Fine-Tuning",
+                backbone="OpenAI CLIP ViT-B/16 (frozen)",
+                replay_memory_samples=0,
+                replay_memory_bytes=0,
+                parameter_growth=0,
+            )
+            for task_id in range(protocol.num_tasks):
+                (store.score_dir / f"task{task_id}_scores.pt").write_bytes(
+                    f"scores-{task_id}".encode("utf-8")
+                )
+                (store.checkpoint_dir / f"task{task_id}.pth").write_bytes(
+                    f"checkpoint-{task_id}".encode("utf-8")
+                )
+            destination = store.export_sync_results("sequential_run")
+            self.assertTrue((destination / "sync_manifest.json").is_file())
+            self.assertEqual(len(list((destination / "scores").glob("*.pt"))), 8)
+            self.assertFalse(list(destination.rglob("*.pth")))
+            self.assertFalse((destination / "shard_metadata").exists())
+            self.assertEqual(len(list(store.checkpoint_dir.glob("*.pth"))), 8)
+
 
 if __name__ == "__main__":
     unittest.main()
