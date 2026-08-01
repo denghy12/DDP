@@ -22,6 +22,7 @@ from .methods.clip_classifier import (
     LearningWithoutForgettingMethod,
     SequentialFineTuningMethod,
 )
+from .methods.krt import KRTBenchmarkMethod
 from .protocol import BenchmarkProtocol
 from .protocol import load_protocol
 from .types import (
@@ -775,7 +776,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--method",
-        choices=("ddp", "finetune", "lwf", "ewc"),
+        choices=("ddp", "finetune", "lwf", "ewc", "krt"),
         default="ddp",
     )
     parser.add_argument("--data-root")
@@ -904,6 +905,7 @@ def main() -> None:
         "finetune": SequentialFineTuningMethod,
         "lwf": LearningWithoutForgettingMethod,
         "ewc": ElasticWeightConsolidationMethod,
+        "krt": KRTBenchmarkMethod,
     }
     method_class = method_classes[args.method]
     artifacts = ArtifactStore(

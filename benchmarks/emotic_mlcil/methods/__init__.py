@@ -6,10 +6,12 @@ from .clip_classifier import (
     LearningWithoutForgettingMethod,
     SequentialFineTuningMethod,
 )
+from .krt import KRTBenchmarkMethod
 
 __all__ = [
     "DDPBenchmarkMethod",
     "ElasticWeightConsolidationMethod",
     "LearningWithoutForgettingMethod",
+    "KRTBenchmarkMethod",
     "SequentialFineTuningMethod",
 ]

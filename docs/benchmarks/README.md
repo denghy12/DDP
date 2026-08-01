@@ -46,6 +46,7 @@ remain a reserved extension point.
 - [Baseline porting checklist](BASELINE_PORTING_CHECKLIST.md)
 - [Implementation status](BASELINE_STATUS.md)
 - [CLIP-visual Fine-Tuning/LwF/EWC design](CLIP_CONTINUAL_BASELINES.md)
+- [KRT source audit and Track-A design](KRT_TRACK_A.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
 - [Registered validation-selected EWC λ=1e6 result](results/ewc_lambda1e6_seed012_v0.3.json)
@@ -70,6 +71,13 @@ The registered repository-local DDP result is a modified DDP-family variant,
 not an evaluation of the unmodified original DDP method. Its seed-0 result is
 retained as project evidence, while additional seeds are intentionally deferred
 until the local modifications and upstream baseline are separately audited.
+
+KRT is the next integration line. Its official source is fixed at
+`3f79044001edfe9ef94b729cd905a535fe8dd478`; the Track-A port retains KRT's
+dynamic pseudo labels, task-token ClassAttention, old-token distillation,
+per-task heads, and herding replay while replacing only the TResNet spatial
+features with CLIP ViT-B/16 patch tokens. It is not yet eligible for a formal
+result until the server test suite and GPU smoke pass.
 
 ## Standard run and output
 

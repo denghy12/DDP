@@ -23,8 +23,13 @@ per-task/per-class threshold scans are rejected during protocol validation.
 already-frozen DDP temperature schedule there. New baseline settings must not be
 added to this frozen protocol file because doing so would invalidate comparison
 with the registered DDP protocol hash. The runner instead writes each
-baseline's registered architecture, optimizer, LwF, and EWC settings to
+baseline's registered architecture, optimizer, LwF, EWC, and KRT settings to
 `config_resolved.json` and `run_manifest.json` as method configuration.
+
+KRT likewise uses immutable code defaults rather than adding fields to the
+frozen YAML. Its manifest records the fixed upstream commit/archive hash,
+CLIP-token substitution, DPL/ICA/token-loss settings, 20-exemplar-per-class
+herding policy, pseudo-density source, and actual replay sample/byte counts.
 
 The only registered tuning override is runner option `--ewc-lambda`. It is
 kept outside the frozen protocol object, validated as finite and positive, and

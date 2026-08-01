@@ -14,7 +14,7 @@ approved external source port has occurred.
 | DER++ | Not started | Reserved | Not started | Not started | Not started | Not started | Multi-label source/protocol audit |
 | PRS | Not started | Reserved | Not started | Not started | Not started | Not started | Source/protocol audit |
 | OCDM | Not started | Reserved | Not started | Not started | Not started | Not started | Source/protocol audit |
-| KRT | Not started | Reserved | Not started | Not started | Not started | Not started | Official source/license audit |
+| KRT | ICCV 2023 paper, official repository, fixed commit, archive hash, configs, and implementation flow audited; license coverage ambiguity recorded | Track-A adapter in progress: CLIP patch tokens + original KRT DPL/ICA/token loss/per-task heads/herding replay; no added Adapter or text features | New KRT unit suite added; local execution unavailable because the macOS workspace has no PyTorch runtime | Pending server CPU suite and worst-task GPU memory smoke | Not started | Not started | Run server validation; inspect replay bytes, pseudo threshold, and GPU peak before formal seed 0 |
 | CSC | Not started | Reserved | Not started | Not started | Not started | Not started | Official source/license audit |
 | MULTI-LANE | Not started | Reserved | Not started | Not started | Not started | Not started | Official source/license audit |
 | L3A | Not started | Reserved | Not started | Not started | Not started | Not started | Official source/license audit |

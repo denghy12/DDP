@@ -8,16 +8,17 @@ algorithm details are deliberately marked `TBD`.
 
 ## Local source collection status
 
-The snapshots below were inspected on 2026-07-31. None contains a `.git`
-directory, so none provides an immutable upstream commit or verifiable remote.
-They are read-only audit inputs, not yet approved porting sources.
+The original snapshots below were inspected on 2026-07-31. Except for the
+separately re-cloned KRT source described below, they do not contain a `.git`
+directory and therefore do not provide an immutable upstream commit or
+verifiable remote. They are read-only audit inputs, not vendored dependencies.
 
 | Method | Local snapshot | Git provenance | License file observed in snapshot | Required next action |
 |---|---|---|---|---|
 | AGCN | `AGCN-main/` | Unavailable | Top-level Apache-2.0 text | Re-clone official repository and verify license at a fixed commit |
 | CSC | `CSC-main/` | Unavailable | None found | Identify official repository, fixed commit, and license |
 | EmoGrowth | `EmoGrowth-master/` | Unavailable | None found | Resolve method identity, official repository, fixed commit, and license |
-| KRT | `KRT-MLCIL-main/` | Unavailable | Nested MIT text credited to Alibaba-MIIL | Verify that the license covers KRT additions at the official fixed commit |
+| KRT | `krt_official/` plus adjacent `krt_release_3f79044/` extraction | Official clone fixed at `3f79044001edfe9ef94b729cd905a535fe8dd478` | MIT text inside the release, credited to Alibaba-MIIL | Implementation audit complete; ownership/license coverage of KRT-authored additions remains ambiguous |
 | L3A | `L3A-main/` | Unavailable | None found | Identify official fixed commit and license |
 | MULTI-LANE | `multi-lane-main/` | Unavailable | Top-level CC BY-NC 4.0 text | Verify official commit and record attribution/non-commercial constraints |
 
@@ -36,7 +37,7 @@ audited.
 | DER++ | Replay/distillation | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | Unified CLIP plus audited replay logits | Preserve audited backbone | Official multi-label variant |
 | PRS | Replay | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | Unified CLIP with audited sampling | Preserve audited backbone | Official source and budget units |
 | OCDM | Replay | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | Unified CLIP with audited memory | Preserve audited backbone | Official source and label access |
-| KRT | Native MLCIL | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | Replace only the audited visual backbone with the shared CLIP initialization; retain original method modules/loss | Preserve audited backbone | Source, license, protocol |
+| KRT | Native MLCIL | [Knowledge Restore and Transfer for Multi-Label Class-Incremental Learning, ICCV 2023](https://arxiv.org/abs/2302.13334) | [Official repository](https://github.com/witdsl/KRT-MLCIL) | `3f79044001edfe9ef94b729cd905a535fe8dd478` (`main`) | Release contains MIT text credited to Alibaba-MIIL; coverage/ownership of the KRT-authored files is not explicit, so no upstream source is copied | Original: MS-COCO and PASCAL VOC; adaptation: EMOTIC | Original: ImageNet-21k TResNet-M; Track A: trainable OpenAI CLIP ViT-B/16 visual tower | ASL classification, dynamic pseudo labels (DPL), task-token ClassAttention (ICA), cosine old-token distillation | Official COCO config: herding, 20 exemplars/class, expanding budget; Track A retains the same policy and reports deduplicated person-sample count/bytes | One task token, LayerNorm, and linear head per task | Replace TResNet spatial features only with projected CLIP patch tokens; retain DPL, ICA, token loss, old token/head freezing, per-task heads, and herding replay | Preserve TResNet-M and official data path in a separate future run | Track A uses current-task training labels to estimate EMOTIC pseudo-label density; replay stores post-transform tensors because the Core method interface intentionally hides the underlying dataset |
 | CSC | Native MLCIL | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | Replace only the audited visual backbone with the shared CLIP initialization; retain original method modules/loss | Preserve audited backbone | Source, license, protocol |
 | MULTI-LANE | Native MLCIL | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | Replace only the audited visual backbone with the shared CLIP initialization; retain original method modules/loss | Preserve audited backbone | Source, license, protocol |
 | L3A | Native MLCIL | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD | Replace only the audited visual backbone with the shared CLIP initialization; retain original method modules/loss | Preserve audited backbone | Source, license, protocol |
