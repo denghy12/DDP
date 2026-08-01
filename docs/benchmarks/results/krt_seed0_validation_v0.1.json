@@ -1,0 +1,143 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "method": "KRT",
+  "status": "validation_passed_configuration_frozen",
+  "validation_run": {
+    "run_id": "krt_seed0_val_ampfix_20260801_163959",
+    "reporting_split": "val",
+    "seed": 0,
+    "source": {
+      "git_commit": "d614960a0335d9d2dda0ff2be4b7d74eee88e214",
+      "git_dirty": false,
+      "source_tree_hash": "7819314ec0d8e4833255003f2160c478a797bf5774afc3ada4808d1f769621c7",
+      "core_runtime_version": "0.3.1",
+      "protocol_hash": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+      "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee"
+    },
+    "eligibility": {
+      "configuration_locked": false,
+      "reporting_split_is_test": false,
+      "test_labels_used_for_selection": false,
+      "prediction_reused_task_ids": [],
+      "eligible_for_main_table": false
+    },
+    "metrics": {
+      "final_mAP": 32.34349136536406,
+      "final_cF1": 33.06818104085131,
+      "final_oF1": 49.05950406536954,
+      "average_mAP": 41.13257179820523,
+      "forgetting": 6.345252445066587,
+      "per_task_mAP": [
+        55.42353875821042,
+        50.911080130793664,
+        36.30656812358613,
+        42.04893554405866,
+        39.97895833938508,
+        38.00329817050313,
+        34.04470395374069,
+        32.34349136536406
+      ]
+    },
+    "checkpoint_selection": {
+      "split": "val",
+      "metric": "current_label_mAP",
+      "mode": "max",
+      "tie_break": "earliest_epoch",
+      "best_epoch_by_task": [2, 16, 3, 9, 6, 16, 4, 11],
+      "best_current_label_mAP_by_task": [
+        55.39740086087825,
+        66.8243409470706,
+        47.47990671024787,
+        69.06934763077184,
+        43.56902843381753,
+        55.66862961884622,
+        61.50191406793505,
+        44.260567806601564
+      ]
+    },
+    "method_configuration": {
+      "upstream_commit": "3f79044001edfe9ef94b729cd905a535fe8dd478",
+      "upstream_archive_sha256": "2eec8351568358efca50bdaea5d06034dd28bd35d7d41c12e78cc0b1c915daf1",
+      "backbone": "OpenAI CLIP ViT-B/16 visual encoder (fine-tuned)",
+      "visual_encoder_trainable": true,
+      "clip_text_encoder_used": false,
+      "benchmark_added_adapter": false,
+      "epochs": 20,
+      "early_stopping_patience": 20,
+      "base_learning_rate": 0.00004,
+      "incremental_learning_rate": 0.0001,
+      "weight_decay": 0.0001,
+      "embed_dim": 384,
+      "num_heads": 8,
+      "token_distillation_weight": 100.0,
+      "exemplars_per_class": 20,
+      "replay_batch_size": 64,
+      "train_batch_size": 32,
+      "eval_batch_size": 64,
+      "workers": 2,
+      "amp": true,
+      "tf32": true
+    },
+    "amp_stability": {
+      "optimizer_updates": 19208,
+      "overflow_skipped_updates": 52,
+      "attempted_updates": 19260,
+      "overflow_skip_fraction": 0.002699896157840083,
+      "optimizer_updates_by_task": [3353, 2792, 595, 6292, 2814, 1714, 535, 1113],
+      "overflow_skipped_updates_by_task": [7, 8, 5, 8, 6, 6, 5, 7],
+      "scheduler_advanced_on_skipped_updates": false,
+      "nan_detected": false,
+      "oom_detected": false,
+      "scheduler_order_warning_detected": false,
+      "worst_task_gpu_smoke_batch_size": 32,
+      "worst_task_gpu_peak_mib": 3756.63232421875
+    },
+    "pseudo_labels": {
+      "density_source": "current-task training labels only",
+      "threshold_by_incremental_task": [0.575, 0.745, 0.73, 0.86, 0.78, 0.705, 0.835],
+      "target_old_positive_count": [
+        1.6943559399180703,
+        2.988772744870306,
+        4.5206592152519045,
+        4.694546568627451,
+        6.138144058885383,
+        8.123338649654439,
+        7.867627785058978
+      ],
+      "realized_old_positive_count": [
+        1.6103777878925807,
+        2.896631823461092,
+        4.434296646863357,
+        4.5622702205882355,
+        6.053233438485805,
+        8.070175438596491,
+        7.936435124508519
+      ],
+      "closest_threshold_fallback_tasks": [4]
+    },
+    "replay": {
+      "policy": "herding, 20 exemplars per class, expanding budget",
+      "samples_before_each_task": [0, 98, 158, 217, 277, 337, 397, 457],
+      "final_samples": 517,
+      "theoretical_max_samples": 520,
+      "final_bytes": 311378462,
+      "deduplicated_by_stable_person_id": true,
+      "stored_image_representation": "post-transform float32 tensor"
+    },
+    "artifacts": {
+      "archive_sha256": "0ce713e82cc79fec8cc49d32e66384dbd54b5fd55c616216bcedd49cd45d9432",
+      "sync_manifest_verified": true,
+      "score_tasks_present": [0, 1, 2, 3, 4, 5, 6, 7],
+      "contains_pth": false
+    }
+  },
+  "freeze_decision": {
+    "hyperparameters_changed_after_validation": false,
+    "configuration_is_locked_for_held_out_test": true,
+    "test_metrics_must_not_change_configuration": true,
+    "formal_seeds": [0, 1, 2],
+    "formal_results_pending": true
+  }
+}

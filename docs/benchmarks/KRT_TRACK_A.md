@@ -87,6 +87,35 @@ Validation checkpoint selection follows the frozen benchmark rule: current
 label validation mAP, with higher score and then earlier epoch. This is a
 benchmark-wide selection rule rather than a KRT-specific hyperparameter search.
 
+## Frozen seed-0 validation decision
+
+The complete seed-0 validation run at source commit `d614960` passed review.
+Its checkpoint-free archive and manifest were verified, all eight score files
+were present, and no test label was used. Validation produced Final mAP
+`32.3435`, Average mAP `41.1326`, and Forgetting `6.3453`. These are selection
+evidence only and must not be ranked against held-out test results.
+
+The run applied 19,208 optimizer updates and safely skipped 52 AMP-overflow
+updates (0.270% of attempts). OneCycle did not advance on skipped updates. No
+NaN, OOM, or scheduler-order warning occurred. The worst-task batch-32 smoke
+peaked at `3756.6 MiB`.
+
+Incremental pseudo thresholds were `0.575`, `0.745`, `0.730`, `0.860`, `0.780`,
+`0.705`, and `0.835`. Task 4 used the documented closest-threshold fallback;
+all pseudo-density inputs came only from current-task training labels. The
+final replay contained 517 unique people and 311,378,462 bytes, versus the
+520-sample theoretical class budget; stable-person deduplication explains the
+difference.
+
+No KRT hyperparameter is changed after this review. The authoritative snapshot
+is [krt_seed0_validation_v0.1.json](results/krt_seed0_validation_v0.1.json).
+Held-out execution must use `configuration_locked=true`, a clean worktree, and
+the exact configuration-freeze commit. The formal launcher measures GPU 0 free
+memory and schedules seeds 0--2 concurrently only when the configured safety
+budget permits it. Otherwise it queues them automatically. An explicit CUDA
+OOM during concurrent execution preserves the failed artifact and retries only
+the affected seed sequentially; it never changes batch size or method options.
+
 ## Acceptance gates
 
 Before a KRT result can enter the table:
@@ -97,4 +126,6 @@ Before a KRT result can enter the table:
    round-trip, and seen-score alignment pass;
 4. a GPU memory smoke fixes a safe batch size;
 5. seed 0 validation artifacts are reviewed before the configuration is locked;
-6. only then is a held-out seed-0 test run allowed.
+6. held-out test execution uses only the frozen commit and explicit lock;
+7. every formal manifest must be clean, locked, test-only, and free of test-based
+   selection before the three-seed result is registered.

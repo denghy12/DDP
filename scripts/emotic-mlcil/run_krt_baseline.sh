@@ -18,6 +18,7 @@ TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-32}"
 EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-64}"
 WORKERS="${WORKERS:-2}"
 EXPORT_SYNC_RESULTS="${EXPORT_SYNC_RESULTS:-1}"
+CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:-}"
 
 [[ "${SEED}" =~ ^[0-9]+$ ]] || { echo "Invalid SEED" >&2; exit 2; }
 [[ "${GPU}" =~ ^[0-9]+$ ]] || { echo "Invalid GPU" >&2; exit 2; }
@@ -40,6 +41,10 @@ runner_args=(
   --device cuda
 )
 if [[ "${REPORTING_SPLIT}" == "test" ]]; then
+  [[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "KRT_TRACK_A_V0_1" ]] || {
+    echo "Held-out KRT test requires the frozen configuration confirmation" >&2
+    exit 2
+  }
   runner_args+=(--configuration-locked)
 fi
 CUDA_VISIBLE_DEVICES="${GPU}" "${PYTHON}" \
