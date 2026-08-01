@@ -151,3 +151,36 @@ Heavy tuning state and `.pth` checkpoints remain under the run root. Only the
 formal metrics, scores, logs, manifests, reports, and `tuning_selection` record
 are copied into `formal/download_ready/<run-id>/`. The download directory is
 validated to contain no `.pth` file.
+
+## Registered EWC v0.3 result
+
+The validation-only run `ewc_lambda_v03_20260801_011056` evaluated the locked
+grid below with seed 0. Selection maximized Final validation mAP; no test metric
+participated in this decision.
+
+| EWC coefficient | Final validation mAP | Average validation mAP | Validation forgetting |
+|---:|---:|---:|---:|
+| `1e2` | 24.5881 | 30.4982 | 6.0811 |
+| `1e4` | 24.8897 | 29.2073 | 6.8493 |
+| `1e5` | 28.9342 | 31.8689 | 3.9307 |
+| **`1e6`** | **29.7755** | **33.0151** | **3.4223** |
+| `1e7` | 27.0644 | 32.3118 | 8.0463 |
+
+The selected coefficient `1e6` is an interior grid point. It was frozen before
+the held-out test was opened, then used unchanged for formal seeds 0, 1, and 2.
+All three clean runs came from commit
+`dea022e6b59caf445eacb5e481a511fcd7ace1f4`, completed Task 0--7 without score
+reuse, and are eligible for the main table.
+
+| Metric | Mean ± sample standard deviation |
+|---|---:|
+| Final mAP | **20.4155 ± 1.2887** |
+| Average mAP | **24.9688 ± 0.4050** |
+| Final cF1 | **16.5073 ± 2.2618** |
+| Final oF1 | **42.6844 ± 4.2293** |
+| Forgetting | **6.9760 ± 1.6373** |
+
+The registered machine-readable record is
+[`results/ewc_lambda1e6_seed012_v0.3.json`](results/ewc_lambda1e6_seed012_v0.3.json).
+The earlier `λ=100` three-seed run remains a diagnostic and must not replace or
+be averaged with this formal result.

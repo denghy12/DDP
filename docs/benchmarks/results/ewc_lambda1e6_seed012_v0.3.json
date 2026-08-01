@@ -1,0 +1,151 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "method": "EWC",
+  "run_id": "ewc_lambda_v03_20260801_011056",
+  "status": "eligible_for_main_table",
+  "selection": {
+    "split": "val",
+    "seed": 0,
+    "metric": "final_mAP",
+    "mode": "max",
+    "tie_break": "lower_ewc_lambda",
+    "test_metrics_used": false,
+    "candidates": [
+      {
+        "ewc_lambda": 100.0,
+        "final_validation_mAP": 24.588149892889525,
+        "average_validation_mAP": 30.498163359339642,
+        "forgetting_on_validation": 6.081089282203925,
+        "mean_ewc_to_classification_ratio": 3.007762915265609e-06
+      },
+      {
+        "ewc_lambda": 10000.0,
+        "final_validation_mAP": 24.889714814694898,
+        "average_validation_mAP": 29.207338060246848,
+        "forgetting_on_validation": 6.849338956654723,
+        "mean_ewc_to_classification_ratio": 0.00013078038457517823
+      },
+      {
+        "ewc_lambda": 100000.0,
+        "final_validation_mAP": 28.934227964330457,
+        "average_validation_mAP": 31.868929390608045,
+        "forgetting_on_validation": 3.930663646867485,
+        "mean_ewc_to_classification_ratio": 0.0010277882307956098
+      },
+      {
+        "ewc_lambda": 1000000.0,
+        "final_validation_mAP": 29.775482515063512,
+        "average_validation_mAP": 33.015118211583705,
+        "forgetting_on_validation": 3.422283580815083,
+        "mean_ewc_to_classification_ratio": 0.005580611909865124
+      },
+      {
+        "ewc_lambda": 10000000.0,
+        "final_validation_mAP": 27.06442409520355,
+        "average_validation_mAP": 32.311808261615866,
+        "forgetting_on_validation": 8.046272556297415,
+        "mean_ewc_to_classification_ratio": 0.014588397657839985
+      }
+    ],
+    "selected_ewc_lambda": 1000000.0,
+    "selected_final_validation_mAP": 29.775482515063512,
+    "configuration_locked_after_selection": true
+  },
+  "formal_run": {
+    "reporting_split": "test",
+    "seeds": [0, 1, 2],
+    "aggregation": "mean_and_sample_standard_deviation",
+    "source": {
+      "git_commit": "dea022e6b59caf445eacb5e481a511fcd7ace1f4",
+      "git_dirty": false,
+      "source_tree_hash": "b18e6e32e6485c3736ed736cc6affd106185cd62841aa6c1e3394e090adbd3de",
+      "core_runtime_version": "0.3.1",
+      "protocol_hash": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+      "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee"
+    },
+    "eligibility": {
+      "configuration_locked": true,
+      "test_labels_used_for_selection": false,
+      "prediction_reused_task_ids": [],
+      "all_seeds_eligible_for_main_table": true
+    },
+    "method_configuration": {
+      "ewc_lambda": 1000000.0,
+      "ewc_decay": 1.0,
+      "visual_encoder_trainable": true,
+      "clip_text_encoder_used": false,
+      "benchmark_added_adapter": false,
+      "epochs": 10,
+      "early_stopping_patience": 3,
+      "backbone_learning_rate": 1e-05,
+      "head_learning_rate": 0.0001,
+      "weight_decay": 0.0001
+    },
+    "resources": {
+      "backbone": "OpenAI CLIP ViT-B/16 visual encoder",
+      "total_parameters": 86205978,
+      "trainable_parameters": 86205978,
+      "parameter_growth": 10773,
+      "replay_memory_samples": 0,
+      "replay_memory_bytes": 0
+    },
+    "per_seed": [
+      {
+        "seed": 0,
+        "final_mAP": 21.88563988581727,
+        "final_cF1": 19.118814084691515,
+        "final_oF1": 38.01227369505016,
+        "average_mAP": 25.422883225949896,
+        "forgetting": 5.0950647587345825
+      },
+      {
+        "seed": 1,
+        "final_mAP": 19.481116898128576,
+        "final_cF1": 15.233403195971885,
+        "final_oF1": 43.78965696204651,
+        "average_mAP": 24.83896404715624,
+        "forgetting": 7.750961476664631
+      },
+      {
+        "seed": 2,
+        "final_mAP": 19.87975437251775,
+        "final_cF1": 15.169804130499388,
+        "final_oF1": 46.25129937629938,
+        "average_mAP": 24.644698007382416,
+        "forgetting": 8.081972180105705
+      }
+    ],
+    "aggregate": {
+      "final_mAP": {
+        "mean": 20.4155037188212,
+        "std": 1.288682746500965
+      },
+      "final_cF1": {
+        "mean": 16.507340470387597,
+        "std": 2.2618260408210937
+      },
+      "final_oF1": {
+        "mean": 42.684410011132016,
+        "std": 4.229251016545407
+      },
+      "average_mAP": {
+        "mean": 24.968848426829517,
+        "std": 0.4050253358267395
+      },
+      "forgetting": {
+        "mean": 6.975999471834973,
+        "std": 1.6373235989436157
+      }
+    }
+  },
+  "sync_bundle": {
+    "formal_bundle_count": 3,
+    "formal_file_count": 47,
+    "formal_total_bytes": 25652841,
+    "package_manifest_entries": 97,
+    "contains_pth": false,
+    "sha256_manifest_verified": true
+  }
+}
