@@ -198,7 +198,6 @@ class AsymmetricLoss(torch.nn.Module):
         return -(loss * weight).sum()
 
 
-@register_method("krt")
 class KRTBenchmarkMethod(BenchmarkMethod):
     method_name = "KRT"
     method_family = "Native MLCIL / Replay / Token Distillation"
@@ -1011,3 +1010,6 @@ class KRTBenchmarkMethod(BenchmarkMethod):
                 example.byte_count() for example in self._replay_memory
             ),
         )
+
+
+register_method("krt", KRTBenchmarkMethod)
