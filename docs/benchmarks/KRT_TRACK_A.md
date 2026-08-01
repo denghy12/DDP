@@ -39,6 +39,8 @@ The Track-A method retains these KRT components:
   and an expanding, non-fixed total budget;
 - Adam, bias/norm-exempt weight-decay grouping, and a OneCycle learning-rate
   schedule;
+- under AMP, OneCycle advances only when `GradScaler` actually applies the
+  optimizer update; overflow-skipped updates are counted in `train.log`;
 - task-0 learning rate `4e-5`, incremental learning rate `1e-4`, 20 epochs,
   embedding width 384, and eight ClassAttention heads.
 

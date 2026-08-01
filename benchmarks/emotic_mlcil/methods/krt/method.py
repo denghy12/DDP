@@ -515,7 +515,7 @@ class KRTBenchmarkMethod(BenchmarkMethod):
         optimizer: torch.optim.Optimizer,
         scaler: torch.cuda.amp.GradScaler,
         teacher_output: Optional[Dict[str, object]] = None,
-    ) -> Tuple[float, float]:
+    ) -> Tuple[float, float, bool]:
         images = self._images(images)
         targets = targets.to(self.device, non_blocking=True).float()
         optimizer.zero_grad(set_to_none=True)
@@ -526,12 +526,15 @@ class KRTBenchmarkMethod(BenchmarkMethod):
             classification = self._criterion(output["logits"].float(), targets)
             token_loss = self._token_distillation(output, teacher_output)
             loss = classification + token_loss
+        scale_before_step = float(scaler.get_scale())
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
+        optimizer_stepped = float(scaler.get_scale()) >= scale_before_step
         return (
             float(classification.detach().cpu()),
             float(token_loss.detach().cpu()),
+            optimizer_stepped,
         )
 
     def _selection_map(self, val_loader: Iterable[TrainBatch]) -> float:
@@ -601,6 +604,8 @@ class KRTBenchmarkMethod(BenchmarkMethod):
             classification_total = 0.0
             token_total = 0.0
             batches = 0
+            optimizer_steps = 0
+            skipped_optimizer_steps = 0
             replay_iterator = iter(self._replay_batches(epoch))
             replay_index = 0
             for current_step, raw_batch in enumerate(train_loader, start=1):
@@ -611,14 +616,18 @@ class KRTBenchmarkMethod(BenchmarkMethod):
                     batch.targets_current.to(self.device).float(),
                     teacher_output,
                 )
-                classification, token_loss = self._train_batch(
+                classification, token_loss, optimizer_stepped = self._train_batch(
                     images,
                     targets,
                     optimizer,
                     scaler,
                     teacher_output=teacher_output,
                 )
-                scheduler.step()
+                if optimizer_stepped:
+                    scheduler.step()
+                    optimizer_steps += 1
+                else:
+                    skipped_optimizer_steps += 1
                 classification_total += classification
                 token_total += token_loss
                 batches += 1
@@ -634,22 +643,34 @@ class KRTBenchmarkMethod(BenchmarkMethod):
                     if current_step < replay_position:
                         break
                     replay_images, replay_targets = next(replay_iterator)
-                    replay_classification, replay_token_loss = self._train_batch(
+                    (
+                        replay_classification,
+                        replay_token_loss,
+                        optimizer_stepped,
+                    ) = self._train_batch(
                         replay_images,
                         replay_targets,
                         optimizer,
                         scaler,
                     )
-                    scheduler.step()
+                    if optimizer_stepped:
+                        scheduler.step()
+                        optimizer_steps += 1
+                    else:
+                        skipped_optimizer_steps += 1
                     classification_total += replay_classification
                     token_total += replay_token_loss
                     batches += 1
                     replay_index += 1
             for replay_images, replay_targets in replay_iterator:
-                classification, token_loss = self._train_batch(
+                classification, token_loss, optimizer_stepped = self._train_batch(
                     replay_images, replay_targets, optimizer, scaler
                 )
-                scheduler.step()
+                if optimizer_stepped:
+                    scheduler.step()
+                    optimizer_steps += 1
+                else:
+                    skipped_optimizer_steps += 1
                 classification_total += classification
                 token_total += token_loss
                 batches += 1
@@ -670,6 +691,8 @@ class KRTBenchmarkMethod(BenchmarkMethod):
                     "pseudo_target_count": self._pseudo_target_count,
                     "pseudo_realized_count": self._pseudo_realized_count,
                     "replay_samples": float(len(self._replay_memory)),
+                    "optimizer_steps": float(optimizer_steps),
+                    "skipped_optimizer_steps": float(skipped_optimizer_steps),
                 }
             )
             if selection_map > best_map:

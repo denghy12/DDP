@@ -150,6 +150,15 @@ class KRTBenchmarkMethodTest(unittest.TestCase):
                 for record in method.training_history
             )
         )
+        self.assertTrue(
+            all(record["optimizer_steps"] > 0 for record in method.training_history)
+        )
+        self.assertTrue(
+            all(
+                record["skipped_optimizer_steps"] == 0
+                for record in method.training_history
+            )
+        )
         memory = method.memory_statistics()
         self.assertGreater(memory.replay_memory_samples, first_memory.replay_memory_samples)
         self.assertLessEqual(memory.replay_memory_samples, 4)
