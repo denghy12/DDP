@@ -4,8 +4,9 @@
 
 This document fixed the source and protocol-safe Track-A interpretation of
 Confidence Self-Calibration (CSC) before the adapter was implemented and
-remains its audit/design contract. It is not a claim that CSC results already
-exist.
+remains its audit/design contract. The independent implementation and seed-0
+validation gate are now complete; held-out three-seed execution is the active
+stage.
 
 Development branch: `codex/emotic-baseline-csc`, created from frozen KRT
 Track-A commit `029eda42269f053b6306eed5522f8c967be44edb`.
@@ -160,9 +161,9 @@ It must reject any training batch whose visibility mask exposes old or future
 columns. The teacher is a detached deep copy taken before task expansion. Test
 data cannot choose epochs, coefficients, or architecture settings.
 
-## Planned implementation and gates
+## Implementation and completed gates
 
-The independent adapter will live under:
+The independent adapter lives under:
 
 ```text
 benchmarks/emotic_mlcil/methods/csc/
@@ -171,7 +172,7 @@ benchmarks/emotic_mlcil/methods/csc/
 └── model.py
 ```
 
-Before any GPU experiment, the branch must provide tests for:
+The branch provides tests for:
 
 - registry/source/config metadata and absence of Adapter/text/replay;
 - exact dynamic expansion and preservation of old parameter blocks;
@@ -182,10 +183,10 @@ Before any GPU experiment, the branch must provide tests for:
 - prediction/target/sample-ID alignment;
 - checkpoint round-trip and parameter/memory statistics.
 
-After CPU tests and legacy regressions pass, run a worst-case GPU memory smoke,
-then a validation-only seed-0 experiment. Hyperparameters may be frozen only
-from validation. Held-out test remains prohibited until the configuration is
-locked in a committed, clean source tree.
+CPU tests, legacy regressions, worst-case GPU memory smoke, and the
+validation-only seed-0 experiment form the completed freeze gate. Held-out
+test remains prohibited unless the frozen configuration is confirmed from a
+committed, clean source tree.
 
 The validation launcher is
 `scripts/emotic-mlcil/launch_csc_seed0_tmux.sh`. It requires a clean worktree,
@@ -202,3 +203,35 @@ archive includes the canonical config/manifests/metrics/report, all eight
 rejecting `.pth` at every nesting depth. This follows
 [`DOWNLOAD_STANDARD.md`](DOWNLOAD_STANDARD.md) and leaves task checkpoints only
 in the server run tree.
+
+## Frozen validation decision and formal execution
+
+Seed-0 validation run `csc_seed0_val_20260802_101131` completed all eight tasks
+and all `9,300` attempted optimizer updates, with zero AMP skips, NaN, OOM, or
+traceback. Its Final mAP is `28.2163`, Average mAP is `39.1098`, and Forgetting
+is `7.9566`. The complete immutable evidence is
+[`results/csc_seed0_validation_v0.1.json`](results/csc_seed0_validation_v0.1.json).
+
+At the mandatory global threshold `0.5`, final cF1/oF1 are only
+`3.3105/5.7068`: only `6.43%` of final predictions are positive while
+`24.10%` of targets are positive. A diagnostic threshold changes F1 sharply,
+but it is not a permitted selection and is not used. This calibration failure
+is reported as a retained property of the released all-seen maximum-entropy
+formulation; mAP remains the primary threshold-free metric.
+
+No hyperparameter was changed after validation. The locked formal
+configuration is 20 epochs, Adam + OneCycleLR, learning rate `4e-5`, weight
+decay `1e-4`, `alpha=0.5`, entropy strength `0.04`, train/eval batch size 64,
+two workers, AMP/TF32 enabled, no replay, no text encoder, and no benchmark
+Adapter. Held-out test requires confirmation `CSC_TRACK_A_V0_1` and a clean
+exact frozen commit.
+
+The fastest protocol-safe execution maps the three independent seeds to three
+distinct GPUs. Continual tasks within a seed remain sequential because each
+task depends on the preceding model state. Use
+`scripts/emotic-mlcil/launch_csc_formal_seed012_tmux.sh`; it runs the full test
+suites, checks free memory on every assigned GPU, runs the worst-task GPU
+smoke, launches seeds 0--2 concurrently, validates locked manifests and common
+provenance, computes mean/population-standard-deviation metrics, and creates a
+single checkpoint-free archive. A failed seed blocks aggregation and
+packaging.

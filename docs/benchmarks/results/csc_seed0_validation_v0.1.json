@@ -1,0 +1,132 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "method": "CSC",
+  "status": "validation_passed_configuration_frozen",
+  "validation_run": {
+    "run_id": "csc_seed0_val_20260802_101131",
+    "reporting_split": "val",
+    "seed": 0,
+    "source": {
+      "git_commit": "026a536faf7fc80fd82b77f0f2d62d011b956b28",
+      "git_dirty": false,
+      "source_tree_hash": "6415806eef9b9506dba19b69e9a273076bc7b0b402b36a1cd780e5cdff717b66",
+      "core_runtime_version": "0.4.0",
+      "protocol_hash": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+      "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee"
+    },
+    "eligibility": {
+      "configuration_locked": false,
+      "reporting_split_is_test": false,
+      "test_labels_used_for_selection": false,
+      "prediction_reused_task_ids": [],
+      "eligible_for_main_table": false
+    },
+    "metrics": {
+      "final_mAP": 28.216343564844127,
+      "final_cF1": 3.310483749327879,
+      "final_oF1": 5.706778770362584,
+      "average_mAP": 39.10978865598829,
+      "forgetting": 7.956631321056484,
+      "per_task_mAP": [
+        49.91440965801224,
+        49.62412444934889,
+        36.11746913151108,
+        41.78375188815103,
+        40.0492801713157,
+        36.7369360906819,
+        30.435994294041347,
+        28.216343564844127
+      ]
+    },
+    "training_stability": {
+      "epochs_by_task": [20, 20, 20, 20, 20, 20, 20, 20],
+      "optimizer_updates": 9300,
+      "attempted_updates": 9300,
+      "overflow_skipped_updates": 0,
+      "optimizer_updates_by_task": [
+        1680,
+        1380,
+        280,
+        3120,
+        1360,
+        800,
+        200,
+        480
+      ],
+      "overflow_skipped_updates_by_task": [0, 0, 0, 0, 0, 0, 0, 0],
+      "all_logged_values_finite": true,
+      "nan_detected": false,
+      "oom_detected": false,
+      "traceback_detected": false
+    },
+    "fixed_threshold_calibration": {
+      "benchmark_threshold": 0.5,
+      "task7_target_positive_percent": 24.100638618786302,
+      "task7_predicted_positive_percent": 6.4343249574789,
+      "task7_score_median": 0.3615027666091919,
+      "task7_score_p90": 0.44884905219078064,
+      "task7_classes_with_no_positive_prediction": 19,
+      "diagnostic_threshold_only": 0.35,
+      "diagnostic_task7_cF1": 33.3055,
+      "diagnostic_task7_oF1": 47.1812,
+      "selection_decision": "Do not tune or replace the protocol threshold; report the CSC calibration limitation.",
+      "interpretation": "Ranking remains useful for mAP, while the released all-seen one-sided maximum-entropy term compresses most final-task probabilities below 0.5."
+    },
+    "largest_per_class_forgetting": {
+      "Anger": 28.07412279330203,
+      "Annoyance": 23.253651606921927,
+      "Affection": 23.09935989563236,
+      "Disapproval": 20.689741419977047,
+      "Aversion": 17.874184484457317
+    },
+    "method_configuration": {
+      "upstream_commit": "0bab38a00d6e0555f2df855ae2fe8db1fea68b12",
+      "backbone": "OpenAI CLIP ViT-B/16 visual encoder (fine-tuned)",
+      "visual_encoder_trainable": true,
+      "clip_text_encoder_used": false,
+      "benchmark_added_adapter": false,
+      "replay_enabled": false,
+      "epochs": 20,
+      "learning_rate": 0.00004,
+      "weight_decay": 0.0001,
+      "one_cycle_pct_start": 0.2,
+      "alpha": 0.5,
+      "entropy_strength": 0.04,
+      "entropy_scope": "all_seen_classes_as_released",
+      "branch_combination": "arithmetic_mean_as_released",
+      "train_batch_size": 64,
+      "eval_batch_size": 64,
+      "workers": 2,
+      "amp": true,
+      "tf32": true
+    },
+    "resources": {
+      "total_parameters": 89963388,
+      "trainable_parameters": 89962712,
+      "incremental_parameters": 76608,
+      "replay_memory_samples": 0,
+      "replay_memory_bytes": 0
+    },
+    "artifacts": {
+      "archive": "csc_seed0_val_20260802_101131.tar.gz",
+      "archive_sha256": "35920b693038a5ba37eacddc04b7297adc9f16ac1bde6f99c9435fa0b0ea8599",
+      "download_manifest_records_verified": 17,
+      "sync_manifest_records_verified": 14,
+      "score_tasks_present": [0, 1, 2, 3, 4, 5, 6, 7],
+      "contains_pth": false,
+      "contains_symlink": false,
+      "preflight_log_available": false
+    }
+  },
+  "freeze_decision": {
+    "hyperparameters_changed_after_validation": false,
+    "configuration_is_locked_for_held_out_test": true,
+    "test_metrics_must_not_change_configuration": true,
+    "global_threshold_remains": 0.5,
+    "formal_seeds": [0, 1, 2],
+    "formal_results_pending": true,
+    "required_confirmation": "CSC_TRACK_A_V0_1"
+  }
+}

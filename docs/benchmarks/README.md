@@ -55,6 +55,7 @@ remain a reserved extension point.
 - [Frozen KRT seed-0 validation snapshot](results/krt_seed0_validation_v0.1.json)
 - [Registered KRT three-seed formal result](results/krt_seed012_formal_v0.1.json)
 - [CSC independent-port/upstream-oracle equivalence audit](results/csc_upstream_equivalence_v0.1.json)
+- [Frozen CSC seed-0 validation snapshot](results/csc_seed0_validation_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -64,7 +65,9 @@ Core v0.1 is frozen at commit
 line branched from that commit as `codex/emotic-baseline-finetune-lwf-ewc` and
 implemented repository-native Sequential Fine-Tuning, LwF, and EWC controls
 without vendoring external repositories. KRT then received its own frozen
-branch, and current CSC work continues on `codex/emotic-baseline-csc`.
+branch. CSC seed-0 validation is complete on `codex/emotic-baseline-csc`; its
+configuration is frozen and locked held-out seeds 0--2 are the active
+execution stage.
 
 The baseline branch removes the earlier benchmark-added residual Adapter.
 Fine-Tuning and LwF have completed three-seed execution. EWC coefficient
