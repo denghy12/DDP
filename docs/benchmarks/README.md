@@ -48,6 +48,7 @@ remain a reserved extension point.
 - [CLIP-visual Fine-Tuning/LwF/EWC design](CLIP_CONTINUAL_BASELINES.md)
 - [KRT source audit and Track-A design](KRT_TRACK_A.md)
 - [CSC source audit and Track-A porting contract](CSC_TRACK_A.md)
+- [MULTI-LANE source audit and Track-A porting contract](MULTI_LANE_TRACK_A.md)
 - [Universal checkpoint-free download standard](DOWNLOAD_STANDARD.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
@@ -110,6 +111,14 @@ deviation, three seeds). Its fixed-0.5 Final cF1 is only
 `2.3391 ± 0.7219`: held-out scores reproduce the validation-time calibration
 failure and newest-class bias. This limitation is registered without any
 post-test threshold or hyperparameter change.
+
+MULTI-LANE is the next active integration line on
+`codex/emotic-baseline-multi-lane`, branched from the registered CSC commit
+`e13cac7`. Its official source is fixed at `5ee982c` with archive SHA-256
+`dfe84ea3...22d49`; the fixed extraction is byte-identical to the previously
+collected snapshot. The implementation contract freezes the shared CLIP visual
+tower and trains only MULTI-LANE's task selectors, prompt slices, and
+classifier under current-label visibility.
 
 The independent CSC CI-GCN operators have also been checked against the exact
 external upstream implementation with mapped inputs and parameters. Float32

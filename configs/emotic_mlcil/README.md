@@ -37,6 +37,11 @@ substitution, dynamic CI-GCN expansion, current-label/old-model loss weights,
 max-entropy scope, paper-reported Adam/OneCycle settings, and explicit zero
 replay memory. The absence of Adapter and CLIP text features is recorded.
 
+MULTI-LANE follows the same immutable-default rule. Its manifest must record
+the fixed official commit/archive hash, frozen CLIP-block substitution,
+preallocated task selectors and K/V prompts, concat inference, current-class
+BCE mask, zero replay memory, and the source VOC optimizer/schedule mapping.
+
 The only registered tuning override is runner option `--ewc-lambda`. It is
 kept outside the frozen protocol object, validated as finite and positive, and
 written into method configuration. The official tuning launcher permits this
