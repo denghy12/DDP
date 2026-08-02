@@ -432,6 +432,12 @@ class MultiLaneBenchmarkMethod(BenchmarkMethod):
         return tuple(dict(row) for row in self.training_history)
 
     def resolved_method_config(self) -> Mapping[str, Any]:
+        task_lane_parameters = self.model.selectors.numel() + sum(
+            parameter.numel() for parameter in self.model.prompts
+        )
+        shared_classifier_parameters = sum(
+            parameter.numel() for parameter in self.model.head.parameters()
+        )
         return {
             "strategy": "multi_lane",
             "upstream_repository": self.upstream_repository,
@@ -442,6 +448,13 @@ class MultiLaneBenchmarkMethod(BenchmarkMethod):
             "clip_text_encoder_used": False,
             "benchmark_added_adapter": False,
             "replay_enabled": False,
+            "task_lane_capacity_preallocated": True,
+            "task_lane_parameters_total": task_lane_parameters,
+            "task_lane_parameters_per_task": (
+                task_lane_parameters // self.protocol.num_tasks
+            ),
+            "shared_classifier_parameters": shared_classifier_parameters,
+            "physical_parameter_growth_after_initialization": 0,
             "retained_multi_lane_components": [
                 "task_specific_patch_selectors",
                 "first_layers_task_specific_key_value_prompts",

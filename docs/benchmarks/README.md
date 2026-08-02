@@ -58,6 +58,7 @@ remain a reserved extension point.
 - [CSC independent-port/upstream-oracle equivalence audit](results/csc_upstream_equivalence_v0.1.json)
 - [Frozen CSC seed-0 validation snapshot](results/csc_seed0_validation_v0.1.json)
 - [Registered CSC three-seed formal result](results/csc_seed012_formal_v0.1.json)
+- [Frozen MULTI-LANE seed-0 validation snapshot](results/multi_lane_seed0_validation_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase

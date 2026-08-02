@@ -260,8 +260,15 @@ class MultiLaneBenchmarkMethodTest(unittest.TestCase):
     def test_parameter_statistics_report_preallocated_zero_growth(self):
         method = self.make_method()
         stats = method.parameter_statistics()
+        resolved = method.resolved_method_config()
         expected_trainable = sum(
             parameter.numel() for parameter in method.model.optimizer_parameters()
+        )
+        expected_lane = method.model.selectors.numel() + sum(
+            parameter.numel() for parameter in method.model.prompts
+        )
+        expected_head = sum(
+            parameter.numel() for parameter in method.model.head.parameters()
         )
         self.assertEqual(stats.trainable_parameters, expected_trainable)
         self.assertEqual(stats.incremental_parameters, 0)
@@ -269,6 +276,19 @@ class MultiLaneBenchmarkMethodTest(unittest.TestCase):
             dict(stats.per_task_incremental_parameters), {0: 0, 1: 0}
         )
         self.assertGreater(stats.total_parameters, stats.trainable_parameters)
+        self.assertTrue(resolved["task_lane_capacity_preallocated"])
+        self.assertEqual(resolved["task_lane_parameters_total"], expected_lane)
+        self.assertEqual(
+            resolved["task_lane_parameters_per_task"],
+            expected_lane // method.protocol.num_tasks,
+        )
+        self.assertEqual(resolved["shared_classifier_parameters"], expected_head)
+        self.assertEqual(
+            expected_lane + expected_head, stats.trainable_parameters
+        )
+        self.assertEqual(
+            resolved["physical_parameter_growth_after_initialization"], 0
+        )
 
 
 if __name__ == "__main__":

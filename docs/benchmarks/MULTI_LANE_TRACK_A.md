@@ -189,6 +189,49 @@ checksum:
 <run-root>/download_packages/<run-id>.tar.gz.sha256
 ```
 
-No held-out test is authorized at this stage. Validation results must first be
-reviewed for finite training, AMP skips, metric stability, and protocol/source
-metadata before the configuration can be frozen.
+## Frozen validation decision and formal execution
+
+The seed-0 validation gate completed from clean commit `35ca2de` with Final
+mAP `41.9641`, Average mAP `48.3236`, Forgetting `0.8908`, Final cF1
+`37.2893`, and Final oF1 `58.5866`. All 240 epochs and 13,950 optimizer
+updates completed with finite values, zero AMP overflow skips, no OOM, and no
+traceback. The fixed-source critical-operator comparison remained exactly
+equal (`max_abs_error=0.0`). No hyperparameter is changed after this review.
+
+The physical parameter-growth field is zero because all eight task slices are
+allocated before task 0, matching the released implementation. This must not
+be described as zero task-specific capacity. The frozen ViT-B/16 instance has
+`675,840` task-lane parameters (`84,480` per task) plus a `13,338`-parameter
+shared classifier, for `689,178` optimizer parameters in total. Future lanes
+are preallocated architecture only: they are absent from current computation,
+receive no gradient, and cannot access future labels.
+
+The reviewed evidence is registered in
+[`results/multi_lane_seed0_validation_v0.1.json`](results/multi_lane_seed0_validation_v0.1.json).
+The configuration is now locked for held-out test seeds 0, 1, and 2. They run
+concurrently on three distinct GPUs because each continual seed must preserve
+its own task sequence; spreading a single seed over the remaining GPUs would
+change the implementation and add synchronization overhead.
+
+```bash
+cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1
+
+EXPECTED_GIT_COMMIT="$(git rev-parse HEAD)" \
+CONFIGURATION_LOCKED_CONFIRMATION=MULTI_LANE_TRACK_A_V0_1 \
+CLIP_MODEL_PATH=/mnt/haoyuan/workspace/CODE_DDP-benchmark/pretrained/clip/ViT-B-16.pt \
+GPUS="0 1 2" \
+bash scripts/emotic-mlcil/launch_multi_lane_formal_seed012_tmux.sh
+```
+
+The formal launcher rejects a dirty or unexpected Git commit, reruns Core,
+legacy, fixed-source, and memory preflights, launches one seed per GPU, checks
+all three manifests/configurations/training logs, aggregates with sample
+standard deviation, and creates one checkpoint-free archive:
+
+```text
+<run-root>/download_packages/<run-id>.tar.gz
+<run-root>/download_packages/<run-id>.tar.gz.sha256
+```
+
+Any formal test metric is report-only and must not change the frozen
+configuration.
