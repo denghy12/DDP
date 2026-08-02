@@ -31,6 +31,12 @@ frozen YAML. Its manifest records the fixed upstream commit/archive hash,
 CLIP-token substitution, DPL/ICA/token-loss settings, 20-exemplar-per-class
 herding policy, pseudo-density source, and actual replay sample/byte counts.
 
+CSC also uses audited immutable code defaults outside the frozen YAML. Its
+manifest records the fixed official commit/archive hash, CLIP patch-token
+substitution, dynamic CI-GCN expansion, current-label/old-model loss weights,
+max-entropy scope, paper-reported Adam/OneCycle settings, and explicit zero
+replay memory. The absence of Adapter and CLIP text features is recorded.
+
 The only registered tuning override is runner option `--ewc-lambda`. It is
 kept outside the frozen protocol object, validated as finite and positive, and
 written into method configuration. The official tuning launcher permits this

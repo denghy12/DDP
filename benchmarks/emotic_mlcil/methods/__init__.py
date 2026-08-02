@@ -7,11 +7,13 @@ from .clip_classifier import (
     SequentialFineTuningMethod,
 )
 from .krt import KRTBenchmarkMethod
+from .csc import CSCBenchmarkMethod
 
 __all__ = [
     "DDPBenchmarkMethod",
     "ElasticWeightConsolidationMethod",
     "LearningWithoutForgettingMethod",
     "KRTBenchmarkMethod",
+    "CSCBenchmarkMethod",
     "SequentialFineTuningMethod",
 ]

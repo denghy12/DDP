@@ -47,6 +47,7 @@ remain a reserved extension point.
 - [Implementation status](BASELINE_STATUS.md)
 - [CLIP-visual Fine-Tuning/LwF/EWC design](CLIP_CONTINUAL_BASELINES.md)
 - [KRT source audit and Track-A design](KRT_TRACK_A.md)
+- [CSC source audit and Track-A porting contract](CSC_TRACK_A.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
 - [Registered validation-selected EWC λ=1e6 result](results/ewc_lambda1e6_seed012_v0.3.json)
@@ -57,10 +58,11 @@ remain a reserved extension point.
 ## Current phase
 
 Core v0.1 is frozen at commit
-`00f399f13bc7552c254c8f6e6c095a8be4f56146`. Baseline development continues
-from that exact commit on `codex/emotic-baseline-finetune-lwf-ewc`. The first
-development line implements repository-native Sequential Fine-Tuning, LwF,
-and EWC controls without vendoring external repositories.
+`00f399f13bc7552c254c8f6e6c095a8be4f56146`. The first baseline development
+line branched from that commit as `codex/emotic-baseline-finetune-lwf-ewc` and
+implemented repository-native Sequential Fine-Tuning, LwF, and EWC controls
+without vendoring external repositories. KRT then received its own frozen
+branch, and current CSC work continues on `codex/emotic-baseline-csc`.
 
 The baseline branch removes the earlier benchmark-added residual Adapter.
 Fine-Tuning and LwF have completed three-seed execution. EWC coefficient
@@ -74,7 +76,8 @@ not an evaluation of the unmodified original DDP method. Its seed-0 result is
 retained as project evidence, while additional seeds are intentionally deferred
 until the local modifications and upstream baseline are separately audited.
 
-KRT is the active integration line. Its official source is fixed at
+KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
+official source is fixed at
 `3f79044001edfe9ef94b729cd905a535fe8dd478`; the Track-A port retains KRT's
 dynamic pseudo labels, task-token ClassAttention, old-token distillation,
 per-task heads, and herding replay while replacing only the TResNet spatial
@@ -84,6 +87,16 @@ its expanding replay sample/byte budget. A three-process single-GPU attempt
 triggered the guarded OOM fallback; the affected seeds restarted cleanly and
 the future memory smoke/capacity estimate now includes Adam state and replay
 batch 64 without changing the registered algorithm or result.
+
+CSC is the next active integration line. Its official source is fixed at
+`0bab38a00d6e0555f2df855ae2fe8db1fea68b12`, and the exact source archive has
+SHA-256 `588a098a1c7f3d813dee7df777c283fd27768a08a125d4e60b11b2d6ebdb7faa`.
+No upstream license file was found, so the source remains outside this
+repository as a read-only reference. The Track-A contract keeps CSC's
+dynamically expanding CI-GCN, current-label loss, old-model sigmoid
+distillation, and max-entropy calibration while replacing only TResNet spatial
+features with trainable CLIP patch tokens. It explicitly adds no Adapter, text
+features, or replay.
 
 ## Standard run and output
 
