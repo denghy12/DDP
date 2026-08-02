@@ -38,6 +38,14 @@ if [[ "${REQUIRE_CLEAN}" == "1" && -n "$(git status --porcelain)" ]]; then
   exit 2
 fi
 
+RUN_ROOT="${OUTPUT_BASE}/${RUN_ID}"
+LOG_DIR="${OUTPUT_BASE}/_launcher_logs"
+PREFLIGHT_LOG="${LOG_DIR}/${RUN_ID}_preflight.log"
+mkdir -p "${LOG_DIR}"
+
+set +e
+(
+set -e
 "${PYTHON}" - <<'PY'
 from benchmarks.emotic_mlcil.registry import method_names
 from benchmarks.emotic_mlcil.runner import CORE_RUNTIME_VERSION
@@ -63,20 +71,29 @@ if [[ "${RUN_GPU_SMOKE}" == "1" ]]; then
     --clip-model-path "${CLIP_MODEL_PATH}" \
     --batch-size "${TRAIN_BATCH_SIZE}"
 fi
+) 2>&1 | tee "${PREFLIGHT_LOG}"
+PREFLIGHT_RC="${PIPESTATUS[0]}"
+set -e
+if [[ "${PREFLIGHT_RC}" -ne 0 ]]; then
+  echo "CSC preflight failed with exit code ${PREFLIGHT_RC}" >&2
+  echo "Preflight log: ${PREFLIGHT_LOG}" >&2
+  exit "${PREFLIGHT_RC}"
+fi
 
-RUN_ROOT="${OUTPUT_BASE}/${RUN_ID}"
-LOG_DIR="${OUTPUT_BASE}/_launcher_logs"
-mkdir -p "${LOG_DIR}"
 printf -v command \
-  'cd %q && RUN_ID=%q SEED=0 GPU=%q PYTHON=%q DATA_ROOT=%q CLIP_MODEL_PATH=%q OUTPUT_ROOT=%q REPORTING_SPLIT=val TRAIN_BATCH_SIZE=%q EVAL_BATCH_SIZE=%q WORKERS=%q bash %q 2>&1 | tee %q; code=${PIPESTATUS[0]}; echo CSC_EXIT_CODE=$code; exec bash' \
+  'cd %q && RUN_ID=%q SEED=0 GPU=%q PYTHON=%q DATA_ROOT=%q CLIP_MODEL_PATH=%q OUTPUT_ROOT=%q REPORTING_SPLIT=val TRAIN_BATCH_SIZE=%q EVAL_BATCH_SIZE=%q WORKERS=%q bash %q 2>&1 | tee %q; code=${PIPESTATUS[0]}; package_code=not_run; if [[ "$code" -eq 0 ]]; then %q %q --run-root %q --run-id %q --expected-bundles 1; package_code=$?; fi; echo CSC_EXIT_CODE=$code; echo DOWNLOAD_PACKAGE_EXIT_CODE=$package_code; exec bash' \
   "${ROOT}" "${RUN_ID}" "${GPU}" "${PYTHON}" "${DATA_ROOT}" \
   "${CLIP_MODEL_PATH}" "${RUN_ROOT}" "${TRAIN_BATCH_SIZE}" \
   "${EVAL_BATCH_SIZE}" "${WORKERS}" \
-  "${SCRIPT_DIR}/run_csc_baseline.sh" "${LOG_DIR}/${RUN_ID}.log"
+  "${SCRIPT_DIR}/run_csc_baseline.sh" "${LOG_DIR}/${RUN_ID}.log" \
+  "${PYTHON}" "${SCRIPT_DIR}/package_benchmark_download.py" \
+  "${RUN_ROOT}" "${RUN_ID}"
 
 tmux new-session -d -s "${SESSION}" -n "csc_seed0_g${GPU}" "${command}"
 echo "Started CSC validation session: ${SESSION}"
 echo "Run ID: ${RUN_ID}"
 echo "Attach: tmux attach -t ${SESSION}"
 echo "Log: ${LOG_DIR}/${RUN_ID}.log"
-echo "Checkpoint-free download folder will be under the CSC seed-0 artifact's results_to_sync/${RUN_ID}"
+echo "Preflight log: ${PREFLIGHT_LOG}"
+echo "After success, download only: ${RUN_ROOT}/download_packages/${RUN_ID}.tar.gz"
+echo "And checksum: ${RUN_ROOT}/download_packages/${RUN_ID}.tar.gz.sha256"

@@ -48,6 +48,7 @@ remain a reserved extension point.
 - [CLIP-visual Fine-Tuning/LwF/EWC design](CLIP_CONTINUAL_BASELINES.md)
 - [KRT source audit and Track-A design](KRT_TRACK_A.md)
 - [CSC source audit and Track-A porting contract](CSC_TRACK_A.md)
+- [Universal checkpoint-free download standard](DOWNLOAD_STANDARD.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
 - [Registered validation-selected EWC λ=1e6 result](results/ewc_lambda1e6_seed012_v0.3.json)
@@ -183,11 +184,14 @@ output/benchmarks/<protocol_id>/<track>/<method>/seed<seed>/
 └── train.log
 ```
 
-After a successful merge, download only
-`results_to_sync/<shard_run_id>/`. It contains the resolved configuration,
-manifest, metrics, canonical task scores, report, console logs, shard metadata,
-and a SHA-256 file manifest. It contains no `.pth` files. Large checkpoint
-copies remain in their server-side checkpoint directories.
+`results_to_sync/<shard_run_id>/` is the canonical checkpoint-free method
+bundle. The universal packager then combines all expected bundles and available
+launcher/preflight logs into `download_packages/<run-id>.tar.gz` plus an
+adjacent `.sha256` file. Download only those two files. The package contains
+resolved configuration, manifests, metrics, canonical `.pt` task scores,
+reports, logs, and hashes; every nested `.pth` is forbidden. Large checkpoint
+copies remain in their server-side checkpoint directories. The complete
+mandatory policy is [Benchmark Download Package Standard](DOWNLOAD_STANDARD.md).
 
 The summary main-table schema is:
 

@@ -193,3 +193,12 @@ runs the complete Core/CSC and selected legacy regression suites, performs a
 worst-task teacher + forward/backward + Adam-state memory smoke, and only then
 starts seed 0 on the validation split in tmux. It does not authorize held-out
 test evaluation.
+
+After a successful run, the launcher invokes the universal checkpoint-free
+packager. The only files that need to be synchronized locally are
+`download_packages/<run-id>.tar.gz` and its adjacent `.tar.gz.sha256`. The
+archive includes the canonical config/manifests/metrics/report, all eight
+`.pt` score files, training log, and available launcher/preflight logs, while
+rejecting `.pth` at every nesting depth. This follows
+[`DOWNLOAD_STANDARD.md`](DOWNLOAD_STANDARD.md) and leaves task checkpoints only
+in the server run tree.

@@ -38,6 +38,14 @@ table.
 - [ ] NaN/Inf and shape/hash checks pass.
 - [ ] Unit tests and one method-specific smoke test pass.
 - [ ] Three registered seeds complete before aggregate reporting.
+- [ ] Every completed seed/method calls `--export-sync-results` and the exact
+      expected bundle count is checked.
+- [ ] The universal download packager produces one `.tar.gz` and adjacent
+      `.tar.gz.sha256` containing results and available launcher/preflight logs.
+- [ ] The download directory and archive contain no `.pth` at any nesting
+      depth; canonical `.pt` score tensors remain included.
+- [ ] Checkpoints remain in a separate server-only directory or a separately
+      requested checkpoint-only package.
 
 ## Fairness and resource accounting
 
