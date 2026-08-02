@@ -205,7 +205,7 @@ class CSCModel(nn.Module):
             raise ValueError("CSC token encoder feature width differs")
         if patches.shape[1] == 0:
             raise ValueError("CSC requires at least one visual patch token")
-        return patches.float()
+        return patches.to(dtype=self.feature_projection.weight.dtype)
 
     def _checked_dynamic_layers(
         self,
