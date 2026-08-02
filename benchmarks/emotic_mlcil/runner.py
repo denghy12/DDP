@@ -24,6 +24,7 @@ from .methods.clip_classifier import (
 )
 from .methods.krt import KRTBenchmarkMethod
 from .methods.csc import CSCBenchmarkMethod
+from .methods.multi_lane import MultiLaneBenchmarkMethod
 from .protocol import BenchmarkProtocol
 from .protocol import load_protocol
 from .types import (
@@ -38,7 +39,7 @@ from .types import (
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
 CORE_BASE_COMMIT = "00f399f13bc7552c254c8f6e6c095a8be4f56146"
-CORE_RUNTIME_VERSION = "0.4.0"
+CORE_RUNTIME_VERSION = "0.5.0"
 
 
 def _current_git_commit() -> str:
@@ -777,7 +778,15 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--method",
-        choices=("ddp", "finetune", "lwf", "ewc", "krt", "csc"),
+        choices=(
+            "ddp",
+            "finetune",
+            "lwf",
+            "ewc",
+            "krt",
+            "csc",
+            "multi_lane",
+        ),
         default="ddp",
     )
     parser.add_argument("--data-root")
@@ -908,6 +917,7 @@ def main() -> None:
         "ewc": ElasticWeightConsolidationMethod,
         "krt": KRTBenchmarkMethod,
         "csc": CSCBenchmarkMethod,
+        "multi_lane": MultiLaneBenchmarkMethod,
     }
     method_class = method_classes[args.method]
     artifacts = ArtifactStore(

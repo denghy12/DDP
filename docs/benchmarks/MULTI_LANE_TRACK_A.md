@@ -124,3 +124,61 @@ Before validation training, the branch must provide:
 
 Formal results must follow the universal checkpoint-free download standard and
 use mean ± sample standard deviation across seeds 0, 1, and 2.
+
+## Implementation candidate
+
+The independent candidate is registered as runner method `multi_lane` under
+`benchmarks/emotic_mlcil/methods/multi_lane/`. Runtime `0.5.0` now provides:
+
+- a frozen OpenAI CLIP visual stream and a differentiable parallel task stream;
+- selectors and K/V prompt tensors preallocated for the fixed eight tasks;
+- exact first-LayerNorm selector aggregation, first-five-layer prompts, and
+  released drop-and-replace residual behavior;
+- the released full-26-column BCE reduction, with non-current logits and
+  targets filled with zero so only current labels have gradients;
+- previous-task slice copying, task-local gradients, Adam/cosine reset per
+  task, and zero architectural parameter growth after initialization; and
+- evaluation over all seen lanes followed by disjoint class-block concat,
+  without a task identifier or task oracle.
+
+`compare_multi_lane_upstream_reference.py` verifies the immutable external
+tree/archive and compiles the exact upstream `PreT_Attention` and
+`forward_head` bodies at runtime. It compares same-input/same-weight selector
+aggregation, prompt attention, drop-and-replace, and concat masking, rejecting
+maximum absolute error of `1e-6` or larger. The upstream source remains outside
+this repository.
+
+Six focused unit cases cover source identity, frozen visual weights, task-slice
+copying and isolation, current-label visibility, concat masking, checkpoint
+round-trip, aligned prediction, zero replay, and preallocated parameter
+statistics. Full Torch execution is intentionally left to the configured
+server because the local macOS system Python has no PyTorch installation.
+
+## Seed-0 validation entry point
+
+After the candidate commit is present on the server and the fixed source
+archive/extraction is available under `/mnt/haoyuan/workspace/baseline_sources`,
+launch the validation-only gate with:
+
+```bash
+cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1
+
+GPU=0 \
+SESSION=emotic_multi_lane_seed0_val \
+bash scripts/emotic-mlcil/launch_multi_lane_seed0_tmux.sh
+```
+
+The launcher refuses a dirty tree, runs the complete Core and selected legacy
+tests, executes the fixed-source oracle, measures the worst-task train/eval
+GPU peak including Adam state, and only then starts seed-0 validation in tmux.
+On success it creates exactly one checkpoint-free download archive and adjacent
+checksum:
+
+```text
+<run-root>/download_packages/<run-id>.tar.gz
+<run-root>/download_packages/<run-id>.tar.gz.sha256
+```
+
+No held-out test is authorized at this stage. Validation results must first be
+reviewed for finite training, AMP skips, metric stability, and protocol/source
+metadata before the configuration can be frozen.

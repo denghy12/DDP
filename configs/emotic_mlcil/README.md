@@ -40,7 +40,9 @@ replay memory. The absence of Adapter and CLIP text features is recorded.
 MULTI-LANE follows the same immutable-default rule. Its manifest must record
 the fixed official commit/archive hash, frozen CLIP-block substitution,
 preallocated task selectors and K/V prompts, concat inference, current-class
-BCE mask, zero replay memory, and the source VOC optimizer/schedule mapping.
+BCE mask and full-width released reduction, zero replay memory, and the source
+VOC optimizer/schedule mapping. The registered train batch is 64, yielding
+effective Adam learning rate `0.0125` from source rule `0.05 * batch / 256`.
 
 The only registered tuning override is runner option `--ewc-lambda`. It is
 kept outside the frozen protocol object, validated as finite and positive, and

@@ -8,6 +8,7 @@ from .clip_classifier import (
 )
 from .krt import KRTBenchmarkMethod
 from .csc import CSCBenchmarkMethod
+from .multi_lane import MultiLaneBenchmarkMethod
 
 __all__ = [
     "DDPBenchmarkMethod",
@@ -15,5 +16,6 @@ __all__ = [
     "LearningWithoutForgettingMethod",
     "KRTBenchmarkMethod",
     "CSCBenchmarkMethod",
+    "MultiLaneBenchmarkMethod",
     "SequentialFineTuningMethod",
 ]

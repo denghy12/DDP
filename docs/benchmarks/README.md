@@ -118,7 +118,11 @@ MULTI-LANE is the next active integration line on
 `dfe84ea3...22d49`; the fixed extraction is byte-identical to the previously
 collected snapshot. The implementation contract freezes the shared CLIP visual
 tower and trains only MULTI-LANE's task selectors, prompt slices, and
-classifier under current-label visibility.
+classifier under current-label visibility. The independent runtime-`0.5.0`
+candidate, six focused unit cases, fixed-source execution oracle, worst-task
+GPU smoke, seed-0 validation launcher, and universal checkpoint-free packaging
+are now implemented. Clean-server preflight and seed-0 validation remain
+pending; no MULTI-LANE test result has been produced.
 
 The independent CSC CI-GCN operators have also been checked against the exact
 external upstream implementation with mapped inputs and parameters. Float32
