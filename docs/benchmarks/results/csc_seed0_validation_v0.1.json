@@ -126,7 +126,8 @@
     "test_metrics_must_not_change_configuration": true,
     "global_threshold_remains": 0.5,
     "formal_seeds": [0, 1, 2],
-    "formal_results_pending": true,
-    "required_confirmation": "CSC_TRACK_A_V0_1"
+    "formal_results_pending": false,
+    "required_confirmation": "CSC_TRACK_A_V0_1",
+    "formal_result_snapshot": "csc_seed012_formal_v0.1.json"
   }
 }

@@ -90,7 +90,11 @@ class CSCFormalResultValidationTest(unittest.TestCase):
             self.assertEqual(payload["aggregate"]["final_mAP"]["mean"], 21.0)
             self.assertAlmostEqual(
                 payload["aggregate"]["final_mAP"]["std"],
-                0.816496580927726,
+                1.0,
+            )
+            self.assertEqual(
+                payload["aggregate"]["aggregation"],
+                "mean_and_sample_standard_deviation",
             )
             self.assertEqual(
                 payload["source"]["protocol_hash_by_seed"],

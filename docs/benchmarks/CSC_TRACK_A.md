@@ -5,8 +5,8 @@
 This document fixed the source and protocol-safe Track-A interpretation of
 Confidence Self-Calibration (CSC) before the adapter was implemented and
 remains its audit/design contract. The independent implementation and seed-0
-validation gate are now complete; held-out three-seed execution is the active
-stage.
+validation gate are complete, and the locked held-out three-seed result is now
+registered.
 
 Development branch: `codex/emotic-baseline-csc`, created from frozen KRT
 Track-A commit `029eda42269f053b6306eed5522f8c967be44edb`.
@@ -184,8 +184,8 @@ The branch provides tests for:
 - checkpoint round-trip and parameter/memory statistics.
 
 CPU tests, legacy regressions, worst-case GPU memory smoke, and the
-validation-only seed-0 experiment form the completed freeze gate. Held-out
-test remains prohibited unless the frozen configuration is confirmed from a
+validation-only seed-0 experiment formed the completed freeze gate. Held-out
+test was permitted only after the frozen configuration was confirmed from a
 committed, clean source tree.
 
 The validation launcher is
@@ -232,6 +232,44 @@ task depends on the preceding model state. Use
 `scripts/emotic-mlcil/launch_csc_formal_seed012_tmux.sh`; it runs the full test
 suites, checks free memory on every assigned GPU, runs the worst-task GPU
 smoke, launches seeds 0--2 concurrently, validates locked manifests and common
-provenance, computes mean/population-standard-deviation metrics, and creates a
+provenance, computes mean/sample-standard-deviation metrics, and creates a
 single checkpoint-free archive. A failed seed blocks aggregation and
 packaging.
+
+## Registered three-seed formal result
+
+The locked held-out test ran from clean source commit `84eaf37`. All three
+manifests use the validation-frozen `CSC_TRACK_A_V0_1` configuration, report
+only the test split, declare no test-based selection, contain no reused
+predictions, and are eligible for the main table. The subsequent validator
+change only permits the protocol hash to vary with the registered seed and
+standardizes aggregation to the benchmark-wide sample standard deviation; it
+does not change training, predictions, or per-seed metrics.
+
+The registered mean ± sample-standard-deviation result is:
+
+| Metric | Three-seed formal result |
+|---|---:|
+| Final mAP | `20.5614 ± 0.4785` |
+| Average mAP | `30.3967 ± 0.2411` |
+| Forgetting | `9.0112 ± 0.6309` |
+| Final cF1 | `2.3391 ± 0.7219` |
+| Final oF1 | `3.7207 ± 0.7037` |
+
+All seeds completed 160 epochs. Seeds 0 and 2 completed all `9,300`
+optimizer updates; seed 1 completed `9,299` updates after one AMP overflow
+skip at task 0, epoch 0. Every logged value is finite and the final runs have
+no NaN, OOM, or traceback. The one guarded AMP skip is normal mixed-precision
+behavior and does not justify a rerun.
+
+The fixed-threshold failure seen on validation is reproduced on held-out test.
+At task 7, targets are positive for `17.10%` of entries, while only
+`6.25%--7.06%` of scores reach the mandatory threshold `0.5`; 15--17 of the
+26 classes receive no positive prediction. Final mAP remains meaningful
+because it is threshold-free, but final F1 exposes severe absolute-score
+calibration and newest-class bias. Test results must not be used to change the
+threshold, entropy coefficient, or any other configuration. Any revised CSC
+calibration is a new variant that must restart from validation.
+
+The complete immutable evidence is
+[`results/csc_seed012_formal_v0.1.json`](results/csc_seed012_formal_v0.1.json).

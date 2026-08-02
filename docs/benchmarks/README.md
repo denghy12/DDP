@@ -56,6 +56,7 @@ remain a reserved extension point.
 - [Registered KRT three-seed formal result](results/krt_seed012_formal_v0.1.json)
 - [CSC independent-port/upstream-oracle equivalence audit](results/csc_upstream_equivalence_v0.1.json)
 - [Frozen CSC seed-0 validation snapshot](results/csc_seed0_validation_v0.1.json)
+- [Registered CSC three-seed formal result](results/csc_seed012_formal_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -65,9 +66,9 @@ Core v0.1 is frozen at commit
 line branched from that commit as `codex/emotic-baseline-finetune-lwf-ewc` and
 implemented repository-native Sequential Fine-Tuning, LwF, and EWC controls
 without vendoring external repositories. KRT then received its own frozen
-branch. CSC seed-0 validation is complete on `codex/emotic-baseline-csc`; its
-configuration is frozen and locked held-out seeds 0--2 are the active
-execution stage.
+branch. CSC Track A is complete on `codex/emotic-baseline-csc`: its seed-0
+validation configuration was frozen before the locked held-out seeds 0--2
+were run, and the three-seed result is now registered.
 
 The baseline branch removes the earlier benchmark-added residual Adapter.
 Fine-Tuning and LwF have completed three-seed execution. EWC coefficient
@@ -93,7 +94,7 @@ triggered the guarded OOM fallback; the affected seeds restarted cleanly and
 the future memory smoke/capacity estimate now includes Adam state and replay
 batch 64 without changing the registered algorithm or result.
 
-CSC is the next active integration line. Its official source is fixed at
+CSC Track A is the latest completed integration line. Its official source is fixed at
 `0bab38a00d6e0555f2df855ae2fe8db1fea68b12`, and the exact source archive has
 SHA-256 `588a098a1c7f3d813dee7df777c283fd27768a08a125d4e60b11b2d6ebdb7faa`.
 No upstream license file was found, so the source remains outside this
@@ -102,6 +103,13 @@ dynamically expanding CI-GCN, current-label loss, old-model sigmoid
 distillation, and max-entropy calibration while replacing only TResNet spatial
 features with trainable CLIP patch tokens. It explicitly adds no Adapter, text
 features, or replay.
+
+The locked CSC test result is Final mAP `20.5614 ± 0.4785`, Average mAP
+`30.3967 ± 0.2411`, and Forgetting `9.0112 ± 0.6309` (mean ± sample standard
+deviation, three seeds). Its fixed-0.5 Final cF1 is only
+`2.3391 ± 0.7219`: held-out scores reproduce the validation-time calibration
+failure and newest-class bias. This limitation is registered without any
+post-test threshold or hyperparameter change.
 
 The independent CSC CI-GCN operators have also been checked against the exact
 external upstream implementation with mapped inputs and parameters. Float32

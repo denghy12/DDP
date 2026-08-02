@@ -1,0 +1,162 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "method": "CSC",
+  "run_id": "csc_formal_seed012_20260802_120239",
+  "status": "eligible_for_main_table",
+  "configuration_lock_confirmation": "CSC_TRACK_A_V0_1",
+  "source": {
+    "git_commit": "84eaf377599b348701f7a7a39d9973946e90d01c",
+    "git_dirty": false,
+    "source_tree_hash": "f31694b197097001a7c4ebfd16a2342f7029288aaaf22d5ac69f3474f079391e",
+    "core_runtime_version": "0.4.0",
+    "core_base_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+    "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+    "protocol_hash_by_seed": {
+      "0": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+      "1": "7324c4bcf8632259990ba1ade0a57608ea3ecd20f75ebaff5c87fba55a227090",
+      "2": "f7c21d4133f4b4cd6824a1a0e77f26a525e0cb520373fa5f271ee371263dba5a"
+    }
+  },
+  "eligibility": {
+    "reporting_split": "test",
+    "configuration_locked": true,
+    "test_labels_used_for_selection": false,
+    "prediction_reused_task_ids": [],
+    "all_seeds_clean": true,
+    "all_seeds_eligible_for_main_table": true,
+    "hyperparameters_changed_after_validation": false
+  },
+  "method_configuration": {
+    "upstream_repository": "https://github.com/Kaile-Du/CSC",
+    "upstream_commit": "0bab38a00d6e0555f2df855ae2fe8db1fea68b12",
+    "upstream_archive_sha256": "588a098a1c7f3d813dee7df777c283fd27768a08a125d4e60b11b2d6ebdb7faa",
+    "backbone": "OpenAI CLIP ViT-B/16 visual encoder (fine-tuned)",
+    "visual_encoder_trainable": true,
+    "clip_text_encoder_used": false,
+    "benchmark_added_adapter": false,
+    "replay_enabled": false,
+    "epochs": 20,
+    "learning_rate": 0.00004,
+    "weight_decay": 0.0001,
+    "one_cycle_pct_start": 0.2,
+    "alpha": 0.5,
+    "entropy_strength": 0.04,
+    "entropy_scope": "all_seen_classes_as_released",
+    "branch_combination": "arithmetic_mean_as_released",
+    "train_batch_size": 64,
+    "eval_batch_size": 64,
+    "workers": 2,
+    "amp": true,
+    "tf32": true
+  },
+  "resources": {
+    "total_parameters": 89963388,
+    "trainable_parameters": 89962712,
+    "parameter_growth": 76608,
+    "replay_memory_samples": 0,
+    "replay_memory_bytes": 0,
+    "formal_preflight_peak_mib": 6396.4365234375,
+    "formal_preflight_peak_reserved_mib": 6712.0
+  },
+  "per_seed": [
+    {
+      "seed": 0,
+      "final_mAP": 21.111344932204304,
+      "average_mAP": 30.511621057469203,
+      "forgetting": 8.31379737808006,
+      "final_cF1": 1.9519239514304005,
+      "final_oF1": 3.2906651932344904
+    },
+    {
+      "seed": 1,
+      "final_mAP": 20.240295510852626,
+      "average_mAP": 30.558891406029908,
+      "forgetting": 9.54238367135531,
+      "final_cF1": 3.171970262825354,
+      "final_oF1": 4.532779590625927
+    },
+    {
+      "seed": 2,
+      "final_mAP": 20.332611905972957,
+      "average_mAP": 30.11973352360903,
+      "forgetting": 9.17745280522594,
+      "final_cF1": 1.8934645330918987,
+      "final_oF1": 3.3386424895858857
+    }
+  ],
+  "aggregate": {
+    "aggregation": "mean_and_sample_standard_deviation",
+    "final_mAP": {"mean": 20.56141744967663, "std": 0.47848276482170493},
+    "average_mAP": {"mean": 30.39674866236938, "std": 0.24106360527892864},
+    "forgetting": {"mean": 9.011211284887104, "std": 0.6309383902722833},
+    "final_cF1": {"mean": 2.339119582449218, "std": 0.7218618758116845},
+    "final_oF1": {"mean": 3.7206957578154345, "std": 0.7036942296732529},
+    "parameter_growth": {"mean": 76608.0, "std": 0.0}
+  },
+  "per_task_mAP": [
+    {"task": 0, "mean": 44.05508446555263, "std": 0.4345992864942742},
+    {"task": 1, "mean": 37.33511084728654, "std": 0.32502887731208063},
+    {"task": 2, "mean": 29.017238614731408, "std": 0.6078045030088431},
+    {"task": 3, "mean": 32.0065598040878, "std": 0.7842154720053622},
+    {"task": 4, "mean": 29.949663543347175, "std": 0.1033700972243093},
+    {"task": 5, "mean": 27.592940835065836, "std": 0.4796152483087016},
+    {"task": 6, "mean": 22.655973739207017, "std": 0.40680286886531564},
+    {"task": 7, "mean": 20.56141744967663, "std": 0.47848276482170493}
+  ],
+  "training_stability": {
+    "epochs_completed_by_seed": [160, 160, 160],
+    "attempted_optimizer_updates_by_seed": [9300, 9300, 9300],
+    "optimizer_updates_by_seed": [9300, 9299, 9300],
+    "amp_overflow_skips_by_seed": [0, 1, 0],
+    "seed1_skip_location": {"task": 0, "epoch": 0, "count": 1},
+    "all_logged_values_finite": true,
+    "nan_detected": false,
+    "oom_detected": false,
+    "traceback_detected": false,
+    "interpretation": "The single guarded AMP overflow skip is normal mixed-precision behavior and does not invalidate or require rerunning seed 1."
+  },
+  "fixed_threshold_calibration": {
+    "benchmark_threshold": 0.5,
+    "task7_target_positive_percent": 17.095609308724065,
+    "task7_predicted_positive_percent_by_seed": [
+      6.2471340135274565,
+      7.058924681875501,
+      6.296572280178838
+    ],
+    "task7_score_median_by_seed": [
+      0.36184096336364746,
+      0.3624049127101898,
+      0.36184096336364746
+    ],
+    "task7_score_p90_by_seed": [
+      0.44755083322525024,
+      0.4610774517059326,
+      0.445861279964447
+    ],
+    "task7_classes_with_no_positive_prediction_by_seed": [17, 15, 17],
+    "selection_decision": "Do not tune or replace the protocol threshold from held-out test results.",
+    "interpretation": "Threshold-free ranking remains usable for mAP, while fixed-threshold F1 exposes severe absolute-score calibration and newest-class bias."
+  },
+  "largest_mean_per_class_forgetting": [
+    {"class": "Anticipation", "mean": 38.588706190983174, "std": 1.5636633787185732},
+    {"class": "Affection", "mean": 37.140646534931086, "std": 4.497167080861785},
+    {"class": "Anger", "mean": 21.996747397492967, "std": 1.8850739835549297},
+    {"class": "Annoyance", "mean": 21.78990020946489, "std": 2.809089563409211},
+    {"class": "Disapproval", "mean": 14.221744472318894, "std": 1.042502741778955}
+  ],
+  "sync_bundle": {
+    "archive_revision": "sample_standard_deviation_reaggregation_only_no_prediction_change",
+    "bundle_count": 3,
+    "manifest_file_count": 56,
+    "manifest_total_bytes": 25777317,
+    "score_file_count": 24,
+    "contains_pth": false,
+    "canonical_scores_included": true,
+    "all_manifest_sha256_verified": true,
+    "archive_bytes": 4885005,
+    "archive_sha256": "4503039dab385d5a69ed50c36932e2e4e4d53e93fc51443fe94d8d0dd7117cc1",
+    "superseded_population_std_archive_sha256": "3c3969d7adc0e02cf1151aca41e3c9f4691b52103edac01694ec0029f66fef8f"
+  }
+}

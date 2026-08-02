@@ -191,8 +191,9 @@ def validate_csc_formal_results(
         values = [row[metric] for row in per_seed]
         aggregate[metric] = {
             "mean": statistics.mean(values),
-            "std": statistics.pstdev(values),
+            "std": statistics.stdev(values),
         }
+    aggregate["aggregation"] = "mean_and_sample_standard_deviation"
     return {
         "formal_result_schema_version": 1,
         "method": "CSC",
