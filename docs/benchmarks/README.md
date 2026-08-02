@@ -51,6 +51,7 @@ remain a reserved extension point.
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
 - [Registered validation-selected EWC λ=1e6 result](results/ewc_lambda1e6_seed012_v0.3.json)
 - [Frozen KRT seed-0 validation snapshot](results/krt_seed0_validation_v0.1.json)
+- [Registered KRT three-seed formal result](results/krt_seed012_formal_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -77,9 +78,12 @@ KRT is the active integration line. Its official source is fixed at
 `3f79044001edfe9ef94b729cd905a535fe8dd478`; the Track-A port retains KRT's
 dynamic pseudo labels, task-token ClassAttention, old-token distillation,
 per-task heads, and herding replay while replacing only the TResNet spatial
-features with CLIP ViT-B/16 patch tokens. The server test suite, GPU smoke, and
-seed-0 validation review passed. Its configuration is now frozen for a clean,
-locked held-out test; validation metrics remain ineligible for the main table.
+features with CLIP ViT-B/16 patch tokens. Its frozen held-out test seeds 0--2
+are complete and registered at Final mAP `22.1726 ± 2.8439`. The result reports
+its expanding replay sample/byte budget. A three-process single-GPU attempt
+triggered the guarded OOM fallback; the affected seeds restarted cleanly and
+the future memory smoke/capacity estimate now includes Adam state and replay
+batch 64 without changing the registered algorithm or result.
 
 ## Standard run and output
 

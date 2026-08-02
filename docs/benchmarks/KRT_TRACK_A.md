@@ -116,6 +116,37 @@ budget permits it. Otherwise it queues them automatically. An explicit CUDA
 OOM during concurrent execution preserves the failed artifact and retries only
 the affected seed sequentially; it never changes batch size or method options.
 
+## Registered three-seed formal result
+
+The locked held-out test ran from clean commit `4cb11f6`. All three manifests
+record `configuration_locked=true`, `reporting_split=test`, no test-based
+selection, and main-table eligibility. The registered aggregate is Final mAP
+`22.1726 ± 2.8439`, Average mAP `30.0654 ± 2.3901`, Forgetting
+`8.8511 ± 1.3584`, final cF1 `24.5397 ± 2.3698`, and final oF1
+`36.7383 ± 1.9541` (mean ± sample standard deviation, three seeds).
+
+The run initially scheduled three processes on one RTX 4090 from a
+backward-only smoke estimate of `3757.9 MiB`. Seed 0 completed, while seeds 1
+and 2 encountered CUDA OOM. The automatic fallback isolated both partial
+artifact trees and restarted each failed seed from Task 0, sequentially and
+without checkpoint reuse. The three final artifacts contain 160 epochs each,
+have no OOM/NaN/scheduler warning, and pass both bundle-level and per-seed SHA
+verification. The failed parallel attempts therefore do not contaminate the
+registered results.
+
+The capacity error came from the smoke omitting Adam state allocation and
+using training batch 32 instead of the larger replay batch 64. Future smoke
+runs execute an actual AMP+Adam update at the larger batch. The one-GPU
+launcher now budgets `12000 MiB` per process, reserves `2048 MiB`, and caps
+physical-GPU concurrency at two; on a 24 GB card this selects one safe job.
+These operational changes do not alter the model, loss, optimizer settings,
+training data, or the registered run.
+
+The complete result and execution audit are frozen in
+[krt_seed012_formal_v0.1.json](results/krt_seed012_formal_v0.1.json). The
+checkpoint-free archive SHA-256 is
+`e44ef0ce046e4708a485bed41c863713e50f369f773e4c098fcbef0ea95a49b6`.
+
 ## Acceptance gates
 
 Before a KRT result can enter the table:

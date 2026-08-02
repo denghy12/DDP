@@ -1,0 +1,162 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "method": "KRT",
+  "run_id": "krt_formal_seed012_20260802_004624",
+  "status": "eligible_for_main_table",
+  "source": {
+    "git_commit": "4cb11f6223ca011f8b8edc8ac08048957d395d0d",
+    "git_dirty": false,
+    "source_tree_hash": "1a2797a08b65c0db90cd84531d8c35f4f59ae9f1285f2fd6c4786b73ddc6d2a7",
+    "core_runtime_version": "0.3.1",
+    "core_base_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+    "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+    "protocol_hash_by_seed": {
+      "0": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+      "1": "7324c4bcf8632259990ba1ade0a57608ea3ecd20f75ebaff5c87fba55a227090",
+      "2": "f7c21d4133f4b4cd6824a1a0e77f26a525e0cb520373fa5f271ee371263dba5a"
+    }
+  },
+  "eligibility": {
+    "reporting_split": "test",
+    "configuration_locked": true,
+    "test_labels_used_for_selection": false,
+    "prediction_reused_task_ids": [],
+    "all_seeds_clean": true,
+    "all_seeds_eligible_for_main_table": true
+  },
+  "method_configuration": {
+    "upstream_repository": "https://github.com/witdsl/KRT-MLCIL",
+    "upstream_commit": "3f79044001edfe9ef94b729cd905a535fe8dd478",
+    "upstream_archive_sha256": "2eec8351568358efca50bdaea5d06034dd28bd35d7d41c12e78cc0b1c915daf1",
+    "backbone": "OpenAI CLIP ViT-B/16 visual encoder (fine-tuned)",
+    "visual_encoder_trainable": true,
+    "clip_text_encoder_used": false,
+    "benchmark_added_adapter": false,
+    "epochs": 20,
+    "early_stopping_patience": 20,
+    "base_learning_rate": 0.00004,
+    "incremental_learning_rate": 0.0001,
+    "weight_decay": 0.0001,
+    "embed_dim": 384,
+    "num_heads": 8,
+    "token_distillation_weight": 100.0,
+    "exemplars_per_class": 20,
+    "replay_batch_size": 64,
+    "train_batch_size": 32,
+    "eval_batch_size": 64,
+    "workers": 2,
+    "amp": true,
+    "tf32": true
+  },
+  "resources": {
+    "total_parameters": 88257818,
+    "trainable_parameters": 88240899,
+    "parameter_growth": 16149,
+    "replay_memory_by_seed": [
+      {"seed": 0, "samples": 514, "bytes": 309571555},
+      {"seed": 1, "samples": 503, "bytes": 302946431},
+      {"seed": 2, "samples": 512, "bytes": 308367410}
+    ],
+    "replay_samples": {
+      "mean": 509.6666666666667,
+      "std": 5.8594652770823155
+    },
+    "replay_bytes": {
+      "mean": 306961798.6666667,
+      "std": 3529146.415089679,
+      "mean_mib": 292.7415835062663,
+      "std_mib": 3.3656562949082174
+    }
+  },
+  "per_seed": [
+    {
+      "seed": 0,
+      "final_mAP": 24.31666364694698,
+      "average_mAP": 31.8936927010276,
+      "forgetting": 7.691583292378501,
+      "final_cF1": 25.86919693383542,
+      "final_oF1": 36.324041008037355
+    },
+    {
+      "seed": 1,
+      "final_mAP": 18.946513183516984,
+      "average_mAP": 27.360784512340892,
+      "forgetting": 10.345700373470295,
+      "final_cF1": 21.80364736620605,
+      "final_oF1": 35.024515950501126
+    },
+    {
+      "seed": 2,
+      "final_mAP": 23.25472586749216,
+      "average_mAP": 30.94166770545596,
+      "forgetting": 8.51608922511533,
+      "final_cF1": 25.946241777087952,
+      "final_oF1": 38.86627438336289
+    }
+  ],
+  "aggregate": {
+    "aggregation": "mean_and_sample_standard_deviation",
+    "final_mAP": {"mean": 22.17263423265204, "std": 2.8439094095298767},
+    "average_mAP": {"mean": 30.06538163960815, "std": 2.390130145758809},
+    "forgetting": {"mean": 8.851124296988042, "std": 1.3584074295197197},
+    "final_cF1": {"mean": 24.53969535904314, "std": 2.3698001901634775},
+    "final_oF1": {"mean": 36.73827711396712, "std": 1.9540907419329374}
+  },
+  "per_task_mAP": [
+    {"task": 0, "mean": 48.659913646854896, "std": 0.5459228286895149},
+    {"task": 1, "mean": 38.11337961382029, "std": 1.0464467580797592},
+    {"task": 2, "mean": 24.962915319722168, "std": 4.022744152390632},
+    {"task": 3, "mean": 28.957738181052246, "std": 3.879405566065948},
+    {"task": 4, "mean": 27.440675409707275, "std": 3.332203982158496},
+    {"task": 5, "mean": 26.216238293071093, "std": 3.307017262625515},
+    {"task": 6, "mean": 23.999558419985206, "std": 2.986466569525865},
+    {"task": 7, "mean": 22.17263423265204, "std": 2.8439094095298767}
+  ],
+  "training_stability": {
+    "epochs_completed_by_seed": [160, 160, 160],
+    "optimizer_updates_by_seed": [19210, 19183, 19206],
+    "amp_overflow_skips_by_seed": [50, 57, 54],
+    "nan_detected_in_final_runs": false,
+    "oom_detected_in_final_runs": false,
+    "scheduler_order_warning_detected": false,
+    "pseudo_closest_threshold_fallback_tasks_by_seed": {
+      "0": [],
+      "1": [3, 4],
+      "2": [4]
+    }
+  },
+  "execution_audit": {
+    "physical_gpu": 0,
+    "initial_free_mib": 23645,
+    "original_estimated_per_job_mib": 4800,
+    "original_planned_concurrency": 3,
+    "preflight_backward_only_smoke_peak_mib": 3757.85107421875,
+    "initial_attempts": {
+      "seed0": "parallel_success",
+      "seed1": "parallel_cuda_oom_exit_1",
+      "seed2": "parallel_cuda_oom_exit_1"
+    },
+    "fallback": {
+      "failed_attempt_artifacts_isolated": true,
+      "failed_seeds_restarted_from_task0": true,
+      "checkpoint_resume_used": false,
+      "seed1": "sequential_retry_success",
+      "seed2": "sequential_retry_success"
+    },
+    "final_artifacts_contain_failed_attempt_state": false,
+    "final_result_valid": true,
+    "capacity_issue": "The original smoke omitted Adam state allocation and did not cover the replay batch of 64, so it underestimated real training memory."
+  },
+  "sync_bundle": {
+    "bundle_count": 3,
+    "manifest_file_count": 60,
+    "manifest_total_bytes": 25805207,
+    "score_file_count": 24,
+    "contains_pth": false,
+    "all_manifest_sha256_verified": true,
+    "archive_bytes": 4762301,
+    "archive_sha256": "e44ef0ce046e4708a485bed41c863713e50f369f773e4c098fcbef0ea95a49b6"
+  }
+}

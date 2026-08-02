@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Worst-task CLIP/KRT forward-backward GPU memory smoke."""
+"""Worst-task CLIP/KRT optimizer-step GPU memory smoke."""
 
 from __future__ import annotations
 
@@ -56,14 +56,18 @@ def main() -> None:
     model.cuda().train()
     model.freeze_old_task_parameters()
 
-    images = torch.rand(args.batch_size, 3, 224, 224, device="cuda")
+    optimizer = method._optimizer(method.options.incremental_learning_rate)
+    scaler = torch.cuda.amp.GradScaler(enabled=True, init_scale=1.0)
+    smoke_batch_size = max(args.batch_size, method.options.replay_batch_size)
+    images = torch.rand(smoke_batch_size, 3, 224, 224, device="cuda")
     targets = torch.randint(
         0,
         2,
-        (args.batch_size, protocol.num_classes),
+        (smoke_batch_size, protocol.num_classes),
         device="cuda",
     ).float()
     criterion = AsymmetricLoss()
+    optimizer.zero_grad(set_to_none=True)
     torch.cuda.reset_peak_memory_stats()
     with torch.no_grad(), torch.cuda.amp.autocast():
         old_output = teacher(images)
@@ -81,20 +85,39 @@ def main() -> None:
             * F.cosine_embedding_loss(
                 current_old_tokens,
                 teacher_tokens,
-                torch.ones(args.batch_size, device="cuda"),
+                torch.ones(smoke_batch_size, device="cuda"),
             )
         )
         loss = classification + token_loss
-    loss.backward()
+    scale_before_step = float(scaler.get_scale())
+    scaler.scale(loss).backward()
+    scaler.step(optimizer)
+    scaler.update()
+    optimizer_stepped = float(scaler.get_scale()) >= scale_before_step
+    if not optimizer_stepped:
+        raise RuntimeError("KRT memory smoke did not apply its Adam update")
+    optimizer_state_tensors = sum(
+        int(torch.is_tensor(value))
+        for state in optimizer.state.values()
+        for value in state.values()
+    )
+    if optimizer_state_tensors == 0:
+        raise RuntimeError("KRT memory smoke did not initialize Adam state")
     torch.cuda.synchronize()
     print(
         {
-            "batch_size": args.batch_size,
+            "requested_train_batch_size": args.batch_size,
+            "replay_batch_size": method.options.replay_batch_size,
+            "smoke_batch_size": smoke_batch_size,
             "tasks": protocol.num_tasks,
             "classes": protocol.num_classes,
             "classification_loss": float(classification.detach()),
             "token_loss": float(token_loss.detach()),
+            "optimizer": "Adam",
+            "optimizer_stepped": optimizer_stepped,
+            "optimizer_state_tensors": optimizer_state_tensors,
             "peak_mib": torch.cuda.max_memory_allocated() / (1024**2),
+            "peak_reserved_mib": torch.cuda.max_memory_reserved() / (1024**2),
         }
     )
 

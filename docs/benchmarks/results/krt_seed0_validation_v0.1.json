@@ -138,6 +138,7 @@
     "configuration_is_locked_for_held_out_test": true,
     "test_metrics_must_not_change_configuration": true,
     "formal_seeds": [0, 1, 2],
-    "formal_results_pending": true
+    "formal_results_pending": false,
+    "formal_result_snapshot": "krt_seed012_formal_v0.1.json"
   }
 }
