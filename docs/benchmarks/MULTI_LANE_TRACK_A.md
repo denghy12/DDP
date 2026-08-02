@@ -141,12 +141,23 @@ The independent candidate is registered as runner method `multi_lane` under
 - evaluation over all seen lanes followed by disjoint class-block concat,
   without a task identifier or task oracle.
 
-`compare_multi_lane_upstream_reference.py` verifies the immutable external
-tree/archive and compiles the exact upstream `PreT_Attention` and
-`forward_head` bodies at runtime. It compares same-input/same-weight selector
+`compare_multi_lane_upstream_reference.py` verifies the external files it will
+execute and compiles the exact upstream `PreT_Attention` and `forward_head`
+bodies at runtime. When a clean archive is supplied it additionally verifies
+the archive and whole extraction. It compares same-input/same-weight selector
 aggregation, prompt attention, drop-and-replace, and concat masking, rejecting
 maximum absolute error of `1e-6` or larger. The upstream source remains outside
 this repository.
+
+The server's existing `/mnt/haoyuan/workspace/multi-lane-main` tree contains
+local data and unrelated modifications, so its whole-tree hash is intentionally
+not treated as an upstream identity. The two files actually compiled by the
+oracle, `multi_lane/blocks.py` and `multi_lane/vision_transformer.py`, are
+byte-identical to the fixed extraction, with SHA-256 values `79f1d549...24af7`
+and `6d4777e7...a3e95`. In this critical-file mode the oracle rejects either
+file before compiling any code if its digest differs. The locally retained
+clean archive and full-tree digests remain the immutable provenance record;
+none of the modified tree's other files are imported or executed.
 
 Six focused unit cases cover source identity, frozen visual weights, task-slice
 copying and isolation, current-label visibility, concat masking, checkpoint
@@ -156,9 +167,8 @@ server because the local macOS system Python has no PyTorch installation.
 
 ## Seed-0 validation entry point
 
-After the candidate commit is present on the server and the fixed source
-archive/extraction is available under `/mnt/haoyuan/workspace/baseline_sources`,
-launch the validation-only gate with:
+After the candidate commit is present on the server, launch the validation-only
+gate with the already-present `/mnt/haoyuan/workspace/multi-lane-main` tree:
 
 ```bash
 cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1

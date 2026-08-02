@@ -11,8 +11,8 @@ GPU="${GPU:-0}"
 PYTHON="${PYTHON:-/opt/conda/envs/ddp/bin/python}"
 DATA_ROOT="${DATA_ROOT:-/mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC}"
 CLIP_MODEL_PATH="${CLIP_MODEL_PATH:-${ROOT}/pretrained/clip/ViT-B-16.pt}"
-UPSTREAM_ROOT="${UPSTREAM_ROOT:-/mnt/haoyuan/workspace/baseline_sources/multi_lane_release_5ee982c}"
-UPSTREAM_ARCHIVE="${UPSTREAM_ARCHIVE:-/mnt/haoyuan/workspace/baseline_sources/multi_lane_release_5ee982c.tar.gz}"
+UPSTREAM_ROOT="${UPSTREAM_ROOT:-/mnt/haoyuan/workspace/multi-lane-main}"
+UPSTREAM_ARCHIVE="${UPSTREAM_ARCHIVE:-}"
 OUTPUT_BASE="${OUTPUT_BASE:-/mnt/haoyuan/workspace/emotic_benchmark_runs/multi_lane_track_a_v0.1}"
 TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-64}"
 EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-64}"
@@ -39,14 +39,18 @@ fi
   echo "Missing CLIP checkpoint: ${CLIP_MODEL_PATH}" >&2
   exit 2
 }
-[[ -d "${UPSTREAM_ROOT}" ]] || {
-  echo "Missing fixed MULTI-LANE extraction: ${UPSTREAM_ROOT}" >&2
+[[ -s "${UPSTREAM_ROOT}/multi_lane/blocks.py" ]] || {
+  echo "Missing MULTI-LANE blocks.py: ${UPSTREAM_ROOT}" >&2
   exit 2
 }
-[[ -s "${UPSTREAM_ARCHIVE}" ]] || {
-  echo "Missing fixed MULTI-LANE archive: ${UPSTREAM_ARCHIVE}" >&2
+[[ -s "${UPSTREAM_ROOT}/multi_lane/vision_transformer.py" ]] || {
+  echo "Missing MULTI-LANE vision_transformer.py: ${UPSTREAM_ROOT}" >&2
   exit 2
 }
+if [[ -n "${UPSTREAM_ARCHIVE}" && ! -s "${UPSTREAM_ARCHIVE}" ]]; then
+  echo "Configured MULTI-LANE archive is missing: ${UPSTREAM_ARCHIVE}" >&2
+  exit 2
+fi
 if [[ "${REQUIRE_CLEAN}" == "1" && -n "$(git status --porcelain)" ]]; then
   echo "MULTI-LANE validation requires a clean Git worktree" >&2
   exit 2
@@ -80,10 +84,15 @@ echo "Running MULTI-LANE/Core preflight tests..."
   tests.test_ddp_prompt_free_auxiliary
 
 echo "Running fixed-source MULTI-LANE operator equivalence..."
-"${PYTHON}" "${SCRIPT_DIR}/compare_multi_lane_upstream_reference.py" \
-  --upstream-root "${UPSTREAM_ROOT}" \
-  --upstream-archive "${UPSTREAM_ARCHIVE}" \
+oracle_args=(
+  --upstream-root "${UPSTREAM_ROOT}"
   --output "${ORACLE_JSON}"
+)
+if [[ -n "${UPSTREAM_ARCHIVE}" ]]; then
+  oracle_args+=(--upstream-archive "${UPSTREAM_ARCHIVE}")
+fi
+"${PYTHON}" "${SCRIPT_DIR}/compare_multi_lane_upstream_reference.py" \
+  "${oracle_args[@]}"
 
 if [[ "${RUN_GPU_SMOKE}" == "1" ]]; then
   echo "Running worst-task MULTI-LANE memory smoke on GPU ${GPU}..."

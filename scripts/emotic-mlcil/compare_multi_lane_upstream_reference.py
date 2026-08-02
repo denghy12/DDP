@@ -77,12 +77,10 @@ def _verify_upstream(root: Path, archive: Optional[Path]) -> Dict[str, Any]:
             "vision_transformer.py"
         )
     observed = {
-        "tree_sha256": _tree_sha256(root),
         "blocks_sha256": _sha256(blocks),
         "vision_transformer_sha256": _sha256(vision_transformer),
     }
     expected = {
-        "tree_sha256": UPSTREAM_TREE_SHA256,
         "blocks_sha256": UPSTREAM_BLOCKS_SHA256,
         "vision_transformer_sha256": UPSTREAM_VIT_SHA256,
     }
@@ -93,6 +91,7 @@ def _verify_upstream(root: Path, archive: Optional[Path]) -> Dict[str, Any]:
                 f"{observed[key]} != {expected_value}"
             )
     archive_sha = None
+    tree_sha = None
     if archive is not None:
         if not archive.is_file():
             raise FileNotFoundError(archive)
@@ -102,11 +101,28 @@ def _verify_upstream(root: Path, archive: Optional[Path]) -> Dict[str, Any]:
                 "MULTI-LANE archive SHA-256 differs: "
                 f"{archive_sha} != {UPSTREAM_ARCHIVE_SHA256}"
             )
+        tree_sha = _tree_sha256(root)
+        if tree_sha != UPSTREAM_TREE_SHA256:
+            raise ValueError(
+                "MULTI-LANE full upstream tree differs: "
+                f"{tree_sha} != {UPSTREAM_TREE_SHA256}"
+            )
     return {
         "repository": "https://github.com/tdemin16/multi-lane",
         "commit": UPSTREAM_COMMIT,
-        "archive_sha256": archive_sha or UPSTREAM_ARCHIVE_SHA256,
+        "registered_archive_sha256": UPSTREAM_ARCHIVE_SHA256,
+        "observed_archive_sha256": archive_sha,
+        "archive_verified_in_this_execution": archive_sha is not None,
+        "expected_clean_tree_sha256": UPSTREAM_TREE_SHA256,
+        "observed_clean_tree_sha256": tree_sha,
+        "clean_tree_verified_in_this_execution": tree_sha is not None,
         **observed,
+        "executed_source_scope": [
+            "multi_lane/blocks.py:PreT_Attention",
+            "multi_lane/vision_transformer.py:VisionTransformer.forward_head",
+        ],
+        "executed_source_files_verified_exactly": True,
+        "non_executed_files_allowed": archive is None,
         "source_copied_into_repository": False,
         "oracle_mode": "runtime_AST_extraction_from_external_fixed_source",
     }
