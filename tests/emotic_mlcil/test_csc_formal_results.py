@@ -30,6 +30,7 @@ def write_seed(root, seed, *, locked=True, commit=COMMIT):
     )
     (seed_root / "metrics").mkdir(parents=True)
     method_configuration = dict(MODULE.LOCKED_METHOD_CONFIGURATION)
+    protocol_hash = f"protocol-{seed}"
     manifest = {
         "method": "CSC",
         "protocol_id": "emotic_b5c3_v0.1",
@@ -38,7 +39,7 @@ def write_seed(root, seed, *, locked=True, commit=COMMIT):
         "git_commit": commit,
         "git_dirty": False,
         "source_tree_hash": "tree",
-        "protocol_hash": "protocol",
+        "protocol_hash": protocol_hash,
         "class_order_hash": "classes",
         "data_split_hash": {"task0": "test"},
         "core_base_commit": "core",
@@ -52,7 +53,14 @@ def write_seed(root, seed, *, locked=True, commit=COMMIT):
     }
     runner = dict(MODULE.LOCKED_RUNNER_CONFIGURATION)
     runner["configuration_locked"] = locked
-    config = {"runner": runner}
+    config = {
+        "protocol": {
+            "seed": seed,
+            "protocol_hash": protocol_hash,
+            "class_order_hash": "classes",
+        },
+        "runner": runner,
+    }
     main_table = {
         "replay_memory": {"samples": 0, "bytes": 0},
         "final_mAP": 20.0 + seed,
@@ -83,6 +91,10 @@ class CSCFormalResultValidationTest(unittest.TestCase):
             self.assertAlmostEqual(
                 payload["aggregate"]["final_mAP"]["std"],
                 0.816496580927726,
+            )
+            self.assertEqual(
+                payload["source"]["protocol_hash_by_seed"],
+                {"0": "protocol-0", "1": "protocol-1", "2": "protocol-2"},
             )
 
     def test_rejects_unlocked_test_seed(self):

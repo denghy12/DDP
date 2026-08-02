@@ -92,6 +92,7 @@ def validate_csc_formal_results(
 
     per_seed: List[Dict[str, Any]] = []
     provenance: Dict[str, Any] = {}
+    protocol_hash_by_seed: Dict[str, Any] = {}
     for seed in seed_values:
         seed_root = _single_path(
             root,
@@ -134,6 +135,26 @@ def validate_csc_formal_results(
             LOCKED_RUNNER_CONFIGURATION,
             f"seed{seed} runner",
         )
+        protocol_configuration = config.get("protocol")
+        if not isinstance(protocol_configuration, Mapping):
+            raise ValueError(f"seed{seed} protocol configuration must be an object")
+        _require_equal(
+            protocol_configuration.get("seed"), seed, f"seed{seed} protocol seed"
+        )
+        _require_equal(
+            protocol_configuration.get("protocol_hash"),
+            manifest.get("protocol_hash"),
+            f"seed{seed} protocol hash",
+        )
+        _require_equal(
+            protocol_configuration.get("class_order_hash"),
+            manifest.get("class_order_hash"),
+            f"seed{seed} class-order hash",
+        )
+        # The registered seed is part of the protocol payload, so its hash is
+        # intentionally seed-specific even though class order and data split
+        # must remain identical across the formal runs.
+        protocol_hash_by_seed[str(seed)] = manifest.get("protocol_hash")
 
         main_table = summary.get("main_table")
         if not isinstance(main_table, Mapping):
@@ -150,7 +171,6 @@ def validate_csc_formal_results(
         current_provenance = {
             "git_commit": manifest.get("git_commit"),
             "source_tree_hash": manifest.get("source_tree_hash"),
-            "protocol_hash": manifest.get("protocol_hash"),
             "class_order_hash": manifest.get("class_order_hash"),
             "data_split_hash": manifest.get("data_split_hash"),
             "core_base_commit": manifest.get("core_base_commit"),
@@ -182,7 +202,10 @@ def validate_csc_formal_results(
         "status": "eligible_for_main_table",
         "configuration_lock_confirmation": LOCK_CONFIRMATION,
         "seeds": list(seed_values),
-        "source": provenance,
+        "source": {
+            **provenance,
+            "protocol_hash_by_seed": protocol_hash_by_seed,
+        },
         "per_seed": per_seed,
         "aggregate": aggregate,
         "fixed_threshold_calibration_note": (
