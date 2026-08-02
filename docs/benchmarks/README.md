@@ -53,6 +53,7 @@ remain a reserved extension point.
 - [Registered validation-selected EWC λ=1e6 result](results/ewc_lambda1e6_seed012_v0.3.json)
 - [Frozen KRT seed-0 validation snapshot](results/krt_seed0_validation_v0.1.json)
 - [Registered KRT three-seed formal result](results/krt_seed012_formal_v0.1.json)
+- [CSC independent-port/upstream-oracle equivalence audit](results/csc_upstream_equivalence_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -97,6 +98,13 @@ dynamically expanding CI-GCN, current-label loss, old-model sigmoid
 distillation, and max-entropy calibration while replacing only TResNet spatial
 features with trainable CLIP patch tokens. It explicitly adds no Adapter, text
 features, or replay.
+
+The independent CSC CI-GCN operators have also been checked against the exact
+external upstream implementation with mapped inputs and parameters. Float32
+combined-logit error is `5.96e-8`; the material discrepancy is confined to the
+published task-expansion lifecycle, which reinitializes old biases and leaves
+new parameters outside the old optimizer. The comparison is a synthetic
+implementation audit, not an EMOTIC performance result.
 
 ## Standard run and output
 

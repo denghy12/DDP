@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "snapshot_date": "2026-08-02",
+  "comparison": "independent_csc_track_a_vs_fixed_upstream_execution_oracle",
+  "scope": "synthetic same-input same-weight operator and expansion-lifecycle audit; not an EMOTIC metric result",
+  "upstream": {
+    "repository": "https://github.com/Kaile-Du/CSC",
+    "commit": "0bab38a00d6e0555f2df855ae2fe8db1fea68b12",
+    "archive_sha256": "588a098a1c7f3d813dee7df777c283fd27768a08a125d4e60b11b2d6ebdb7faa",
+    "tree_sha256": "87abbdd45cdef71cd271db1a1cbac14c89a2aec5b34fdfeb8ec8ac79802e9087",
+    "cigcn_sha256": "78ac46707b1c9479f963fd085258f16c51ef5d3c70488b7cc788380ec110996e",
+    "driver_sha256": "a144eb9999bcfb054593ea7fc3c7c68ba66fe910290c4101b9c9ff6f29093a78",
+    "source_copied_into_repository": false,
+    "oracle_mode": "dynamic_import_and_runtime_AST_extraction_from_external_fixed_source"
+  },
+  "port": {
+    "git_commit": "6dc9cf25801f35826f3084246a87ae7248c268c0",
+    "git_dirty": false,
+    "csc_model_sha256": "1e992aa80ad6b1a10a4f936dd73bcc12c9093b19a4748c09a6a59260f63971bb",
+    "comparison_script_sha256": "ed7e09db4c3d10603e9fb866bc6d3ca25e84052b4c094fa2ee24ed93716483b7"
+  },
+  "oracle_full_output_sha256": "9e0e0944410c81b648d9b03c785f6c718995e4e2daef04a108d00ceb7e33b846",
+  "base_operator_equivalence": {
+    "float64": {
+      "seed": 2026080201,
+      "classification_logits_max_abs_error": 0.0,
+      "graph_logits_max_abs_error": 3.608224830031759e-16,
+      "combined_logits_max_abs_error": 1.1102230246251565e-16,
+      "sample_relation_max_abs_error": 1.1102230246251565e-16,
+      "input_gradient_max_abs_error": 1.0408340855860843e-17,
+      "mapped_parameter_gradient_max_abs_error": 8.881784197001252e-16
+    },
+    "float32": {
+      "seed": 2026080202,
+      "classification_logits_max_abs_error": 0.0,
+      "graph_logits_max_abs_error": 1.1920928955078125e-7,
+      "combined_logits_max_abs_error": 5.960464477539063e-8,
+      "sample_relation_max_abs_error": 5.960464477539063e-8,
+      "input_gradient_max_abs_error": 3.725290298461914e-9,
+      "mapped_parameter_gradient_max_abs_error": 5.066394805908203e-7
+    }
+  },
+  "incremental_expansion_audit": {
+    "seed": 2026080203,
+    "old_classes": 3,
+    "added_classes": 2,
+    "controlled_logit_delta_from_reinitialized_old_biases": 0.013671576976776123,
+    "full_expanded_parameter_remap_max_abs_error": 8.940696716308594e-8,
+    "official_release_old_parameter_max_changes": {
+      "class_activation_weight": 0.0,
+      "general_relation_block": 0.0,
+      "specific_relation_weight": 0.0,
+      "specific_relation_bias": 0.012798553332686424,
+      "graph_classifier_weight": 0.0,
+      "graph_classifier_bias": 0.02735525742173195,
+      "identity_block": 0.0
+    },
+    "independent_port_old_parameter_max_changes": {
+      "class_activation_weight": 0.0,
+      "general_relation_block": 0.0,
+      "specific_relation_weight": 0.0,
+      "specific_relation_bias": 0.0,
+      "graph_classifier_weight": 0.0,
+      "graph_classifier_bias": 0.0,
+      "identity_block": 0.0
+    },
+    "optimizer_coverage_after_expansion": {
+      "official_optimizer_created_before_expansion": {
+        "live_trainable_parameter_tensors": 19,
+        "missing_live_parameter_tensors": 7,
+        "missing_live_parameters": 25660,
+        "stale_parameter_tensors": 7,
+        "stale_parameters": 15384
+      },
+      "port_optimizer_rebuilt_after_expansion": {
+        "live_trainable_parameter_tensors": 16,
+        "missing_live_parameter_tensors": 0,
+        "missing_live_parameters": 0,
+        "stale_parameter_tensors": 0,
+        "stale_parameters": 0
+      }
+    }
+  },
+  "conclusion": {
+    "operator_port": "numerically equivalent to the fixed upstream CI-GCN under mapped inputs and weights",
+    "material_difference": "the released task expansion reinitializes old biases and leaves a pre-expansion optimizer with missing live and stale parameters",
+    "benchmark_policy": "retain the independent port's old-parameter preservation and per-task optimizer rebuild; report these as audited lifecycle corrections",
+    "performance_claim": "none; validation and held-out EMOTIC comparisons have not been run"
+  }
+}

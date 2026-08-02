@@ -108,6 +108,45 @@ new rows/columns are initialized by the same PyTorch layer defaults. These
 lifecycle corrections implement the paper's stated inheritance and continual
 optimization rather than reproducing dangling optimizer references.
 
+## Executable upstream-oracle equivalence
+
+`scripts/emotic-mlcil/compare_csc_upstream_reference.py` validates the exact
+external source tree and dynamically imports its `cigcn.py`; it also extracts
+and executes the exact `network_expansion` method from the verified external
+`CSC.py` syntax tree. No upstream file is copied into this repository.
+
+At clean port commit `6dc9cf25801f35826f3084246a87ae7248c268c0`,
+same-input/same-weight comparison produced:
+
+| Quantity | float64 max error | float32 max error |
+|---|---:|---:|
+| Combined logits | `1.11e-16` | `5.96e-8` |
+| Sample-specific relation | `1.11e-16` | `5.96e-8` |
+| Input gradient | `1.04e-17` | `3.73e-9` |
+| Any mapped parameter gradient | `8.88e-16` | `5.07e-7` |
+
+This establishes numerical operator equivalence. The controlled 3-to-5-class
+expansion audit then isolated the lifecycle difference: the released function
+changed preserved old specific-relation and graph-classifier biases by
+`0.01280` and `0.02736`, respectively, causing a maximum synthetic logit delta
+of `0.01367`. Once every expanded parameter was remapped, error returned to
+`8.94e-8`.
+
+The optimizer created before the official expansion missed seven current
+parameter tensors (`25,660` parameters) and retained seven replaced tensors
+(`15,384` parameters) in this small oracle. The rebuilt port optimizer had no
+missing or stale tensors. These figures diagnose release lifecycle behavior;
+they are not EMOTIC mAP/F1 results. The registered evidence is
+[`results/csc_upstream_equivalence_v0.1.json`](results/csc_upstream_equivalence_v0.1.json).
+
+Reproduce locally with:
+
+```bash
+python scripts/emotic-mlcil/compare_csc_upstream_reference.py \
+  --upstream-root ../baseline_sources/csc_release_0bab38a \
+  --upstream-archive ../baseline_sources/csc_release_0bab38a.tar.gz
+```
+
 ## Protocol and leakage checks
 
 For task `t`, the method may consume only:
