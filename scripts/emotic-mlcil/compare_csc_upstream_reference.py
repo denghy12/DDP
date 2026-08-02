@@ -15,6 +15,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
@@ -107,6 +108,36 @@ def _verify_upstream(root: Path, archive: Optional[Path]) -> Dict[str, Any]:
         **observed,
         "source_copied_into_repository": False,
         "oracle_mode": "dynamic_import_from_external_fixed_extraction",
+    }
+
+
+def _port_provenance() -> Dict[str, Any]:
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    status = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=normal"],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    return {
+        "git_commit": commit,
+        "git_dirty": bool(status),
+        "csc_model_sha256": _sha256(
+            REPOSITORY_ROOT
+            / "benchmarks"
+            / "emotic_mlcil"
+            / "methods"
+            / "csc"
+            / "model.py"
+        ),
+        "comparison_script_sha256": _sha256(Path(__file__).resolve()),
     }
 
 
@@ -623,6 +654,7 @@ def main() -> None:
     result = {
         "schema_version": 1,
         "comparison": "independent_csc_track_a_vs_fixed_upstream_execution_oracle",
+        "port_provenance": _port_provenance(),
         "provenance": provenance,
         "base_operator_equivalence": [
             _operator_equivalence(
