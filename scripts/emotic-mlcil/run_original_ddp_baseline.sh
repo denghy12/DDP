@@ -16,7 +16,7 @@ PROTOCOL="${PROTOCOL:-${ROOT}/configs/emotic_mlcil/protocol_b5c3.yaml}"
 REPORTING_SPLIT="${REPORTING_SPLIT:-val}"
 TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-8}"
 EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-1}"
-WORKERS="${WORKERS:-2}"
+WORKERS="${WORKERS:-0}"
 EXPORT_SYNC_RESULTS="${EXPORT_SYNC_RESULTS:-1}"
 CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:-}"
 
@@ -28,6 +28,10 @@ CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:-}"
 }
 [[ "${EVAL_BATCH_SIZE}" =~ ^[1-9][0-9]*$ ]] || {
   echo "EVAL_BATCH_SIZE must be positive" >&2
+  exit 2
+}
+[[ "${WORKERS}" == "0" ]] || {
+  echo "Registered Original-DDP-Tau2 worker count is 0" >&2
   exit 2
 }
 [[ "${REPORTING_SPLIT}" == "val" || "${REPORTING_SPLIT}" == "test" ]] || {

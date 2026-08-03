@@ -64,6 +64,7 @@ remain a reserved extension point.
 - [Registered MULTI-LANE three-seed formal result](results/multi_lane_seed012_formal_v0.1.json)
 - [Frozen L3A seed-0 validation snapshot](results/l3a_seed0_validation_v0.1.json)
 - [Registered L3A three-seed formal result](results/l3a_seed012_formal_v0.1.json)
+- [Frozen Original-DDP-Tau2 seed-0 validation snapshot](results/original_ddp_tau2_seed0_validation_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -95,8 +96,10 @@ model, random text/visual prompting, loss, optimizer, and cross-task scheduler
 without an Adapter or replay. For direct comparison with the modified DDP, its
 registered PCD is the user-requested `T=1→2, γ=0.7`; the collected source's
 `T=1→7, γ=0.2` is preserved in the audit as a deliberate difference. Source
-identity/operator gates and the seed-0 validation launcher are implemented;
-validation and held-out results are pending.
+identity/operator gates passed with zero numerical error. Seed-0 validation
+reached Final mAP `39.3939`, Average mAP `46.8123`, and Forgetting `0.7607`.
+The `T=1→2, γ=0.7` configuration, source optimizer/schedule, batch `8/1`, and
+zero-worker loader are frozen; locked held-out seeds 0--2 are the next run.
 
 KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
 official source is fixed at

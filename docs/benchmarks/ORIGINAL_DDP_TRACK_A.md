@@ -146,6 +146,28 @@ sizes. Default evaluation batch size is deliberately 1 because final-task DDP
 expands one image into 52 visual-prompt paths; increase it only after the CUDA
 smoke demonstrates sufficient memory.
 
+After validation freeze, launch the three locked held-out seeds concurrently:
+
+```bash
+RUN_ID="original_ddp_tau2_formal_seed012_$(date +%Y%m%d_%H%M%S)" \
+GPU=0 \
+SESSION=emotic_original_ddp_tau2_formal_seed012 \
+EXPECTED_GIT_COMMIT="$(git rev-parse HEAD)" \
+CONFIGURATION_LOCKED_CONFIRMATION=ORIGINAL_DDP_TAU2_TRACK_A_V0_1 \
+bash scripts/emotic-mlcil/launch_original_ddp_formal_seed012_tmux.sh
+```
+
+The formal launcher starts three isolated seed processes concurrently on the
+single physical GPU selected by `GPU`. The measured peak reserved memory was
+`3538 MiB` per training process, so the combined estimate is about `10.6 GiB`;
+the launcher requires at least `14 GiB` free before starting. It also enforces
+a clean exact commit, `configuration_locked=true`, train/evaluation batches
+`8/1`, and `WORKERS=0`. The worker count is a runtime reliability freeze
+following the validation loader file-descriptor failure; it does not alter
+sample order, optimizer state, method behavior, or scores. Aggregation and
+checkpoint-free packaging are blocked if any seed fails. Advanced users may
+override the mapping with `GPUS="0 1 2"` when three cards are available.
+
 On success, download only
 `download_packages/<run-id>.tar.gz` and its adjacent `.sha256`. The universal
 [checkpoint-free download standard](DOWNLOAD_STANDARD.md) includes metrics,
@@ -155,7 +177,15 @@ rejecting every `.pth` and checkpoint directory.
 ## Current status
 
 The independent adapter, source oracle, tests, GPU smoke, runner, packaging,
-and seed-0 tmux launcher are implemented. No validation or held-out result has
-yet been registered. Hyperparameters remain source-fixed except for the
-explicit user-requested PCD mapping; they must not be changed after observing
-held-out test data.
+and launchers are implemented. Clean seed-0 validation passed at commit
+`33238e7` with Final mAP `39.3939`, Average mAP `46.8123`, Forgetting
+`0.7607`, and 34 guarded AMP skips in 74,020 attempts. The checkpoint-free
+archive SHA-256 is
+`480ae50d8f4d2f82270d4311507c0dfd0f2b5eb95be2489a41ff2d72d8bd1dfc`.
+The result is registered in
+[`original_ddp_tau2_seed0_validation_v0.1.json`](results/original_ddp_tau2_seed0_validation_v0.1.json).
+
+Configuration is now frozen: source method defaults and cross-task schedule,
+the explicit `T=1→2, γ=0.7` PCD mapping, global F1 threshold 0.5, batch `8/1`,
+and `WORKERS=0`. Held-out test seeds 0--2 are pending and must not be used to
+change this configuration.
