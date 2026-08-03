@@ -61,6 +61,8 @@ remain a reserved extension point.
 - [Registered CSC three-seed formal result](results/csc_seed012_formal_v0.1.json)
 - [Frozen MULTI-LANE seed-0 validation snapshot](results/multi_lane_seed0_validation_v0.1.json)
 - [Registered MULTI-LANE three-seed formal result](results/multi_lane_seed012_formal_v0.1.json)
+- [Frozen L3A seed-0 validation snapshot](results/l3a_seed0_validation_v0.1.json)
+- [Registered L3A three-seed formal result](results/l3a_seed012_formal_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -136,21 +138,23 @@ published task-expansion lifecycle, which reinitializes old biases and leaves
 new parameters outside the old optimizer. The comparison is a synthetic
 implementation audit, not an EMOTIC performance result.
 
-L3A is the next integration candidate on `codex/emotic-baseline-l3a`, branched
-from the frozen MULTI-LANE commit `20e645d`. Its official source is fixed at
-`1067bbd` and the previously collected snapshot is byte-identical to that Git
-tree. Because the fixed source has no license declaration, it remains outside
-the benchmark and only an independent implementation enters `methods/l3a/`.
-The candidate retains L3A's two-stage lifecycle: one Task-0 CLIP+ASL epoch,
-then frozen random ReLU features, cumulative weighted analytic updates, and
-threshold-0.7 old-class pseudo labels. It adds no Adapter, text feature, or
-replay. Server verification and validation-only execution remain pending.
+L3A Track A is complete on `codex/emotic-baseline-l3a`, branched from the
+frozen MULTI-LANE commit `20e645d`. Its official source is fixed at `1067bbd`;
+because that source has no license declaration, it remains outside this
+repository and only an independent implementation enters `methods/l3a/`.
+The port retains L3A's one-epoch Task-0 CLIP+ASL stage, frozen random ReLU
+features, cumulative weighted analytic updates, and threshold-0.7 old-class
+pseudo labels. It adds no Adapter, text feature, or replay.
 
-The local CPU gate passes 90 Core/baseline tests (one skip) and 17 selected
-legacy regressions. The fixed-source oracle verifies the archive plus critical
-files and reports maximum analytic-operator error `2.22e-16`, with exact ASL
-loss/gradient and pseudo-threshold agreement. Real CLIP CUDA memory smoke and
-seed-0 validation remain server-only gates.
+The configuration was frozen on validation before held-out access. Locked test
+seeds 0--2 then ran concurrently on distinct GPUs from clean commit `d88620f`.
+The registered result is Final mAP `28.8296 ± 0.6470`, Average mAP
+`33.7746 ± 1.3091`, and Forgetting `4.8687 ± 0.3780` (mean ± sample standard
+deviation). Every seed attempted 84 Task-0 updates: 76 were applied and 8 were
+guarded AMP overflow skips; there was no NaN, OOM, or training traceback. The
+fixed-source oracle's largest error remained `2.22e-16`. The result snapshot
+also records all pseudo-label counts, per-task curves, and the complete
+26-class forgetting audit.
 
 ## Standard run and output
 

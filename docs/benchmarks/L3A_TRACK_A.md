@@ -177,3 +177,52 @@ The registered entry point is
 `scripts/emotic-mlcil/launch_l3a_formal_seed012_tmux.sh`; its single tmux job
 owns all three concurrent workers, final validation, and checkpoint-free
 packaging.
+
+## Registered three-seed formal result
+
+The locked held-out run `l3a_parallel_seed012_20260803_121031` completed from
+clean commit `d88620fd5c3650e9d1f361fbcb3174c29b21e006`. Seeds 0, 1, and 2 ran
+concurrently on physical GPUs 0, 1, and 2. Every manifest reports the test
+split, `configuration_locked=true`, no reused predictions, no test-label
+selection, and main-table eligibility. No hyperparameter changed after the
+validation freeze.
+
+The registered mean ± sample standard deviation is:
+
+| Metric | L3A Track A |
+|---|---:|
+| Final mAP | `28.8296 ± 0.6470` |
+| Average mAP | `33.7746 ± 1.3091` |
+| Forgetting | `4.8687 ± 0.3780` |
+| Final cF1 | `26.5487 ± 0.0916` |
+| Final oF1 | `34.8493 ± 0.0847` |
+
+The mean per-task mAP curve is `44.3229`, `36.9742`, `29.5139`, `33.5338`,
+`33.2423`, `32.3917`, `31.3889`, and `28.8296`; its sample standard
+deviations are `2.5066`, `1.9713`, `1.2164`, `1.3296`, `1.1849`, `0.9234`,
+`0.8289`, and `0.6470`. The lower Task-2 result followed by the Task-3 rebound
+is present in every seed and is retained as observed behavior.
+
+Each seed attempted 84 Task-0 AMP updates, applied 76, and skipped 8 overflows
+under the already-frozen guarded scheduler policy. All logged values and
+analytic solutions were finite; no seed log contains an OOM, NaN, or training
+traceback. Old-class pseudo positives were sparse and task dependent: their
+three-seed means for Tasks 0--7 were `0.0`, `1891.7`, `98.7`, `1930.7`,
+`199.3`, `91.0`, `5.3`, and `22.3`. These counts come only from prior model
+scores and do not expose old or future ground truth.
+
+The complete per-class audit identifies Anticipation (`34.1185 ± 0.5784` AP),
+Affection (`20.3143 ± 1.5249`), Annoyance (`9.7606 ± 0.8997`), Disconnection
+(`8.9922 ± 0.0803`), and Aversion (`6.6034 ± 3.7346`) as the five largest
+mean class-level forgetting values. This diagnosis was made after the locked
+test run and is reporting evidence only; it does not authorize tuning.
+
+The checkpoint-free archive contains all three bundles and 24 canonical task
+score files. All 57 manifest records and their byte counts/SHA-256 values were
+verified; no `.pth`, checkpoint directory, or symlink is present. The archive
+SHA-256 is
+`970d64ad492dacba1fed2d344872f4d33103f0bdc46a1ebc69db615243af704b`.
+The immutable machine-readable record is
+[`results/l3a_seed012_formal_v0.1.json`](results/l3a_seed012_formal_v0.1.json).
+No training rerun or prediction recomputation is required; this result freezes
+L3A Track A v0.1.
