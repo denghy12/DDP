@@ -49,6 +49,7 @@ remain a reserved extension point.
 - [KRT source audit and Track-A design](KRT_TRACK_A.md)
 - [CSC source audit and Track-A porting contract](CSC_TRACK_A.md)
 - [MULTI-LANE source audit and Track-A porting contract](MULTI_LANE_TRACK_A.md)
+- [L3A source audit and Track-A porting contract](L3A_TRACK_A.md)
 - [Universal checkpoint-free download standard](DOWNLOAD_STANDARD.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
@@ -134,6 +135,22 @@ combined-logit error is `5.96e-8`; the material discrepancy is confined to the
 published task-expansion lifecycle, which reinitializes old biases and leaves
 new parameters outside the old optimizer. The comparison is a synthetic
 implementation audit, not an EMOTIC performance result.
+
+L3A is the next integration candidate on `codex/emotic-baseline-l3a`, branched
+from the frozen MULTI-LANE commit `20e645d`. Its official source is fixed at
+`1067bbd` and the previously collected snapshot is byte-identical to that Git
+tree. Because the fixed source has no license declaration, it remains outside
+the benchmark and only an independent implementation enters `methods/l3a/`.
+The candidate retains L3A's two-stage lifecycle: one Task-0 CLIP+ASL epoch,
+then frozen random ReLU features, cumulative weighted analytic updates, and
+threshold-0.7 old-class pseudo labels. It adds no Adapter, text feature, or
+replay. Server verification and validation-only execution remain pending.
+
+The local CPU gate passes 90 Core/baseline tests (one skip) and 17 selected
+legacy regressions. The fixed-source oracle verifies the archive plus critical
+files and reports maximum analytic-operator error `2.22e-16`, with exact ASL
+loss/gradient and pseudo-threshold agreement. Real CLIP CUDA memory smoke and
+seed-0 validation remain server-only gates.
 
 ## Standard run and output
 

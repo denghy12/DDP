@@ -44,6 +44,13 @@ BCE mask and full-width released reduction, zero replay memory, and the source
 VOC optimizer/schedule mapping. The registered train batch is 64, yielding
 effective Adam learning rate `0.0125` from source rule `0.05 * batch / 256`.
 
+L3A also uses immutable audited defaults outside the frozen YAML. Its manifest
+records the fixed official commit/tree/archive, Task-0-only CLIP visual
+fine-tuning with ASL, the official ViT hidden width/ridge mapping, random ReLU
+expansion, float64 cumulative analytic state, inverse-square-root class
+weighting, threshold-0.7 pseudo labels, and zero replay. No L3A field is added
+to `protocol_b5c3.yaml`, so the frozen dataset/protocol hash remains unchanged.
+
 The only registered tuning override is runner option `--ewc-lambda`. It is
 kept outside the frozen protocol object, validated as finite and positive, and
 written into method configuration. The official tuning launcher permits this
