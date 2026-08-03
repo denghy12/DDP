@@ -51,6 +51,12 @@ expansion, float64 cumulative analytic state, inverse-square-root class
 weighting, threshold-0.7 pseudo labels, and zero replay. No L3A field is added
 to `protocol_b5c3.yaml`, so the frozen dataset/protocol hash remains unchanged.
 
+Original-DDP-Tau2 likewise keeps immutable method defaults outside the frozen
+YAML. Its manifest records both the collected source PCD (`T=1→7, γ=0.2`) and
+the deliberately registered, user-requested comparison mapping
+(`T=1→2, γ=0.7`). The latter changes method inference only; it does not alter
+the shared dataset protocol hash.
+
 The only registered tuning override is runner option `--ewc-lambda`. It is
 kept outside the frozen protocol object, validated as finite and positive, and
 written into method configuration. The official tuning launcher permits this

@@ -26,6 +26,7 @@ from .methods.krt import KRTBenchmarkMethod
 from .methods.csc import CSCBenchmarkMethod
 from .methods.multi_lane import MultiLaneBenchmarkMethod
 from .methods.l3a import L3ABenchmarkMethod
+from .methods.original_ddp import OriginalDDPBenchmarkMethod
 from .protocol import BenchmarkProtocol
 from .protocol import load_protocol
 from .types import (
@@ -40,7 +41,7 @@ from .types import (
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
 CORE_BASE_COMMIT = "00f399f13bc7552c254c8f6e6c095a8be4f56146"
-CORE_RUNTIME_VERSION = "0.6.0"
+CORE_RUNTIME_VERSION = "0.7.0"
 
 
 def _current_git_commit() -> str:
@@ -788,6 +789,7 @@ def _parse_args() -> argparse.Namespace:
             "csc",
             "multi_lane",
             "l3a",
+            "original_ddp",
         ),
         default="ddp",
     )
@@ -921,6 +923,7 @@ def main() -> None:
         "csc": CSCBenchmarkMethod,
         "multi_lane": MultiLaneBenchmarkMethod,
         "l3a": L3ABenchmarkMethod,
+        "original_ddp": OriginalDDPBenchmarkMethod,
     }
     method_class = method_classes[args.method]
     artifacts = ArtifactStore(

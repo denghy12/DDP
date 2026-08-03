@@ -50,6 +50,7 @@ remain a reserved extension point.
 - [CSC source audit and Track-A porting contract](CSC_TRACK_A.md)
 - [MULTI-LANE source audit and Track-A porting contract](MULTI_LANE_TRACK_A.md)
 - [L3A source audit and Track-A porting contract](L3A_TRACK_A.md)
+- [Original-DDP-Tau2 source audit and Track-A contract](ORIGINAL_DDP_TRACK_A.md)
 - [Universal checkpoint-free download standard](DOWNLOAD_STANDARD.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
@@ -87,6 +88,15 @@ The registered repository-local DDP result is a modified DDP-family variant,
 not an evaluation of the unmodified original DDP method. Its seed-0 result is
 retained as project evidence, while additional seeds are intentionally deferred
 until the local modifications and upstream baseline are separately audited.
+
+Original-DDP-Tau2 is now the active next baseline on
+`codex/emotic-baseline-original-ddp`. It retains the collected original DDP
+model, random text/visual prompting, loss, optimizer, and cross-task scheduler
+without an Adapter or replay. For direct comparison with the modified DDP, its
+registered PCD is the user-requested `T=1→2, γ=0.7`; the collected source's
+`T=1→7, γ=0.2` is preserved in the audit as a deliberate difference. Source
+identity/operator gates and the seed-0 validation launcher are implemented;
+validation and held-out results are pending.
 
 KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
 official source is fixed at
