@@ -135,8 +135,9 @@ Before any held-out test run, this branch must pass:
 8. a committed configuration freeze before `--configuration-locked` test.
 
 Formal artifacts follow [the universal checkpoint-free download
-standard](DOWNLOAD_STANDARD.md). Only after seed-0 held-out review may seeds 1
-and 2 be launched.
+standard](DOWNLOAD_STANDARD.md). Because configuration is frozen before any
+held-out access, seeds 0--2 may run concurrently; no held-out seed may change
+the configuration or determine whether another seed is reported.
 
 The seed-0 launcher deliberately reads method-specific controls named
 `L3A_OUTPUT_BASE`, `L3A_TRAIN_BATCH_SIZE`, `L3A_EVAL_BATCH_SIZE`,
@@ -164,14 +165,15 @@ precision.
 The CUDA gate measured `5926.9473 MiB` peak allocation for Task-0 training and
 `1110.9395 MiB` for the full-width float64 analytic solve at batch 64. Formal
 execution therefore assigns one seed to one physical GPU. The orchestrator
-runs locked seed 0 first, validates provenance/configuration/artifacts without
-using its metric to tune anything, and only then launches seeds 1 and 2 on two
-distinct GPUs in parallel. All three results are finally validated together
-and packaged by the universal checkpoint-free download standard.
+runs locked seeds 0, 1, and 2 concurrently on three distinct GPUs. All three
+results must pass provenance, configuration, artifact, and numerical-stability
+validation before they are aggregated and packaged by the universal
+checkpoint-free download standard. A failure in any seed blocks the package.
 
 The frozen held-out confirmation is `L3A_TRACK_A_V0_1`. Held-out runs must use
 the exact freeze commit supplied to the formal launcher, a clean worktree,
 train/eval batch size 64, two workers, and `configuration_locked=true`.
 The registered entry point is
 `scripts/emotic-mlcil/launch_l3a_formal_seed012_tmux.sh`; its single tmux job
-owns both phases, final three-seed validation, and checkpoint-free packaging.
+owns all three concurrent workers, final validation, and checkpoint-free
+packaging.

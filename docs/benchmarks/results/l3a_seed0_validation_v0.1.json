@@ -160,7 +160,7 @@
     "global_threshold_remains": 0.5,
     "required_confirmation": "L3A_TRACK_A_V0_1",
     "formal_seeds": [0, 1, 2],
-    "formal_execution": "seed 0 automatic compliance gate, then seeds 1 and 2 on distinct GPUs in parallel",
+    "formal_execution": "seeds 0, 1, and 2 concurrently on three distinct physical GPUs after the validation configuration freeze",
     "formal_results_pending": true,
     "formal_result_snapshot": "l3a_seed012_formal_v0.1.json"
   }

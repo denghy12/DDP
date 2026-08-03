@@ -130,25 +130,6 @@ def write_seed(
 
 
 class L3AFormalResultValidationTest(unittest.TestCase):
-    def test_seed0_metric_blind_gate(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            write_seed(root, 0)
-            payload = MODULE.validate_l3a_formal_results(
-                root, "formal_run", (0,), COMMIT
-            )
-            self.assertEqual(payload["status"], "seed0_compliance_gate_passed")
-            self.assertTrue(
-                payload["seed0_gate_does_not_select_configuration_from_metrics"]
-            )
-            self.assertIsNone(payload["aggregate"]["final_mAP"]["std"])
-            self.assertEqual(
-                payload["training_stability"][0]["optimizer_updates"], 76
-            )
-            self.assertEqual(
-                payload["training_stability"][0]["amp_overflow_skips"], 8
-            )
-
     def test_validates_and_aggregates_three_locked_seeds(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -158,11 +139,20 @@ class L3AFormalResultValidationTest(unittest.TestCase):
                 root, "formal_run", (0, 1, 2), COMMIT
             )
             self.assertEqual(payload["status"], "eligible_for_main_table")
+            self.assertTrue(
+                payload["configuration_was_frozen_before_all_held_out_seeds"]
+            )
             self.assertEqual(payload["aggregate"]["final_mAP"]["mean"], 41.0)
             self.assertEqual(payload["aggregate"]["final_mAP"]["std"], 1.0)
             self.assertEqual(
                 payload["aggregate"]["aggregation"],
                 "mean_and_sample_standard_deviation",
+            )
+            self.assertEqual(
+                payload["training_stability"][0]["optimizer_updates"], 76
+            )
+            self.assertEqual(
+                payload["training_stability"][0]["amp_overflow_skips"], 8
             )
 
     def test_rejects_unlocked_seed(self):
@@ -180,18 +170,22 @@ class L3AFormalResultValidationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             write_seed(root, 0, pseudo_threshold=0.71)
+            write_seed(root, 1)
+            write_seed(root, 2)
             with self.assertRaisesRegex(ValueError, "pseudo_threshold"):
                 MODULE.validate_l3a_formal_results(
-                    root, "formal_run", (0,), COMMIT
+                    root, "formal_run", (0, 1, 2), COMMIT
                 )
 
     def test_rejects_incomplete_training_log(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             write_seed(root, 0, complete_log=False)
+            write_seed(root, 1)
+            write_seed(root, 2)
             with self.assertRaisesRegex(ValueError, "training task IDs"):
                 MODULE.validate_l3a_formal_results(
-                    root, "formal_run", (0,), COMMIT
+                    root, "formal_run", (0, 1, 2), COMMIT
                 )
 
 

@@ -169,11 +169,10 @@ printf -v command \
   "${EXPECTED_GIT_COMMIT}" "${CONFIGURATION_LOCKED_CONFIRMATION}" \
   "${SCRIPT_DIR}/run_l3a_formal_seed012.sh" "${LAUNCHER_LOG}"
 
-tmux new-session -d -s "${SESSION}" -n "l3a_staged_seed012" "${command}"
-echo "Started locked staged L3A formal session: ${SESSION}"
+tmux new-session -d -s "${SESSION}" -n "l3a_parallel_seed012" "${command}"
+echo "Started locked parallel L3A formal session: ${SESSION}"
 echo "Run ID: ${RUN_ID}"
-echo "Phase 1: seed0->GPU${gpu_values[0]} with automatic compliance gate"
-echo "Phase 2 after gate: seed1->GPU${gpu_values[1]}, seed2->GPU${gpu_values[2]} in parallel"
+echo "Concurrent assignments: seed0->GPU${gpu_values[0]}, seed1->GPU${gpu_values[1]}, seed2->GPU${gpu_values[2]}"
 echo "Attach: tmux attach -t ${SESSION}"
 echo "Preflight log: ${PREFLIGHT_LOG}"
 echo "Runtime logs: ${RUN_OUTPUT_ROOT}/runtime_logs"

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
 
-ALLOWED_SEED_SEQUENCES = ((0,), (0, 1, 2))
+EXPECTED_SEEDS = (0, 1, 2)
 LOCK_CONFIRMATION = "L3A_TRACK_A_V0_1"
 AGGREGATE_METRICS = (
     "final_mAP",
@@ -201,8 +201,7 @@ def validate_l3a_formal_results(
     if not root.is_dir():
         raise FileNotFoundError(f"Missing formal run root: {root}")
     seed_values = tuple(int(seed) for seed in seeds)
-    if seed_values not in ALLOWED_SEED_SEQUENCES:
-        raise ValueError("L3A formal validation accepts seed 0 or seeds 0 1 2")
+    _require_equal(seed_values, EXPECTED_SEEDS, "formal seeds")
     if not re.fullmatch(r"[0-9a-f]{40}", expected_git_commit):
         raise ValueError("expected-git-commit must be a full lowercase SHA")
 
@@ -322,17 +321,14 @@ def validate_l3a_formal_results(
                 raise ValueError(f"seed{seed} training log reports {failure_key}")
         stability.append({"seed": seed, **run_stability})
 
-    aggregation = (
-        "single_seed_compliance_gate"
-        if len(seed_values) == 1
-        else "mean_and_sample_standard_deviation"
-    )
-    aggregate: Dict[str, Any] = {"aggregation": aggregation}
+    aggregate: Dict[str, Any] = {
+        "aggregation": "mean_and_sample_standard_deviation"
+    }
     for metric in AGGREGATE_METRICS:
         metric_values = [row[metric] for row in per_seed]
         aggregate[metric] = {
             "mean": statistics.mean(metric_values),
-            "std": statistics.stdev(metric_values) if len(metric_values) > 1 else None,
+            "std": statistics.stdev(metric_values),
         }
     per_task = []
     for task_id in range(8):
@@ -341,7 +337,7 @@ def validate_l3a_formal_results(
             {
                 "task": task_id,
                 "mean": statistics.mean(values),
-                "std": statistics.stdev(values) if len(values) > 1 else None,
+                "std": statistics.stdev(values),
             }
         )
     return {
@@ -350,11 +346,7 @@ def validate_l3a_formal_results(
         "protocol_id": "emotic_b5c3_v0.1",
         "track": "A",
         "run_id": run_id,
-        "status": (
-            "seed0_compliance_gate_passed"
-            if seed_values == (0,)
-            else "eligible_for_main_table"
-        ),
+        "status": "eligible_for_main_table",
         "configuration_lock_confirmation": LOCK_CONFIRMATION,
         "seeds": list(seed_values),
         "source": {**provenance, "protocol_hash_by_seed": protocol_hash_by_seed},
@@ -362,7 +354,7 @@ def validate_l3a_formal_results(
         "aggregate": aggregate,
         "per_task_mAP": per_task,
         "training_stability": stability,
-        "seed0_gate_does_not_select_configuration_from_metrics": True,
+        "configuration_was_frozen_before_all_held_out_seeds": True,
     }
 
 

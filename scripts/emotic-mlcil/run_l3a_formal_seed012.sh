@@ -35,7 +35,6 @@ read -r -a gpu_values <<< "${GPUS}"
 
 STATE_DIR="${RUN_OUTPUT_ROOT}/runtime_logs"
 PREFLIGHT_DIR="${RUN_OUTPUT_ROOT}/preflight_logs"
-SEED0_GATE="${RUN_OUTPUT_ROOT}/seed0_compliance_gate.json"
 FORMAL_SUMMARY="${RUN_OUTPUT_ROOT}/formal_seed_summary.json"
 mkdir -p "${STATE_DIR}"
 
@@ -80,25 +79,11 @@ run_seed() {
   return "${code}"
 }
 
-# Phase 1 is deliberately serialized. The validator checks only provenance,
-# locked configuration, artifact completeness, and numerical stability; it
-# never selects a hyperparameter from the held-out metric values.
-run_seed 0 "${gpu_values[0]}" seed0_compliance_gate
-"${PYTHON}" "${SCRIPT_DIR}/validate_l3a_formal_results.py" \
-  --run-root "${RUN_OUTPUT_ROOT}" \
-  --run-id "${RUN_ID}" \
-  --seeds 0 \
-  --expected-git-commit "${EXPECTED_GIT_COMMIT}" \
-  --output "${SEED0_GATE}"
-echo "Locked L3A seed-0 compliance gate passed; launching seeds 1 and 2"
-
-# Phase 2 uses one independent GPU per seed and begins automatically only
-# after the metric-blind seed-0 gate above succeeds.
 pids=()
-run_seed 1 "${gpu_values[1]}" post_seed0_parallel &
-pids+=("$!")
-run_seed 2 "${gpu_values[2]}" post_seed0_parallel &
-pids+=("$!")
+for seed in 0 1 2; do
+  run_seed "${seed}" "${gpu_values[seed]}" three_seed_parallel &
+  pids+=("$!")
+done
 
 overall_code=0
 set +e
@@ -111,7 +96,7 @@ for pid in "${pids[@]}"; do
 done
 set -e
 if [[ "${overall_code}" -ne 0 ]]; then
-  echo "At least one L3A post-gate seed failed; aggregation is blocked" >&2
+  echo "At least one L3A seed failed; aggregation and packaging are blocked" >&2
   exit 1
 fi
 for seed in 0 1 2; do
@@ -134,7 +119,6 @@ done
   --expected-bundles 3 \
   --extra "${PREFLIGHT_DIR}" \
   --extra "${STATE_DIR}" \
-  --extra "${SEED0_GATE}" \
   --extra "${FORMAL_SUMMARY}"
 
 echo "All three locked L3A seeds completed and validated"
