@@ -59,6 +59,7 @@ remain a reserved extension point.
 - [Frozen CSC seed-0 validation snapshot](results/csc_seed0_validation_v0.1.json)
 - [Registered CSC three-seed formal result](results/csc_seed012_formal_v0.1.json)
 - [Frozen MULTI-LANE seed-0 validation snapshot](results/multi_lane_seed0_validation_v0.1.json)
+- [Registered MULTI-LANE three-seed formal result](results/multi_lane_seed012_formal_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -96,7 +97,7 @@ triggered the guarded OOM fallback; the affected seeds restarted cleanly and
 the future memory smoke/capacity estimate now includes Adam state and replay
 batch 64 without changing the registered algorithm or result.
 
-CSC Track A is the latest completed integration line. Its official source is fixed at
+CSC Track A is complete. Its official source is fixed at
 `0bab38a00d6e0555f2df855ae2fe8db1fea68b12`, and the exact source archive has
 SHA-256 `588a098a1c7f3d813dee7df777c283fd27768a08a125d4e60b11b2d6ebdb7faa`.
 No upstream license file was found, so the source remains outside this
@@ -113,17 +114,19 @@ deviation, three seeds). Its fixed-0.5 Final cF1 is only
 failure and newest-class bias. This limitation is registered without any
 post-test threshold or hyperparameter change.
 
-MULTI-LANE is the next active integration line on
+MULTI-LANE Track A is complete on
 `codex/emotic-baseline-multi-lane`, branched from the registered CSC commit
 `e13cac7`. Its official source is fixed at `5ee982c` with archive SHA-256
 `dfe84ea3...22d49`; the fixed extraction is byte-identical to the previously
 collected snapshot. The implementation contract freezes the shared CLIP visual
 tower and trains only MULTI-LANE's task selectors, prompt slices, and
-classifier under current-label visibility. The independent runtime-`0.5.0`
-candidate, six focused unit cases, fixed-source execution oracle, worst-task
-GPU smoke, seed-0 validation launcher, and universal checkpoint-free packaging
-are now implemented. Clean-server preflight and seed-0 validation remain
-pending; no MULTI-LANE test result has been produced.
+classifier under current-label visibility. Its locked held-out seeds 0--2 were
+trained from clean commit `3fe1121` and are registered at Final mAP
+`31.2995 ± 0.1410`, Average mAP `37.9986 ± 0.4825`, and Forgetting
+`4.7885 ± 0.0199` (mean ± sample standard deviation). Every seed completed
+13,950 optimizer updates with zero AMP skips, NaN, or OOM. Aggregator fix
+`7206f58` only corrected the postprocessing task-metric path after training;
+the retained first traceback did not trigger retraining or prediction changes.
 
 The independent CSC CI-GCN operators have also been checked against the exact
 external upstream implementation with mapped inputs and parameters. Float32

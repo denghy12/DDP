@@ -206,9 +206,9 @@ shared classifier, for `689,178` optimizer parameters in total. Future lanes
 are preallocated architecture only: they are absent from current computation,
 receive no gradient, and cannot access future labels.
 
-The reviewed evidence is registered in
+The validation evidence is registered in
 [`results/multi_lane_seed0_validation_v0.1.json`](results/multi_lane_seed0_validation_v0.1.json).
-The configuration is now locked for held-out test seeds 0, 1, and 2. They run
+The configuration was then locked for held-out test seeds 0, 1, and 2. They ran
 concurrently on three distinct GPUs because each continual seed must preserve
 its own task sequence; spreading a single seed over the remaining GPUs would
 change the implementation and add synchronization overhead.
@@ -235,3 +235,40 @@ standard deviation, and creates one checkpoint-free archive:
 
 Any formal test metric is report-only and must not change the frozen
 configuration.
+
+## Frozen three-seed Track-A result
+
+The configuration-locked held-out test completed from clean training commit
+`3fe112129c1c89d6f289ab91ddc0d56eb58ee1f6`. Seeds 0, 1, and 2 achieved Final
+mAP `31.3621`, `31.3984`, and `31.1380`; the registered mean ± sample standard
+deviation is Final mAP `31.2995 ± 0.1410`, Average mAP
+`37.9986 ± 0.4825`, Forgetting `4.7885 ± 0.0199`, Final cF1
+`31.8111 ± 0.2026`, and Final oF1 `49.1092 ± 0.1331`. The mean held-out
+task-mAP curve is `51.6596`, `43.5800`, `34.4637`, `37.2980`, `36.5752`,
+`35.1085`, `34.0040`, and `31.2995` for tasks 0--7.
+
+Each seed completed all 240 epochs and 13,950 optimizer updates with finite
+logged values, zero guarded AMP skips, no NaN, and no OOM. The individual
+training and runtime logs contain no traceback. Physical parameter growth
+remains zero only because the `675,840` task-lane parameters were preallocated;
+the result has zero replay and does not use a task oracle.
+
+The formal preflight passed 82 Core tests (one skip), all 17 selected legacy
+regressions, and the fixed-source execution oracle with worst maximum absolute
+error `0.0`. After the postprocessing repair, its four focused tests pass and
+the repaired validator regenerates the packaged three-seed summary exactly.
+
+The first formal aggregation attempt failed only after all three seed runs had
+finished. The old aggregator looked for task rows at the top level of
+`metrics/summary.json`, while Core stores the canonical rows in
+`metrics/task_metrics.json`. Commit
+`7206f5834ad567e437eea8071ab8a16e65ee93dc` corrects that postprocessing path.
+No model was retrained and no prediction or score tensor was recomputed. The
+download archive intentionally retains the first launcher traceback as audit
+evidence; it must not be classified as a training failure.
+
+The formal result is frozen in
+[`results/multi_lane_seed012_formal_v0.1.json`](results/multi_lane_seed012_formal_v0.1.json).
+All 57 download-manifest records were rehashed successfully, all 24 canonical
+score tensors are present, and no `.pth` file is included. The archive SHA-256
+is `4f461144dfe6e5c35939a81a4e6ae6a9759fa17b7392633e338bbcad8fb4ecc8`.

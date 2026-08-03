@@ -1,0 +1,196 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "method": "MULTI-LANE",
+  "run_id": "multi_lane_formal_seed012_20260802_231734",
+  "status": "eligible_for_main_table",
+  "configuration_lock_confirmation": "MULTI_LANE_TRACK_A_V0_1",
+  "source": {
+    "formal_training_commit": "3fe112129c1c89d6f289ab91ddc0d56eb58ee1f6",
+    "postprocessing_aggregator_fix_commit": "7206f5834ad567e437eea8071ab8a16e65ee93dc",
+    "source_tree_hash": "2ef8d3f53b41012c503933ddf87d67668060402bf594e7426e462694a94a4c8a",
+    "core_runtime_version": "0.5.0",
+    "core_base_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+    "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+    "protocol_hash_by_seed": {
+      "0": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+      "1": "7324c4bcf8632259990ba1ade0a57608ea3ecd20f75ebaff5c87fba55a227090",
+      "2": "f7c21d4133f4b4cd6824a1a0e77f26a525e0cb520373fa5f271ee371263dba5a"
+    }
+  },
+  "eligibility": {
+    "reporting_split": "test",
+    "configuration_locked": true,
+    "test_labels_used_for_selection": false,
+    "prediction_reused_task_ids": [],
+    "all_seeds_clean": true,
+    "all_seeds_eligible_for_main_table": true,
+    "hyperparameters_changed_after_validation": false
+  },
+  "method_configuration": {
+    "upstream_repository": "https://github.com/tdemin16/multi-lane",
+    "upstream_commit": "5ee982c9298d4cfd6af471d9bb2ef3c0aad05373",
+    "upstream_archive_sha256": "dfe84ea31f6d7e51877c2661791c716aed7d888b8d783d16ce067cb8ce022d49",
+    "upstream_license": "CC-BY-NC-4.0",
+    "backbone": "OpenAI CLIP ViT-B/16 visual encoder (frozen)",
+    "visual_encoder_trainable": false,
+    "clip_text_encoder_used": false,
+    "benchmark_added_adapter": false,
+    "replay_enabled": false,
+    "epochs_per_task": 30,
+    "optimizer": "Adam reset at every task boundary",
+    "scheduler": "CosineAnnealingLR reset at every task boundary",
+    "effective_learning_rate": 0.0125,
+    "weight_decay": 0.0,
+    "train_batch_size": 64,
+    "eval_batch_size": 64,
+    "workers": 2,
+    "num_selectors": 10,
+    "num_prompts": 10,
+    "num_prompt_layers": 5,
+    "normalize": "pre-head",
+    "temperature": 1.0,
+    "amp": true,
+    "tf32": true,
+    "training_label_scope": "current_classes_only",
+    "inference_lane_scope": "all_seen_lanes_concat",
+    "task_oracle_at_inference": false
+  },
+  "resources": {
+    "total_parameters": 86881818,
+    "trainable_parameters": 689178,
+    "parameter_growth": 0,
+    "task_lane_parameters_total": 675840,
+    "task_lane_parameters_per_task": 84480,
+    "shared_classifier_parameters": 13338,
+    "task_lanes_preallocated_at_initialization": true,
+    "replay_memory_samples": 0,
+    "replay_memory_bytes": 0,
+    "formal_preflight_peak_mib": 1263.29931640625,
+    "formal_preflight_peak_reserved_mib": 1412.0,
+    "parameter_reporting_note": "parameter_growth=0 is physical growth after initialization, not zero task-specific capacity"
+  },
+  "per_seed": [
+    {
+      "seed": 0,
+      "physical_gpu": 0,
+      "final_mAP": 31.3621034645107,
+      "average_mAP": 38.31179304621705,
+      "forgetting": 4.794711853491275,
+      "final_cF1": 32.030474279901,
+      "final_oF1": 48.955589586523736,
+      "per_task_mAP": [
+        52.70549295528567,
+        43.808828420756974,
+        34.77360293418893,
+        37.53786523657137,
+        36.88369561818022,
+        35.32098009554389,
+        34.101775644698634,
+        31.3621034645107
+      ]
+    },
+    {
+      "seed": 1,
+      "physical_gpu": 1,
+      "final_mAP": 31.39838070082377,
+      "average_mAP": 38.240950471520584,
+      "forgetting": 4.804527178865856,
+      "final_cF1": 31.771921300451634,
+      "final_oF1": 49.18254248476383,
+      "per_task_mAP": [
+        51.99125336106529,
+        44.16136561483223,
+        34.713739672569965,
+        37.50196659184867,
+        36.81440146096231,
+        35.25459002531258,
+        34.091906344749866,
+        31.39838070082377
+      ]
+    },
+    {
+      "seed": 2,
+      "physical_gpu": 2,
+      "final_mAP": 31.13797234098905,
+      "average_mAP": 37.44298358017637,
+      "forgetting": 4.7661324866404104,
+      "final_cF1": 31.630935365972974,
+      "final_oF1": 49.18947933440687,
+      "per_task_mAP": [
+        50.2821439727392,
+        42.76995296921544,
+        33.90389239698789,
+        36.85409213256516,
+        36.02753297509455,
+        34.749817321413055,
+        33.81846453240664,
+        31.13797234098905
+      ]
+    }
+  ],
+  "aggregate": {
+    "aggregation": "mean_and_sample_standard_deviation",
+    "final_mAP": {"mean": 31.29948550210784, "std": 0.14104568543406878},
+    "average_mAP": {"mean": 37.998575699304666, "std": 0.4824589306101728},
+    "forgetting": {"mean": 4.7884571729991805, "std": 0.019946901233407414},
+    "final_cF1": {"mean": 31.81111031544187, "std": 0.2026318585702292},
+    "final_oF1": {"mean": 49.10920380189815, "std": 0.1330790191749395},
+    "parameter_growth": {"mean": 0.0, "std": 0.0}
+  },
+  "per_task_mAP": [
+    {"task": 0, "mean": 51.65963009636339, "std": 1.245245182713395},
+    {"task": 1, "mean": 43.580049001601544, "std": 0.7233687196495292},
+    {"task": 2, "mean": 34.46374500124893, "std": 0.4857696021740282},
+    {"task": 3, "mean": 37.29797465366173, "std": 0.38483236295109174},
+    {"task": 4, "mean": 36.57521001807903, "std": 0.47556600763227275},
+    {"task": 5, "mean": 35.10846248075651, "std": 0.3123646476422991},
+    {"task": 6, "mean": 34.00404884061838, "std": 0.16079646252698743},
+    {"task": 7, "mean": 31.29948550210784, "std": 0.14104568543406878}
+  ],
+  "training_stability": {
+    "epochs_completed_by_seed": [240, 240, 240],
+    "attempted_optimizer_updates_by_seed": [13950, 13950, 13950],
+    "optimizer_updates_by_seed": [13950, 13950, 13950],
+    "amp_overflow_skips_by_seed": [0, 0, 0],
+    "all_logged_values_finite": true,
+    "nan_detected_in_training_logs": false,
+    "oom_detected_in_training_logs": false,
+    "traceback_detected_in_training_logs": false,
+    "traceback_detected_in_seed_runtime_logs": false
+  },
+  "verification": {
+    "formal_preflight_core_tests": 82,
+    "formal_preflight_core_test_skips": 1,
+    "formal_preflight_legacy_regression_tests": 17,
+    "formal_preflight_upstream_operator_worst_max_abs_error": 0.0,
+    "postprocessing_fix_focused_tests": 4,
+    "postprocessing_fix_focused_tests_passed": true,
+    "real_archive_summary_regeneration_matches_packaged_summary": true
+  },
+  "postprocessing_audit": {
+    "initial_formal_aggregation_succeeded": false,
+    "initial_exception": "ValueError: seed0 must contain eight task metrics",
+    "failure_stage": "postprocessing_formal_result_aggregation_after_all_three_seed_runs_completed",
+    "root_cause": "The original aggregator looked for task metrics at the top level of metrics/summary.json instead of the canonical metrics/task_metrics.json file.",
+    "fix_commit": "7206f5834ad567e437eea8071ab8a16e65ee93dc",
+    "training_rerun_after_fix": false,
+    "prediction_recomputed_after_fix": false,
+    "formal_summary_regenerated_after_fix": true,
+    "launcher_log_retains_initial_postprocessing_traceback": true,
+    "interpretation": "The traceback belongs only to postprocessing and is not evidence of a training, evaluation, or score-artifact failure."
+  },
+  "sync_bundle": {
+    "archive_revision": "postprocessing_aggregation_recovery_no_training_or_prediction_change",
+    "bundle_count": 3,
+    "download_manifest_file_count": 57,
+    "download_manifest_total_bytes": 25804323,
+    "score_file_count": 24,
+    "contains_pth": false,
+    "canonical_scores_included": true,
+    "all_download_manifest_sha256_verified": true,
+    "archive_bytes": 5145471,
+    "archive_sha256": "4f461144dfe6e5c35939a81a4e6ae6a9759fa17b7392633e338bbcad8fb4ecc8"
+  }
+}
