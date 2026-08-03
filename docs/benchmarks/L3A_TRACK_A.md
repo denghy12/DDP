@@ -144,3 +144,34 @@ The seed-0 launcher deliberately reads method-specific controls named
 `L3A_UPSTREAM_ARCHIVE`. Generic variables left exported by an earlier KRT,
 CSC, or MULTI-LANE shell are ignored, preventing cross-method output paths or
 silently skipped preflight stages.
+
+## Frozen validation configuration
+
+The clean seed-0 validation run `l3a_seed0_val_clean_20260803_112320` passed all
+gates without changing any registered hyperparameter. It produced Final mAP
+`37.0597`, Average mAP `42.6542`, Final cF1 `33.4700`, Final oF1 `44.6241`, and
+Forgetting `1.7803`. The complete immutable evidence is stored in
+[`results/l3a_seed0_validation_v0.1.json`](results/l3a_seed0_validation_v0.1.json).
+
+Task-0 attempted 84 AMP updates: 76 optimizer updates succeeded and 8 overflow
+attempts were skipped. Every logged value and both analytic solutions were
+finite, and OneCycleLR advanced only on an applied optimizer update. This
+guarded behavior is part of the frozen execution record; it is not a reason to
+change AMP scaling after observing validation. The fixed evaluator threshold
+remains `0.5` even though the final validation predictions favor recall over
+precision.
+
+The CUDA gate measured `5926.9473 MiB` peak allocation for Task-0 training and
+`1110.9395 MiB` for the full-width float64 analytic solve at batch 64. Formal
+execution therefore assigns one seed to one physical GPU. The orchestrator
+runs locked seed 0 first, validates provenance/configuration/artifacts without
+using its metric to tune anything, and only then launches seeds 1 and 2 on two
+distinct GPUs in parallel. All three results are finally validated together
+and packaged by the universal checkpoint-free download standard.
+
+The frozen held-out confirmation is `L3A_TRACK_A_V0_1`. Held-out runs must use
+the exact freeze commit supplied to the formal launcher, a clean worktree,
+train/eval batch size 64, two workers, and `configuration_locked=true`.
+The registered entry point is
+`scripts/emotic-mlcil/launch_l3a_formal_seed012_tmux.sh`; its single tmux job
+owns both phases, final three-seed validation, and checkpoint-free packaging.

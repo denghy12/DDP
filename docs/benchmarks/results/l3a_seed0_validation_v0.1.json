@@ -1,0 +1,167 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "method": "L3A",
+  "status": "validation_passed_configuration_frozen",
+  "validation_run": {
+    "run_id": "l3a_seed0_val_clean_20260803_112320",
+    "reporting_split": "val",
+    "seed": 0,
+    "source": {
+      "git_commit": "3de69d11239cdaa4a4285572068f1325842f6918",
+      "git_dirty": false,
+      "source_tree_hash": "3f5242fcd0cf1d2db2c29335c481c27250d14aa11c6789ed8f365a8776b2912b",
+      "core_runtime_version": "0.6.0",
+      "core_base_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+      "protocol_hash": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+      "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+      "upstream_commit": "1067bbd6124a7aa96136baa555080ba9183ab2ac",
+      "upstream_tree": "9e6ac470600328f2a393f26e30ea764c3b50102b",
+      "upstream_archive_sha256": "307d721d76069a7fe95a10346be1323a842cd9624f8d55200f4cf7cd45462409"
+    },
+    "eligibility": {
+      "configuration_locked": false,
+      "reporting_split_is_test": false,
+      "test_labels_used_for_selection": false,
+      "prediction_reused_task_ids": [],
+      "eligible_for_main_table": false
+    },
+    "configuration": {
+      "backbone": "OpenAI CLIP ViT-B/16 visual encoder (Task-0 fine-tuned)",
+      "visual_encoder_trainability": "Task 0 only",
+      "clip_text_encoder_used": false,
+      "benchmark_added_adapter": false,
+      "replay_enabled": false,
+      "base_epochs": 1,
+      "base_learning_rate": 0.00004,
+      "weight_decay": 0.0001,
+      "one_cycle_pct_start": 0.2,
+      "feature_dim": 512,
+      "hidden_dim": 4096,
+      "analytic_repeats": 1,
+      "analytic_state_dtype": "float64",
+      "ridge": 1.0,
+      "pseudo_label": true,
+      "pseudo_threshold": 0.7,
+      "weighted_analytic": true,
+      "train_batch_size": 64,
+      "eval_batch_size": 64,
+      "workers": 2,
+      "amp": true,
+      "tf32": true,
+      "f1_threshold": 0.5
+    },
+    "main_table": {
+      "final_mAP": 37.059693843573285,
+      "average_mAP": 42.65419501681984,
+      "forgetting": 1.780312780573267,
+      "final_cF1": 33.470005667027095,
+      "final_oF1": 44.62405353055115,
+      "parameter_growth": 86016,
+      "replay_memory": {
+        "samples": 0,
+        "bytes": 0
+      }
+    },
+    "per_task_mAP": [
+      48.40276960566723,
+      48.08242085500239,
+      37.35027378406693,
+      44.59742087377648,
+      43.814436214311954,
+      42.4192934736562,
+      39.507251484504295,
+      37.059693843573285
+    ],
+    "current_task_validation_mAP": [
+      48.40850135747667,
+      60.82231282051029,
+      45.50432157919739,
+      68.89498812719481,
+      45.8155518009776,
+      55.0912334369519,
+      67.08277511209552,
+      41.26596325748167
+    ],
+    "training_stability": {
+      "task0_attempted_optimizer_updates": 84,
+      "task0_optimizer_updates": 76,
+      "task0_amp_overflow_skips": 8,
+      "task0_amp_overflow_skip_fraction": 0.09523809523809523,
+      "task0_base_asl_loss": 37.084272702534996,
+      "scheduler_advanced_on_skipped_updates": false,
+      "all_logged_values_finite": true,
+      "nan_detected": false,
+      "oom_detected": false,
+      "traceback_detected": false
+    },
+    "analytic_updates": {
+      "samples_by_task": [5353, 4394, 861, 9931, 4352, 2536, 627, 1526],
+      "counted_samples_by_task": [5353, 4394, 861, 9931, 4352, 2536, 627, 1526],
+      "pseudo_positive_labels_by_task": [0, 1882, 84, 1896, 216, 102, 6, 27],
+      "pseudo_positive_labels_per_sample_by_task": [
+        0.0,
+        0.4283113336367774,
+        0.0975609756097561,
+        0.19091732957406102,
+        0.04963235294117647,
+        0.04022082018927445,
+        0.009569377990430622,
+        0.017693315858453473
+      ],
+      "analytic_solution_finite": true,
+      "analytic_state_elements": 16883712,
+      "analytic_state_bytes": 135069696
+    },
+    "resources": {
+      "total_parameters": 88396288,
+      "task0_trainable_parameters": 86195205,
+      "incremental_parameters": 86016,
+      "per_incremental_task_parameters": 12288,
+      "task0_peak_mib": 5926.947265625,
+      "task0_peak_reserved_mib": 6286.0,
+      "analytic_peak_mib": 1110.939453125,
+      "analytic_peak_reserved_mib": 1518.0,
+      "gpu_smoke_train_batch_size": 64,
+      "gpu_smoke_analytic_batch_size": 64
+    },
+    "upstream_equivalence": {
+      "largest_max_abs_error": 2.220446049250313e-16,
+      "asl_loss_abs_error": 0.0,
+      "asl_gradient_max_abs_error": 0.0,
+      "pseudo_threshold_exact_match": true,
+      "pseudo_threshold_is_strict_greater_than": true
+    },
+    "artifacts": {
+      "archive": "l3a_seed0_val_clean_20260803_112320.tar.gz",
+      "archive_sha256": "5b9d2ad94ae3f618cc474eee9fa1114147d4f79d13e7bf45ea46907784d947e7",
+      "manifest_file_count": 19,
+      "manifest_total_bytes": 4056093,
+      "manifest_records_verified": 19,
+      "score_tasks_present": [0, 1, 2, 3, 4, 5, 6, 7],
+      "canonical_scores_included": true,
+      "contains_pth": false,
+      "contains_symlink": false,
+      "all_manifest_sha256_verified": true
+    }
+  },
+  "same_split_context": {
+    "multi_lane_seed0_validation_final_mAP": 41.96405116993232,
+    "krt_seed0_validation_final_mAP": 32.34349136536406,
+    "csc_seed0_validation_final_mAP": 28.216343564844127,
+    "comparison_is_validation_only": true,
+    "must_not_be_mixed_with_held_out_test_main_table": true
+  },
+  "freeze_decision": {
+    "hyperparameters_changed_after_validation": false,
+    "configuration_is_locked_for_held_out_test": true,
+    "test_metrics_must_not_change_configuration": true,
+    "global_threshold_remains": 0.5,
+    "required_confirmation": "L3A_TRACK_A_V0_1",
+    "formal_seeds": [0, 1, 2],
+    "formal_execution": "seed 0 automatic compliance gate, then seeds 1 and 2 on distinct GPUs in parallel",
+    "formal_results_pending": true,
+    "formal_result_snapshot": "l3a_seed012_formal_v0.1.json"
+  }
+}
