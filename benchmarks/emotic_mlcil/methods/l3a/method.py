@@ -640,6 +640,9 @@ class L3ABenchmarkMethod(BenchmarkMethod):
             ),
             "source_configuration_mapping": "official l3a_vit_coco.yaml",
             "selection_policy": "fixed_one_epoch_validation_monitoring_only",
+            "amp_skip_policy": (
+                "OneCycleLR advances only when GradScaler applies optimizer step"
+            ),
             "f1_threshold_mapping": "upstream 0.525 -> benchmark fixed 0.5",
             "old_future_ground_truth_used_for_training": False,
             "analytic_state_dtype": "float64",

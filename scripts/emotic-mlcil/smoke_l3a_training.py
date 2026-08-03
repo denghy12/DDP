@@ -99,8 +99,9 @@ def main() -> None:
     torch.cuda.synchronize()
     gradient_peak = torch.cuda.max_memory_allocated() / (1024**2)
     gradient_reserved = torch.cuda.max_memory_reserved() / (1024**2)
+    loss_value = float(loss.detach())
 
-    del optimizer, scaler, images, targets
+    del optimizer, scaler, images, targets, loss
     method.model.zero_grad(set_to_none=True)
     method.model.initialize_analytic()
     method.model.to("cuda")
@@ -140,7 +141,7 @@ def main() -> None:
                 "optimizer": "Adam",
                 "optimizer_stepped": optimizer_stepped,
                 "optimizer_state_tensors": optimizer_state_tensors,
-                "task0_loss": float(loss.detach()),
+                "task0_loss": loss_value,
                 "task0_peak_mib": gradient_peak,
                 "task0_peak_reserved_mib": gradient_reserved,
                 "analytic_peak_mib": analytic_peak,
