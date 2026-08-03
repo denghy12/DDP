@@ -173,6 +173,9 @@ def validate_multi_lane_formal_results(
         manifest = _read_object(seed_root / "run_manifest.json")
         config = _read_object(seed_root / "config_resolved.json")
         summary = _read_object(seed_root / "metrics" / "summary.json")
+        task_metrics_payload = _read_object(
+            seed_root / "metrics" / "task_metrics.json"
+        )
 
         expected_manifest = {
             "method": "MULTI-LANE",
@@ -241,9 +244,11 @@ def validate_multi_lane_formal_results(
             {"samples": 0, "bytes": 0},
             f"seed{seed} replay",
         )
-        task_metrics = summary.get("task_metrics")
+        task_metrics = task_metrics_payload.get("tasks")
         if not isinstance(task_metrics, list) or len(task_metrics) != 8:
-            raise ValueError(f"seed{seed} must contain eight task metrics")
+            raise ValueError(
+                f"seed{seed} metrics/task_metrics.json must contain eight tasks"
+            )
         _require_equal(
             [int(row.get("task_id", -1)) for row in task_metrics],
             list(range(8)),

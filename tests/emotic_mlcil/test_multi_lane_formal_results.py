@@ -83,7 +83,10 @@ def write_seed(root, seed, *, locked=True, commit=COMMIT, lane_total=675840):
     (seed_root / "run_manifest.json").write_text(json.dumps(manifest))
     (seed_root / "config_resolved.json").write_text(json.dumps(config))
     (seed_root / "metrics" / "summary.json").write_text(
-        json.dumps({"main_table": main_table, "task_metrics": task_metrics})
+        json.dumps({"main_table": main_table, "summary": {}})
+    )
+    (seed_root / "metrics" / "task_metrics.json").write_text(
+        json.dumps({"tasks": task_metrics})
     )
     log_lines = []
     for task in range(8):
