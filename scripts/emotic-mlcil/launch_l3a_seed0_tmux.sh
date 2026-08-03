@@ -14,17 +14,17 @@ CLIP_MODEL_PATH="${CLIP_MODEL_PATH:-${ROOT}/pretrained/clip/ViT-B-16.pt}"
 if [[ ! -s "${CLIP_MODEL_PATH}" && -s "/mnt/haoyuan/workspace/CODE_DDP-benchmark/pretrained/clip/ViT-B-16.pt" ]]; then
   CLIP_MODEL_PATH="/mnt/haoyuan/workspace/CODE_DDP-benchmark/pretrained/clip/ViT-B-16.pt"
 fi
-UPSTREAM_ROOT="${UPSTREAM_ROOT:-/mnt/haoyuan/workspace/baseline_sources/l3a_official}"
+UPSTREAM_ROOT="${L3A_UPSTREAM_ROOT:-/mnt/haoyuan/workspace/baseline_sources/l3a_official}"
 if [[ ! -d "${UPSTREAM_ROOT}" && -d "/mnt/haoyuan/workspace/baseline_sources/L3A-main" ]]; then
   UPSTREAM_ROOT="/mnt/haoyuan/workspace/baseline_sources/L3A-main"
 fi
-UPSTREAM_ARCHIVE="${UPSTREAM_ARCHIVE:-}"
-OUTPUT_BASE="${OUTPUT_BASE:-/mnt/haoyuan/workspace/emotic_benchmark_runs/l3a_track_a_v0.1}"
-TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-64}"
-EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-64}"
-WORKERS="${WORKERS:-2}"
-REQUIRE_CLEAN="${REQUIRE_CLEAN:-1}"
-RUN_GPU_SMOKE="${RUN_GPU_SMOKE:-1}"
+UPSTREAM_ARCHIVE="${L3A_UPSTREAM_ARCHIVE:-}"
+OUTPUT_BASE="${L3A_OUTPUT_BASE:-/mnt/haoyuan/workspace/emotic_benchmark_runs/l3a_track_a_v0.1}"
+TRAIN_BATCH_SIZE="${L3A_TRAIN_BATCH_SIZE:-64}"
+EVAL_BATCH_SIZE="${L3A_EVAL_BATCH_SIZE:-64}"
+WORKERS="${L3A_WORKERS:-2}"
+REQUIRE_CLEAN="${L3A_REQUIRE_CLEAN:-1}"
+RUN_GPU_SMOKE="${L3A_RUN_GPU_SMOKE:-1}"
 
 [[ "${RUN_ID}" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$ ]] || {
   echo "Invalid RUN_ID" >&2

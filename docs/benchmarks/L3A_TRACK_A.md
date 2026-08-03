@@ -137,3 +137,10 @@ Before any held-out test run, this branch must pass:
 Formal artifacts follow [the universal checkpoint-free download
 standard](DOWNLOAD_STANDARD.md). Only after seed-0 held-out review may seeds 1
 and 2 be launched.
+
+The seed-0 launcher deliberately reads method-specific controls named
+`L3A_OUTPUT_BASE`, `L3A_TRAIN_BATCH_SIZE`, `L3A_EVAL_BATCH_SIZE`,
+`L3A_WORKERS`, `L3A_RUN_GPU_SMOKE`, `L3A_UPSTREAM_ROOT`, and
+`L3A_UPSTREAM_ARCHIVE`. Generic variables left exported by an earlier KRT,
+CSC, or MULTI-LANE shell are ignored, preventing cross-method output paths or
+silently skipped preflight stages.
