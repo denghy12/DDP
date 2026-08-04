@@ -57,6 +57,9 @@ table.
 - [ ] Track B preserves and reports the audited original backbone.
 - [ ] Replay sample count and replay byte count are both reported.
 - [ ] Replay budget is compared under both sample and byte views.
+- [ ] Replay methods name a versioned memory contract and verify capacity,
+      update timing, replay/current ratio, stable-ID deduplication, stored-label
+      visibility, and checkpointed buffer RNG state.
 - [ ] Total, optimizer-updated, and incremental parameter counts are reported;
       optimizer-updated tensors are deduplicated and must not be inferred only
       from `requires_grad=True`.

@@ -66,6 +66,15 @@ field; AGCN does not use CLIP text features. The registered mapping averages
 `doubt` and `confusion` and uses same-root `disquiet` because `disquietment` is
 absent from the fixed GloVe 6B vocabulary.
 
+Replay methods use the separate machine-readable
+`replay_20c_v0.1.yaml` contract. It fixes a 20-sample-per-seen-class capacity
+schedule, visible-column-only payload, stable-ID deduplication, task-end update,
+and 1:1 replay/current exposure. The replay file is validated against the
+protocol ID but is not inserted into the frozen Core protocol object, so the
+registered B5-C3 protocol hash remains unchanged. ER and PRS record the full
+resolved replay contract and actual sample/byte usage in their method
+artifacts.
+
 The only registered tuning override is runner option `--ewc-lambda`. It is
 kept outside the frozen protocol object, validated as finite and positive, and
 written into method configuration. The official tuning launcher permits this

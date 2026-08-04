@@ -1,0 +1,17 @@
+contract_id: emotic_replay_20c_v0.1
+protocol_id: emotic_b5c3_v0.1
+sample_unit: unique_emotic_person_sample
+capacity:
+  kind: per_seen_class
+  samples_per_seen_class: 20
+  task_capacities: [100, 160, 220, 280, 340, 400, 460, 520]
+payload:
+  image: post_transform_float32_tensor
+  targets: visible_binary_columns_only
+  visible_mask: true
+  stable_sample_id: true
+training:
+  update_timing: task_end_single_pass
+  replay_to_current_ratio: 1.0
+  sample_without_replacement: true
+  current_and_replay_equal_sample_weight: true

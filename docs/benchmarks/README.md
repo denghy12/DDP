@@ -52,6 +52,8 @@ remain a reserved extension point.
 - [L3A source audit and Track-A porting contract](L3A_TRACK_A.md)
 - [Original-DDP-Tau2 source audit and Track-A contract](ORIGINAL_DDP_TRACK_A.md)
 - [AGCN source audit and Track-A porting contract](AGCN_TRACK_A.md)
+- [Shared replay memory contract](REPLAY_MEMORY_CONTRACT.md)
+- [ER control and PRS Track-A porting contract](ER_PRS_TRACK_A.md)
 - [Universal checkpoint-free download standard](DOWNLOAD_STANDARD.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
@@ -111,7 +113,7 @@ then completed concurrently as isolated processes on GPU 0 from clean commit
 scores contain 5,368 `emotic:test:` IDs and no validation IDs, so the raw
 source's default `val+test` behavior was not used by the benchmark run.
 
-AGCN Track-A implementation is active on `codex/emotic-baseline-agcn`, branched
+AGCN Track-A is complete on `codex/emotic-baseline-agcn`, branched
 from the frozen Original-DDP-Tau2 result. Official source is fixed at
 `3afe2ecbbef0051c6e841a97c369885011a683f0` under Apache-2.0 and remains outside
 the benchmark tree as an executable oracle. The independent port replaces only
@@ -131,6 +133,17 @@ NaN, traceback, or skipped update. The registered formal result is Final mAP
 `4.0622 ± 0.9285` (mean ± sample standard deviation). The checkpoint-free
 archive and all 57 manifest entries passed independent SHA-256 verification.
 AGCN Track A is now frozen and must not be rerun or tuned from held-out test.
+
+Replay-baseline development is active on `codex/emotic-baseline-er-prs`,
+branched from the frozen AGCN result. A machine-readable shared memory contract
+now fixes 20 unique person-samples per seen class (task capacities
+`100/160/220/280/340/400/460/520`), 1:1 replay/current exposure, masked
+capture-time-visible labels, stable-ID deduplication, and task-end updates. ER
+is the conventional reservoir control. PRS is an independent Track-A port of
+the official ECCV 2020 source fixed at `136cee1`, retaining allocation power
+`q=-0.03` while replacing only ResNet-101 with the common trainable CLIP visual
+tower. Both interfaces and preflight gates are implemented; no validation or
+held-out result has been registered yet.
 
 KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
 official source is fixed at
