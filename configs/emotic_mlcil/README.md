@@ -62,7 +62,9 @@ thresholds/scales, and paper-resolved `0.07 / 0.93 / 1e5` loss weights are
 immutable code defaults. The runner option `--agcn-word-embeddings` identifies
 an audited 26-by-300 GloVe JSON prepared by
 `prepare_agcn_glove_embeddings.py`. This is a method asset, not a protocol
-field; AGCN does not use CLIP text features.
+field; AGCN does not use CLIP text features. The registered mapping averages
+`doubt` and `confusion` and uses same-root `disquiet` because `disquietment` is
+absent from the fixed GloVe 6B vocabulary.
 
 The only registered tuning override is runner option `--ewc-lambda`. It is
 kept outside the frozen protocol object, validated as finite and positive, and

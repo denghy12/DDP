@@ -4,25 +4,81 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import json
 from pathlib import Path
 
-from benchmarks.emotic_mlcil.protocol import load_protocol
+
+GENSIM_GLOVE_300_MD5 = "29e9329ac2241937d55b852e8284e89b"
 
 
-def file_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
+def file_hashes(path: Path):
+    sha256 = hashlib.sha256()
+    md5 = hashlib.md5()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+            sha256.update(chunk)
+            md5.update(chunk)
+    return sha256.hexdigest(), md5.hexdigest()
+
+
+def open_embedding_text(path: Path):
+    if path.suffix == ".gz":
+        return gzip.open(path, "rt", encoding="utf-8")
+    return path.open("r", encoding="utf-8")
+
+
+def protocol_identity(path: Path):
+    """Load normally on the server, with a stdlib-only frozen-YAML fallback."""
+
+    try:
+        from benchmarks.emotic_mlcil.protocol import load_protocol
+
+        protocol = load_protocol(path)
+        return {
+            "protocol_id": protocol.protocol_id,
+            "class_order": list(protocol.class_order),
+            "class_order_hash": protocol.class_order_hash,
+        }
+    except (ModuleNotFoundError, RuntimeError):
+        # This utility is intentionally usable on a local machine without the
+        # PyTorch/PyYAML training environment. Only the two scalar/list fields
+        # needed by the embedding asset are parsed here; the server still
+        # performs the authoritative full protocol validation.
+        protocol_id = None
+        class_order = []
+        reading_classes = False
+        for raw_line in path.read_text(encoding="utf-8").splitlines():
+            if raw_line.startswith("protocol_id:"):
+                protocol_id = raw_line.split(":", 1)[1].strip()
+            elif raw_line == "class_order:":
+                reading_classes = True
+            elif raw_line == "tasks:":
+                reading_classes = False
+            elif reading_classes and raw_line.startswith("  - "):
+                class_order.append(raw_line[4:])
+        if not protocol_id or not class_order:
+            raise ValueError("Could not read protocol identity from frozen YAML")
+        canonical = json.dumps(
+            class_order, ensure_ascii=False, sort_keys=True,
+            separators=(",", ":"), allow_nan=False,
+        )
+        return {
+            "protocol_id": protocol_id,
+            "class_order": class_order,
+            "class_order_hash": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        }
 
 
 def token_mapping(class_order):
     mapping = {}
     for name in class_order:
-        if name == "Doubt/Confusion":
+        if name == "Disquietment":
+            # The exact EMOTIC label is absent from the fixed GloVe 6B
+            # vocabulary. Freeze the closest same-root token before validation.
+            mapping[name] = ["disquiet"]
+        elif name == "Doubt/Confusion":
             mapping[name] = ["doubt", "confusion"]
         else:
             mapping[name] = [name.lower()]
@@ -30,11 +86,14 @@ def token_mapping(class_order):
 
 
 def prepare(glove_path: Path, protocol_path: Path, output_path: Path):
-    protocol = load_protocol(protocol_path)
-    mapping = token_mapping(protocol.class_order)
+    protocol = protocol_identity(protocol_path)
+    source_sha256, source_md5 = file_hashes(glove_path)
+    if glove_path.name == "glove-wiki-gigaword-300.gz" and source_md5 != GENSIM_GLOVE_300_MD5:
+        raise ValueError("Gensim GloVe 300d MD5 differs from its fixed metadata")
+    mapping = token_mapping(protocol["class_order"])
     required = {token for tokens in mapping.values() for token in tokens}
     found = {}
-    with glove_path.open("r", encoding="utf-8") as handle:
+    with open_embedding_text(glove_path) as handle:
         for line in handle:
             fields = line.rstrip().split(" ")
             if fields[0] not in required:
@@ -49,7 +108,7 @@ def prepare(glove_path: Path, protocol_path: Path, output_path: Path):
     if missing:
         raise ValueError("Missing required GloVe tokens: " + ", ".join(missing))
     vectors = []
-    for name in protocol.class_order:
+    for name in protocol["class_order"]:
         rows = [found[token] for token in mapping[name]]
         vectors.append([sum(values) / len(values) for values in zip(*rows)])
     payload = {
@@ -57,10 +116,17 @@ def prepare(glove_path: Path, protocol_path: Path, output_path: Path):
         "method": "AGCN",
         "embedding_family": "GloVe 6B 300d",
         "source_name": glove_path.name,
-        "source_sha256": file_sha256(glove_path),
-        "protocol_id": protocol.protocol_id,
-        "class_order_hash": protocol.class_order_hash,
-        "class_order": list(protocol.class_order),
+        "source_sha256": source_sha256,
+        "source_md5": source_md5,
+        "source_distribution": (
+            "gensim-data glove-wiki-gigaword-300; converted from Stanford "
+            "GloVe text to word2vec text and gzip-compressed"
+            if glove_path.suffix == ".gz"
+            else "Stanford GloVe text"
+        ),
+        "protocol_id": protocol["protocol_id"],
+        "class_order_hash": protocol["class_order_hash"],
+        "class_order": protocol["class_order"],
         "token_mapping": mapping,
         "vectors": vectors,
     }
@@ -88,7 +154,8 @@ def main():
         "classes": len(payload["vectors"]),
         "dimensions": len(payload["vectors"][0]),
         "source_sha256": payload["source_sha256"],
-        "output_sha256": file_sha256(args.output),
+        "source_md5": payload["source_md5"],
+        "output_sha256": file_hashes(args.output)[0],
     }, indent=2))
 
 

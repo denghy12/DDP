@@ -231,6 +231,8 @@ class AGCNBenchmarkMethod(BenchmarkMethod):
                 "path": str(path),
                 "sha256": hashlib.sha256(raw).hexdigest(),
                 "source_sha256": payload.get("source_sha256"),
+                "source_md5": payload.get("source_md5"),
+                "source_distribution": payload.get("source_distribution"),
                 "token_mapping": payload.get("token_mapping"),
             }
         expected = (self.protocol.num_classes, self.options.embedding_dim)

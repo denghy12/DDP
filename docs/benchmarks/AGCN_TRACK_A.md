@@ -70,24 +70,41 @@ threshold. Held-out test requires `configuration_locked=true`.
 
 The release does not include its referenced embedding pickles. Track A fixes a
 machine-readable 26-by-300 mapping from the standard
-[GloVe 6B 300d](https://nlp.stanford.edu/projects/glove/) text file, whose
-pretrained vectors are released under PDDL 1.0.
-Every single-word EMOTIC class maps to its lowercase token;
-`Doubt/Confusion` is the arithmetic mean of `doubt` and `confusion`. The JSON
-records the source-file SHA-256, token mapping, protocol class order, and all
-vectors. The benchmark refuses a wrong class order, width, non-finite vector,
-or checkpoint/asset hash mismatch.
+[GloVe 6B 300d](https://nlp.stanford.edu/projects/glove/) vectors, whose
+pretrained data are released under PDDL 1.0. To avoid the 822MB four-width ZIP,
+the preparation gate accepts Gensim's official data-registry repack: the same
+400K×300 Wikipedia-2014/Gigaword-5 vectors converted to word2vec text and gzip.
+The fixed gzip is 394,362,229 bytes with registry MD5
+`29e9329ac2241937d55b852e8284e89b` and observed SHA-256
+`0a7aebbe49097dc6e5ffff7a25e9aa20181a6e862050ca68bd2f36e056739e00`.
 
-Prepare it on the server once:
+Every single-word EMOTIC class maps to its lowercase token except
+`Disquietment`: the exact word is absent from the fixed 400K vocabulary, so its
+same-root token `disquiet` is frozen before validation. `Doubt/Confusion` is the
+arithmetic mean of `doubt` and `confusion`. The JSON records the compressed
+source SHA-256/MD5, distribution/conversion, token mapping, protocol class
+order, and all vectors. The benchmark refuses a wrong class order, width,
+non-finite vector, source MD5, or checkpoint/asset hash mismatch.
+
+The recommended path is to prepare the small JSON locally, then upload only
+that asset:
 
 ```bash
-cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1
+cd /Users/denghaoyuan/workspace/MyCode/CODE_DDP-benchmark
 
-/opt/conda/envs/ddp/bin/python \
+python3 \
   scripts/emotic-mlcil/prepare_agcn_glove_embeddings.py \
-  --glove /mnt/haoyuan/workspace/baseline_sources/glove.6B.300d.txt \
+  --glove /Users/denghaoyuan/workspace/MyCode/baseline_sources/glove6b/glove-wiki-gigaword-300.gz \
   --output pretrained/agcn/emotic_glove_6b_300d.json
+
+scp -P 9205 pretrained/agcn/emotic_glove_6b_300d.json \
+  root@172.31.214.226:/mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1/pretrained/agcn/
 ```
+
+The generator has a standard-library-only parser for the frozen class list so
+the local preparation does not require PyTorch or PyYAML. The server method
+still validates the complete protocol and checks that the asset class order is
+identical.
 
 ## Validation entry point
 
