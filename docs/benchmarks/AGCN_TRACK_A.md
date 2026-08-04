@@ -199,3 +199,42 @@ mean plus sample standard deviation. The universal packager then produces:
 All `.pth` checkpoints remain server-only; canonical `.pt` scores, metrics,
 manifests, preflight/runtime logs, source oracle, and the three-seed aggregate
 are included in the download package.
+
+## Registered three-seed formal result
+
+The locked held-out run `agcn_formal_seed012_20260804_141022` completed from
+clean commit `d763c667558108914b560f412cc47ab7450490d9`. Seeds 0, 1, and 2 ran
+concurrently as three isolated processes on physical GPU 0. All processes
+returned exit code 0; no OOM fallback or training rerun was used.
+
+Mean ± sample standard deviation across seeds is:
+
+- Final mAP: `17.9090 ± 0.3755`;
+- Average mAP: `21.7826 ± 0.1163`;
+- Forgetting: `4.0622 ± 0.9285`;
+- fixed-0.5 Final cF1: `13.7096 ± 0.3868`;
+- fixed-0.5 Final oF1: `47.8887 ± 3.5334`.
+
+The mean Task-0 through Task-7 mAP curve is `25.6812, 23.0741, 19.3853,
+24.3495, 22.6081, 21.7311, 19.5225, 17.9090`. Each seed completed 3,701
+optimizer updates, or 11,103 total, with zero skipped updates and no non-finite
+training value. The online graph stayed finite. Task-7 adjacency density was
+`0.1420`, `0.1509`, and `0.1376` for seeds 0--2, with `96`, `102`, and `93`
+nonzero entries. Current-positive, old-soft, and cross soft/hard ACM masses are
+preserved per task and seed in the result snapshot.
+
+Class-level forgetting is concentrated in Anticipation (`33.9902 ± 3.4412`),
+Affection (`14.2650 ± 2.3878`), and Confidence (`12.2861 ± 7.0441`). This does
+not change the locked configuration: the result is retained as observed and
+must not be corrected by post-test tuning.
+
+The checkpoint-free archive is 6,499,597 bytes with SHA-256
+`24979d491737adbd64f8aa2d07af21f856670e15bdf0439e1943222746605ead`.
+It contains three result bundles, 24 canonical score files, and 57 verified
+manifest entries totaling 25,698,855 bytes; it contains no `.pth`, checkpoint
+directory, or symlink. Full metrics, graph/ACM arrays, class forgetting,
+provenance, GPU concurrency, and artifact evidence are registered in
+`results/agcn_seed012_formal_v0.1.json`.
+
+AGCN Track A is frozen at this result. No further AGCN execution, threshold
+calibration, graph/loss adjustment, or held-out-driven rerun is approved.

@@ -68,6 +68,7 @@ remain a reserved extension point.
 - [Frozen Original-DDP-Tau2 seed-0 validation snapshot](results/original_ddp_tau2_seed0_validation_v0.1.json)
 - [Registered Original-DDP-Tau2 three-seed formal result](results/original_ddp_tau2_seed012_formal_v0.1.json)
 - [Frozen AGCN seed-0 validation snapshot](results/agcn_seed0_validation_v0.1.json)
+- [Registered AGCN three-seed formal result](results/agcn_seed012_formal_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -122,10 +123,14 @@ error of `4.47e-8`; the final-task teacher/two-Adam smoke reserved `2640 MiB`.
 Seed-0 validation reached Final mAP `25.3571`, Average mAP `28.9310`, and
 Forgetting `1.1844` with 3,701 optimizer steps, zero skipped updates, and no
 NaN/OOM. The one-epoch schedule, both learning rates, all three loss weights,
-GloVe mapping, graph construction constants, and global threshold are now
-frozen before held-out access. A configuration-locked three-process runner is
-ready to execute seeds 0--2 concurrently on GPU 0; formal results remain
-pending and cannot change the registered configuration.
+GloVe mapping, graph construction constants, and global threshold were frozen
+before held-out access. Locked test seeds 0--2 then completed concurrently as
+three isolated processes on GPU 0 from clean commit `d763c66`, with no OOM,
+NaN, traceback, or skipped update. The registered formal result is Final mAP
+`17.9090 ± 0.3755`, Average mAP `21.7826 ± 0.1163`, and Forgetting
+`4.0622 ± 0.9285` (mean ± sample standard deviation). The checkpoint-free
+archive and all 57 manifest entries passed independent SHA-256 verification.
+AGCN Track A is now frozen and must not be rerun or tuned from held-out test.
 
 KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
 official source is fixed at

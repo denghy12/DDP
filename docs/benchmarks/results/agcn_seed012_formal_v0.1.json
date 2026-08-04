@@ -1,0 +1,260 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "method": "AGCN",
+  "run_id": "agcn_formal_seed012_20260804_141022",
+  "status": "eligible_for_main_table",
+  "configuration_lock_confirmation": "AGCN_TRACK_A_V0_1",
+  "source": {
+    "formal_training_commit": "d763c667558108914b560f412cc47ab7450490d9",
+    "source_tree_hash": "109dbb8d74a2d60b5c123446f50490cf02ae48661c91c2b0bf186e8975bd5ab1",
+    "core_runtime_version": "0.8.0",
+    "core_base_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+    "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+    "protocol_hash_by_seed": {
+      "0": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+      "1": "7324c4bcf8632259990ba1ade0a57608ea3ecd20f75ebaff5c87fba55a227090",
+      "2": "f7c21d4133f4b4cd6824a1a0e77f26a525e0cb520373fa5f271ee371263dba5a"
+    },
+    "data_split_hash": {
+      "task0": "9ad2cdb8e7ec95bc9152953622cbfd98e7eeabd0f413143d2af248d796132dfb",
+      "task1": "b9adf48fdbd522c7eb0cbb8b19ee950742184faf238059311c951c69f46f8a51",
+      "task2": "ac853116831a50f66a4173d7a364fa136645d03ed28ea4ff727fcdaa9ef1a975",
+      "task3": "a7f8d0a25d7085ab45f7219fc156c65b27f5190b24d4fe5b268b48c39081d62d",
+      "task4": "709f667258a29107c88422b5dfb4849ff02ed44193e2341f733be88b5ba23e7c",
+      "task5": "e76331ff24a47c88dd394d52bfb8c33a9cd5936e2e222ccd5b2778696a2d3118",
+      "task6": "7720625403cde13afe85ffe826dcbbf7ed572a74ee1a3ce222dc58022f60cd63",
+      "task7": "a0ad09e4d3c3ca81f8ba63eb0d41b618666192a75bffc61858cb44a2cbe5a415"
+    }
+  },
+  "eligibility": {
+    "reporting_split": "test",
+    "configuration_locked": true,
+    "configuration_was_frozen_before_all_held_out_seeds": true,
+    "test_labels_used_for_selection": false,
+    "prediction_reused_task_ids": [],
+    "all_seeds_clean": true,
+    "all_seeds_eligible_for_main_table": true,
+    "hyperparameters_changed_after_validation": false
+  },
+  "method_configuration": {
+    "upstream_repository": "https://github.com/Kaile-Du/AGCN",
+    "upstream_commit": "3afe2ecbbef0051c6e841a97c369885011a683f0",
+    "upstream_tree": "6c25689b81d0807523108a782ee59630d25a9b40",
+    "upstream_archive_sha256": "b5843d3ee0964767b48c49ba4b71fdf93c4bf954460669ed2b1cd05f9504f301",
+    "upstream_license": "Apache-2.0",
+    "backbone": "OpenAI CLIP ViT-B/16 visual encoder (fine-tuned)",
+    "clip_text_encoder_used": false,
+    "visual_encoder_trainable": true,
+    "benchmark_added_adapter": false,
+    "replay_enabled": false,
+    "class_embedding_asset_sha256": "e926b8672cd761169586668c54e4676093b152e2b02a218747f55bf72e1d1bee",
+    "class_embedding_source_sha256": "0a7aebbe49097dc6e5ffff7a25e9aa20181a6e862050ca68bd2f36e056739e00",
+    "class_embedding_source_md5": "29e9329ac2241937d55b852e8284e89b",
+    "visual_dim": 512,
+    "class_embedding_dim": 300,
+    "graph_hidden_dim": 1024,
+    "epochs_per_task": 1,
+    "visual_learning_rate": 0.0001,
+    "graph_learning_rate": 0.00003,
+    "optimizer": "two Adam optimizers",
+    "optimizer_betas": [0.9, 0.999],
+    "optimizer_epsilon": 1e-08,
+    "classification_weight": 0.07,
+    "distillation_weight": 0.93,
+    "relationship_weight": 100000.0,
+    "task0_threshold": 0.0,
+    "current_threshold": 0.4,
+    "cross_threshold": 0.3,
+    "task0_graph_scale": 0.28,
+    "later_graph_scale": 0.25,
+    "reverse_bayes_scale": 0.5,
+    "task0_degree_exponent": -0.8,
+    "later_degree_exponent": -0.5,
+    "train_batch_size": 8,
+    "eval_batch_size": 32,
+    "workers": 0,
+    "amp": false,
+    "tf32": false,
+    "f1_threshold": 0.5
+  },
+  "resources": {
+    "total_parameters": 87024128,
+    "trainable_parameters": 87024128,
+    "incremental_parameters": 0,
+    "replay_memory_samples": 0,
+    "replay_memory_bytes": 0,
+    "gpu_smoke_batch_size": 8,
+    "gpu_smoke_peak_allocated_mib": 2347.68505859375,
+    "gpu_smoke_peak_reserved_mib": 2640.0,
+    "three_process_estimated_reserved_mib": 7920.0,
+    "launcher_minimum_free_mib": 12000
+  },
+  "execution": {
+    "mode": "three_concurrent_isolated_processes_on_one_physical_gpu",
+    "physical_gpu_by_seed": {"0": 0, "1": 0, "2": 0},
+    "completion_exit_code_by_seed": {"0": 0, "1": 0, "2": 0},
+    "all_processes_completed": true,
+    "oom_fallback_used": false,
+    "training_rerun_used": false
+  },
+  "per_seed": [
+    {
+      "seed": 0,
+      "physical_gpu": 0,
+      "final_mAP": 18.164539514511226,
+      "average_mAP": 21.91324099143965,
+      "forgetting": 3.4469126278238225,
+      "final_cF1": 14.149936552669988,
+      "final_oF1": 43.8087478688574,
+      "parameter_growth": 0.0,
+      "per_task_mAP": [24.69400050790666, 23.36902746976779, 19.74462325966939, 24.384747943127895, 23.235544383117883, 22.034403569231113, 19.679041284185246, 18.164539514511226]
+    },
+    {
+      "seed": 1,
+      "physical_gpu": 0,
+      "final_mAP": 18.08444413412299,
+      "average_mAP": 21.74417415801814,
+      "forgetting": 3.6093521069754173,
+      "final_cF1": 13.4246757838151,
+      "final_oF1": 49.93579225226511,
+      "parameter_growth": 0.0,
+      "per_task_mAP": [24.92868919856385, 22.53639562431296, 19.365192716533024, 24.527854835192997, 22.899258615965202, 22.044357146174796, 19.567200993279343, 18.08444413412299]
+    },
+    {
+      "seed": 2,
+      "physical_gpu": 0,
+      "final_mAP": 17.47787130511716,
+      "average_mAP": 21.690346055567716,
+      "forgetting": 5.130202217303089,
+      "final_cF1": 13.55416120159139,
+      "final_oF1": 49.92170261228557,
+      "parameter_growth": 0.0,
+      "per_task_mAP": [27.420956126967077, 23.31679516008373, 19.045981099082958, 24.135751630821115, 21.689495498628734, 21.114564751031143, 19.3213528728098, 17.47787130511716]
+    }
+  ],
+  "aggregate": {
+    "aggregation": "mean_and_sample_standard_deviation",
+    "final_mAP": {"mean": 17.908951651250458, "std": 0.3754683956163129},
+    "average_mAP": {"mean": 21.782587068341837, "std": 0.1163064996850592},
+    "forgetting": {"mean": 4.0621556507007766, "std": 0.9285145380768153},
+    "final_cF1": {"mean": 13.709591179358826, "std": 0.3868069986460756},
+    "final_oF1": {"mean": 47.8887475778027, "std": 3.5333904183141067},
+    "parameter_growth": {"mean": 0.0, "std": 0.0}
+  },
+  "per_task_mAP": [
+    {"task": 0, "mean": 25.68121527781253, "std": 1.5112224727164882},
+    {"task": 1, "mean": 23.074072751388158, "std": 0.4663738556979941},
+    {"task": 2, "mean": 19.38526569176179, "std": 0.3497533565072965},
+    {"task": 3, "mean": 24.349451469714, "std": 0.19842029003170927},
+    {"task": 4, "mean": 22.608099499237273, "std": 0.813109470949562},
+    {"task": 5, "mean": 21.73110848881235, "std": 0.5339657328625225},
+    {"task": 6, "mean": 19.52253171675813, "std": 0.18298021233665923},
+    {"task": 7, "mean": 17.908951651250458, "std": 0.3754683956163129}
+  ],
+  "training_stability": {
+    "optimizer_updates_by_seed": [3701, 3701, 3701],
+    "total_optimizer_updates": 11103,
+    "optimizer_updates_by_task": [670, 550, 108, 1242, 544, 317, 79, 191],
+    "skipped_optimizer_updates_by_seed": [0, 0, 0],
+    "skipped_optimizer_updates_by_task": [0, 0, 0, 0, 0, 0, 0, 0],
+    "training_samples_by_task": [5353, 4394, 861, 9931, 4352, 2536, 627, 1526],
+    "all_logged_values_finite": true,
+    "nan_detected": false,
+    "oom_detected": false,
+    "traceback_detected": false
+  },
+  "graph_and_acm": {
+    "definition": "Arrays are ordered by Task 0 through Task 7 and preserve each seed's final logged online ACM/adjacency statistics.",
+    "per_seed": [
+      {
+        "seed": 0,
+        "adjacency_nonzero_by_task": [25, 36, 42, 60, 80, 86, 93, 96],
+        "adjacency_density_by_task": [1.0, 0.5625, 0.34710743801652894, 0.30612244897959184, 0.2768166089965398, 0.215, 0.17580340264650285, 0.14201183431952663],
+        "current_positive_mass_by_task": [5610.0, 4467.0, 965.0, 12244.0, 4378.0, 2747.0, 764.0, 1566.0],
+        "old_soft_mass_by_task": [0.0, 4394.00048828125, 861.0000610351562, 9930.998046875, 4352.0, 2535.999755859375, 627.0, 1526.0],
+        "cross_soft_hard_mass_by_task": [0.0, 4467.00048828125, 965.0001220703125, 12243.998046875, 4378.0, 2746.999755859375, 764.0, 1566.0]
+      },
+      {
+        "seed": 1,
+        "adjacency_nonzero_by_task": [25, 36, 45, 63, 83, 89, 96, 102],
+        "adjacency_density_by_task": [1.0, 0.5625, 0.371900826446281, 0.32142857142857145, 0.28719723183391005, 0.2225, 0.18147448015122875, 0.15088757396449703],
+        "current_positive_mass_by_task": [5610.0, 4467.0, 965.0, 12244.0, 4378.0, 2747.0, 764.0, 1566.0],
+        "old_soft_mass_by_task": [0.0, 4393.99951171875, 860.9998168945312, 9931.00390625, 4352.00048828125, 2536.0, 627.0, 1526.000244140625],
+        "cross_soft_hard_mass_by_task": [0.0, 4466.99853515625, 965.0000610351562, 12244.001953125, 4378.0, 2747.0, 764.0, 1565.9998779296875]
+      },
+      {
+        "seed": 2,
+        "adjacency_nonzero_by_task": [25, 36, 45, 66, 83, 86, 90, 93],
+        "adjacency_density_by_task": [1.0, 0.5625, 0.371900826446281, 0.336734693877551, 0.28719723183391005, 0.215, 0.17013232514177692, 0.13757396449704143],
+        "current_positive_mass_by_task": [5610.0, 4467.0, 965.0, 12244.0, 4378.0, 2747.0, 764.0, 1566.0],
+        "old_soft_mass_by_task": [0.0, 4393.99951171875, 861.0000610351562, 9930.998046875, 4352.00146484375, 2536.00048828125, 627.0, 1526.000244140625],
+        "cross_soft_hard_mass_by_task": [0.0, 4466.998046875, 965.0, 12244.001953125, 4378.00048828125, 2747.0, 764.0, 1566.0]
+      }
+    ]
+  },
+  "per_class_forgetting": {
+    "definition": "For each class and seed, maximum AP from its introduction through Task 7 minus final Task-7 AP; mean and sample standard deviation are across seeds. Surprise, Sympathy, and Yearning enter only at Task 7, so they have no forgetting interval and are omitted.",
+    "rows": [
+      {"class": "Affection", "mean": 14.265047294428413, "std": 2.3878490001870336},
+      {"class": "Anger", "mean": 2.6510813431095253, "std": 1.072571466417813},
+      {"class": "Annoyance", "mean": 5.025455323444667, "std": 1.8453270794879042},
+      {"class": "Anticipation", "mean": 33.990231342855765, "std": 3.4411723445461107},
+      {"class": "Aversion", "mean": 2.5450522270916203, "std": 0.08683806969470627},
+      {"class": "Confidence", "mean": 12.28607592368065, "std": 7.044088493160851},
+      {"class": "Disapproval", "mean": 2.456635336920216, "std": 0.7983641516153387},
+      {"class": "Disconnection", "mean": 5.041151494543735, "std": 2.0951817034712796},
+      {"class": "Disquietment", "mean": 2.6204084515258987, "std": 0.33607738396119774},
+      {"class": "Doubt/Confusion", "mean": 2.339898770391241, "std": 0.886179372825784},
+      {"class": "Embarrassment", "mean": 0.4363794059177512, "std": 0.3654819726124751},
+      {"class": "Engagement", "mean": 2.2312738996614834, "std": 0.8966739242929638},
+      {"class": "Esteem", "mean": 0.3347914327628955, "std": 0.3170042219670988},
+      {"class": "Excitement", "mean": 4.475170962830137, "std": 4.9006161338491205},
+      {"class": "Fatigue", "mean": 0.08412172229972932, "std": 0.048990745531946614},
+      {"class": "Fear", "mean": 0.19455913048378046, "std": 0.19201848955768758},
+      {"class": "Happiness", "mean": 1.8232394959372844, "std": 1.4898841688995579},
+      {"class": "Pain", "mean": 0.0546286997416671, "std": 0.08804574610004115},
+      {"class": "Peace", "mean": 0.13955838109193705, "std": 0.1704209333274455},
+      {"class": "Pleasure", "mean": 0.027408683939114553, "std": 0.038149189026610006},
+      {"class": "Sadness", "mean": 0.26484845593282397, "std": 0.2440615205576124},
+      {"class": "Sensitivity", "mean": 0.0999993056440472, "std": 0.17320387809709895},
+      {"class": "Suffering", "mean": 0.04256288188347431, "std": 0.05147744096976434}
+    ],
+    "largest_mean_forgetting": [
+      {"class": "Anticipation", "mean": 33.990231342855765, "std": 3.4411723445461107},
+      {"class": "Affection", "mean": 14.265047294428413, "std": 2.3878490001870336},
+      {"class": "Confidence", "mean": 12.28607592368065, "std": 7.044088493160851},
+      {"class": "Disconnection", "mean": 5.041151494543735, "std": 2.0951817034712796},
+      {"class": "Annoyance", "mean": 5.025455323444667, "std": 1.8453270794879042}
+    ]
+  },
+  "verification": {
+    "formal_preflight_core_tests": 120,
+    "formal_preflight_core_test_skips": 2,
+    "formal_preflight_legacy_regression_tests": 17,
+    "formal_preflight_upstream_operator_worst_max_abs_error": 4.470348358154297e-08,
+    "all_three_seed_task_metric_counts": [8, 8, 8],
+    "all_three_seed_score_file_counts": [8, 8, 8],
+    "final_task_samples_by_seed": [5368, 5368, 5368]
+  },
+  "sync_bundle": {
+    "bundle_count": 3,
+    "download_manifest_file_count": 57,
+    "download_manifest_total_bytes": 25698855,
+    "score_file_count": 24,
+    "canonical_scores_included": true,
+    "contains_pth": false,
+    "contains_checkpoint_directory": false,
+    "contains_symlink": false,
+    "all_download_manifest_sha256_verified": true,
+    "archive_bytes": 6499597,
+    "archive_sha256": "24979d491737adbd64f8aa2d07af21f856670e15bdf0439e1943222746605ead"
+  },
+  "freeze_decision": {
+    "training_rerun_required": false,
+    "prediction_recomputation_required": false,
+    "post_test_configuration_change_allowed": false,
+    "result_is_frozen": true
+  }
+}
