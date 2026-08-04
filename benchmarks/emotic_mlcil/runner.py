@@ -27,6 +27,7 @@ from .methods.csc import CSCBenchmarkMethod
 from .methods.multi_lane import MultiLaneBenchmarkMethod
 from .methods.l3a import L3ABenchmarkMethod
 from .methods.original_ddp import OriginalDDPBenchmarkMethod
+from .methods.agcn import AGCNBenchmarkMethod
 from .protocol import BenchmarkProtocol
 from .protocol import load_protocol
 from .types import (
@@ -41,7 +42,7 @@ from .types import (
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
 CORE_BASE_COMMIT = "00f399f13bc7552c254c8f6e6c095a8be4f56146"
-CORE_RUNTIME_VERSION = "0.7.0"
+CORE_RUNTIME_VERSION = "0.8.0"
 
 
 def _current_git_commit() -> str:
@@ -790,6 +791,7 @@ def _parse_args() -> argparse.Namespace:
             "multi_lane",
             "l3a",
             "original_ddp",
+            "agcn",
         ),
         default="ddp",
     )
@@ -798,6 +800,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--clip-model-path",
         default="./pretrained/clip/ViT-B-16.pt",
+    )
+    parser.add_argument(
+        "--agcn-word-embeddings",
+        default="./pretrained/agcn/emotic_glove_6b_300d.json",
+        help="Audited 26x300 GloVe JSON used only by AGCN",
     )
     parser.add_argument("--output-root", default="./output")
     parser.add_argument("--reporting-split", default="val")
@@ -924,6 +931,7 @@ def main() -> None:
         "multi_lane": MultiLaneBenchmarkMethod,
         "l3a": L3ABenchmarkMethod,
         "original_ddp": OriginalDDPBenchmarkMethod,
+        "agcn": AGCNBenchmarkMethod,
     }
     method_class = method_classes[args.method]
     artifacts = ArtifactStore(
@@ -978,6 +986,13 @@ def main() -> None:
             protocol,
             checkpoint_paths=checkpoint_paths,
             clip_model_path=args.clip_model_path,
+            device=args.device,
+        )
+    elif args.method == "agcn":
+        method = AGCNBenchmarkMethod(
+            protocol,
+            clip_model_path=args.clip_model_path,
+            class_embedding_path=args.agcn_word_embeddings,
             device=args.device,
         )
     else:

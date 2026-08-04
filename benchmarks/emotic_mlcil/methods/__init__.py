@@ -11,6 +11,7 @@ from .csc import CSCBenchmarkMethod
 from .multi_lane import MultiLaneBenchmarkMethod
 from .l3a import L3ABenchmarkMethod
 from .original_ddp import OriginalDDPBenchmarkMethod
+from .agcn import AGCNBenchmarkMethod
 
 __all__ = [
     "DDPBenchmarkMethod",
@@ -21,5 +22,6 @@ __all__ = [
     "CSCBenchmarkMethod",
     "MultiLaneBenchmarkMethod",
     "OriginalDDPBenchmarkMethod",
+    "AGCNBenchmarkMethod",
     "SequentialFineTuningMethod",
 ]

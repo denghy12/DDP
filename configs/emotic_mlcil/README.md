@@ -57,6 +57,13 @@ the deliberately registered, user-requested comparison mapping
 (`T=1→2, γ=0.7`). The latter changes method inference only; it does not alter
 the shared dataset protocol hash.
 
+AGCN follows the same rule: its GCN dimensions, one-epoch optimizer, ACM
+thresholds/scales, and paper-resolved `0.07 / 0.93 / 1e5` loss weights are
+immutable code defaults. The runner option `--agcn-word-embeddings` identifies
+an audited 26-by-300 GloVe JSON prepared by
+`prepare_agcn_glove_embeddings.py`. This is a method asset, not a protocol
+field; AGCN does not use CLIP text features.
+
 The only registered tuning override is runner option `--ewc-lambda`. It is
 kept outside the frozen protocol object, validated as finite and positive, and
 written into method configuration. The official tuning launcher permits this

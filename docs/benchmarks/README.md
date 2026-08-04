@@ -51,6 +51,7 @@ remain a reserved extension point.
 - [MULTI-LANE source audit and Track-A porting contract](MULTI_LANE_TRACK_A.md)
 - [L3A source audit and Track-A porting contract](L3A_TRACK_A.md)
 - [Original-DDP-Tau2 source audit and Track-A contract](ORIGINAL_DDP_TRACK_A.md)
+- [AGCN source audit and Track-A porting contract](AGCN_TRACK_A.md)
 - [Universal checkpoint-free download standard](DOWNLOAD_STANDARD.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
@@ -108,10 +109,15 @@ then completed concurrently as isolated processes on GPU 0 from clean commit
 scores contain 5,368 `emotic:test:` IDs and no validation IDs, so the raw
 source's default `val+test` behavior was not used by the benchmark run.
 
-AGCN is the next baseline candidate. Its collected source remains outside the
-benchmark repository. Work begins with an immutable official-source, commit,
-license, backbone, replay, and label-visibility audit before any Track-A code
-is added under `methods/agcn/`.
+AGCN Track-A implementation is active on `codex/emotic-baseline-agcn`, branched
+from the frozen Original-DDP-Tau2 result. Official source is fixed at
+`3afe2ecbbef0051c6e841a97c369885011a683f0` under Apache-2.0 and remains outside
+the benchmark tree as an executable oracle. The independent port replaces only
+ResNet-101 with a trainable CLIP ViT-B/16 visual tower and retains GloVe label
+nodes, the two-layer GCN, online augmented correlation matrix, sigmoid old-class
+distillation, graph relationship MSE, and zero replay. It adds no Adapter or
+CLIP text feature. Server preflight and seed-0 validation are the next gate;
+held-out test remains locked.
 
 KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
 official source is fixed at
