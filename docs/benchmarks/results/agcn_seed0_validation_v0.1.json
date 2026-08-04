@@ -1,0 +1,187 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "method": "AGCN",
+  "status": "validation_passed_configuration_frozen",
+  "validation_run": {
+    "run_id": "agcn_seed0_val_20260804_130529",
+    "reporting_split": "val",
+    "seed": 0,
+    "source": {
+      "git_commit": "c8ff11460ec9d4ee0bfefcf719316c67ffd021fe",
+      "git_dirty": false,
+      "source_tree_hash": "578156eab7816b47aeb8d7345c50a412ad5f0e18d1c74e01a7d5ca2b7341286c",
+      "core_runtime_version": "0.8.0",
+      "core_base_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+      "protocol_hash": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+      "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+      "upstream_commit": "3afe2ecbbef0051c6e841a97c369885011a683f0",
+      "upstream_tree": "6c25689b81d0807523108a782ee59630d25a9b40",
+      "upstream_archive_sha256": "b5843d3ee0964767b48c49ba4b71fdf93c4bf954460669ed2b1cd05f9504f301",
+      "embedding_asset_sha256": "e926b8672cd761169586668c54e4676093b152e2b02a218747f55bf72e1d1bee",
+      "embedding_source_sha256": "0a7aebbe49097dc6e5ffff7a25e9aa20181a6e862050ca68bd2f36e056739e00",
+      "embedding_source_md5": "29e9329ac2241937d55b852e8284e89b"
+    },
+    "eligibility": {
+      "configuration_locked": false,
+      "reporting_split_is_test": false,
+      "test_labels_used_for_selection": false,
+      "prediction_reused_task_ids": [],
+      "eligible_for_main_table": false
+    },
+    "configuration": {
+      "backbone": "OpenAI CLIP ViT-B/16 visual encoder (fine-tuned)",
+      "clip_text_encoder_used": false,
+      "visual_encoder_trainable": true,
+      "benchmark_added_adapter": false,
+      "replay_enabled": false,
+      "epochs_per_task": 1,
+      "visual_learning_rate": 0.0001,
+      "graph_learning_rate": 0.00003,
+      "optimizer": "two Adam optimizers",
+      "optimizer_betas": [0.9, 0.999],
+      "optimizer_epsilon": 1e-08,
+      "classification_weight": 0.07,
+      "distillation_weight": 0.93,
+      "relationship_weight": 100000.0,
+      "task0_threshold": 0.0,
+      "current_threshold": 0.4,
+      "cross_threshold": 0.3,
+      "task0_graph_scale": 0.28,
+      "later_graph_scale": 0.25,
+      "reverse_bayes_scale": 0.5,
+      "task0_degree_exponent": -0.8,
+      "later_degree_exponent": -0.5,
+      "train_batch_size": 8,
+      "eval_batch_size": 32,
+      "workers": 0,
+      "amp": false,
+      "tf32": false,
+      "f1_threshold": 0.5,
+      "glove_token_exceptions": {
+        "Disquietment": ["disquiet"],
+        "Doubt/Confusion": ["doubt", "confusion"]
+      }
+    },
+    "main_table": {
+      "final_mAP": 25.35710468189588,
+      "average_mAP": 28.931038570463578,
+      "forgetting": 1.1844070802333535,
+      "final_cF1": 16.935691731359086,
+      "final_oF1": 55.81936538884871,
+      "parameter_growth": 0,
+      "replay_memory": {"samples": 0, "bytes": 0}
+    },
+    "per_task_mAP": [
+      30.873792934065875,
+      31.047843424043574,
+      25.180809095743008,
+      32.39866060924378,
+      30.822812997347327,
+      29.366480287134138,
+      26.400804534235046,
+      25.35710468189588
+    ],
+    "current_task_validation_mAP": [
+      30.87457696682233,
+      45.016098789598466,
+      39.88086038431382,
+      62.45120218236511,
+      36.38650814324949,
+      41.26297740037833,
+      52.4572883656384,
+      37.78724328554869
+    ],
+    "training_stability": {
+      "optimizer_updates": 3701,
+      "skipped_optimizer_updates": 0,
+      "optimizer_updates_by_task": [670, 550, 108, 1242, 544, 317, 79, 191],
+      "skipped_optimizer_updates_by_task": [0, 0, 0, 0, 0, 0, 0, 0],
+      "training_samples_by_task": [5353, 4394, 861, 9931, 4352, 2536, 627, 1526],
+      "all_logged_values_finite": true,
+      "nan_detected": false,
+      "oom_detected": false,
+      "traceback_detected": false
+    },
+    "graph_and_acm": {
+      "adjacency_nonzero_by_task": [25, 36, 42, 60, 80, 86, 93, 96],
+      "adjacency_density_by_task": [
+        1.0,
+        0.5625,
+        0.34710743801652894,
+        0.30612244897959184,
+        0.2768166089965398,
+        0.215,
+        0.17580340264650285,
+        0.14201183431952663
+      ],
+      "current_positive_mass_by_task": [5610.0, 4467.0, 965.0, 12244.0, 4378.0, 2747.0, 764.0, 1566.0],
+      "old_soft_mass_by_task": [0.0, 4394.0009765625, 860.9998779296875, 9931.0, 4352.001953125, 2535.999267578125, 626.9999389648438, 1526.0],
+      "cross_soft_hard_mass_by_task": [0.0, 4467.00048828125, 964.9998779296875, 12243.998046875, 4377.9990234375, 2747.0, 763.9999389648438, 1566.0001220703125]
+    },
+    "class_forgetting": {
+      "largest": {
+        "Affection": 12.086351775931895,
+        "Anticipation": 5.759164868751,
+        "Aversion": 1.8634958222329647,
+        "Anger": 1.6568304224629493,
+        "Annoyance": 1.117330943352341
+      },
+      "interpretation": "Low mean forgetting does not imply high accuracy; most classes remain stable at modest AP while Affection and Anticipation dominate the measured drop."
+    },
+    "resources": {
+      "total_parameters": 87024128,
+      "trainable_parameters": 87024128,
+      "incremental_parameters": 0,
+      "gpu_smoke_batch_size": 8,
+      "peak_allocated_mib": 2347.68505859375,
+      "peak_reserved_mib": 2640.0,
+      "teacher_present": true,
+      "optimizer_state_initialized": true
+    },
+    "upstream_equivalence": {
+      "largest_max_abs_error": 4.470348358154297e-08,
+      "two_layer_gcn_max_abs_error": 4.6566128730773926e-09,
+      "task0_threshold_scale_max_abs_error": 4.470348358154297e-08,
+      "task0_normalization_max_abs_error": 0.0,
+      "cross_block_max_abs_error": 0.0,
+      "incremental_current_normalization_max_abs_error": 0.0
+    },
+    "artifacts": {
+      "archive": "agcn_seed0_val_20260804_130529.tar.gz",
+      "archive_sha256": "568387f0674be605d89e8ce9316a49a049c06fe10deeaee62100b13927a56f7f",
+      "manifest_file_count": 19,
+      "manifest_total_bytes": 4062525,
+      "score_tasks_present": [0, 1, 2, 3, 4, 5, 6, 7],
+      "canonical_scores_included": true,
+      "contains_pth": false,
+      "all_manifest_sha256_verified": true
+    }
+  },
+  "same_split_context": {
+    "multi_lane_seed0_validation_final_mAP": 41.96405116993232,
+    "original_ddp_tau2_seed0_validation_final_mAP": 39.393897288349955,
+    "l3a_seed0_validation_final_mAP": 37.059693843573285,
+    "krt_seed0_validation_final_mAP": 32.34349136536406,
+    "csc_seed0_validation_final_mAP": 28.216343564844127,
+    "agcn_seed0_validation_final_mAP": 25.35710468189588,
+    "comparison_is_validation_only": true,
+    "must_not_be_mixed_with_held_out_test_main_table": true
+  },
+  "freeze_decision": {
+    "hyperparameters_changed_after_validation": false,
+    "configuration_is_locked_for_held_out_test": true,
+    "one_epoch_and_both_learning_rates_are_frozen": true,
+    "all_three_loss_weights_are_frozen": true,
+    "glove_asset_and_token_mapping_are_frozen": true,
+    "all_graph_thresholds_scales_and_degree_exponents_are_frozen": true,
+    "test_metrics_must_not_change_configuration": true,
+    "global_threshold_remains": 0.5,
+    "required_confirmation": "AGCN_TRACK_A_V0_1",
+    "formal_seeds": [0, 1, 2],
+    "formal_execution": "seeds 0, 1, and 2 concurrently as three isolated processes on physical GPU 0 after the validation configuration freeze; measured aggregate reserved-memory demand is about 7.9 GiB",
+    "formal_results_pending": true,
+    "formal_result_snapshot": "agcn_seed012_formal_v0.1.json"
+  }
+}

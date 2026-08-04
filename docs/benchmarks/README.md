@@ -67,6 +67,7 @@ remain a reserved extension point.
 - [Registered L3A three-seed formal result](results/l3a_seed012_formal_v0.1.json)
 - [Frozen Original-DDP-Tau2 seed-0 validation snapshot](results/original_ddp_tau2_seed0_validation_v0.1.json)
 - [Registered Original-DDP-Tau2 three-seed formal result](results/original_ddp_tau2_seed012_formal_v0.1.json)
+- [Frozen AGCN seed-0 validation snapshot](results/agcn_seed0_validation_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -116,8 +117,15 @@ the benchmark tree as an executable oracle. The independent port replaces only
 ResNet-101 with a trainable CLIP ViT-B/16 visual tower and retains GloVe label
 nodes, the two-layer GCN, online augmented correlation matrix, sigmoid old-class
 distillation, graph relationship MSE, and zero replay. It adds no Adapter or
-CLIP text feature. Server preflight and seed-0 validation are the next gate;
-held-out test remains locked.
+CLIP text feature. Server preflight passed with a largest fixed-source operator
+error of `4.47e-8`; the final-task teacher/two-Adam smoke reserved `2640 MiB`.
+Seed-0 validation reached Final mAP `25.3571`, Average mAP `28.9310`, and
+Forgetting `1.1844` with 3,701 optimizer steps, zero skipped updates, and no
+NaN/OOM. The one-epoch schedule, both learning rates, all three loss weights,
+GloVe mapping, graph construction constants, and global threshold are now
+frozen before held-out access. A configuration-locked three-process runner is
+ready to execute seeds 0--2 concurrently on GPU 0; formal results remain
+pending and cannot change the registered configuration.
 
 KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
 official source is fixed at
