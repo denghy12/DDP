@@ -128,7 +128,8 @@ Before held-out test access, this branch must pass:
 
 Only after the seed-0 validation result is reviewed may the configuration be
 frozen and the confirmation `ORIGINAL_DDP_TAU2_TRACK_A_V0_1` be used for
-held-out test. Seeds 0--2 can then run concurrently on distinct GPUs without
+held-out test. Seeds 0--2 then run as isolated processes, either concurrently
+on distinct GPUs or—after a memory-capacity check—on one shared GPU, without
 using one held-out seed to tune another.
 
 The seed-0 validation entry point is:
@@ -185,7 +186,27 @@ archive SHA-256 is
 The result is registered in
 [`original_ddp_tau2_seed0_validation_v0.1.json`](results/original_ddp_tau2_seed0_validation_v0.1.json).
 
-Configuration is now frozen: source method defaults and cross-task schedule,
+Configuration was then frozen: source method defaults and cross-task schedule,
 the explicit `T=1→2, γ=0.7` PCD mapping, global F1 threshold 0.5, batch `8/1`,
-and `WORKERS=0`. Held-out test seeds 0--2 are pending and must not be used to
-change this configuration.
+and `WORKERS=0`. Locked held-out test seeds 0--2 completed from clean commit
+`e9d3945` as three isolated concurrent processes on GPU 0, with no OOM,
+training traceback, prediction reuse, or rerun. Their registered mean ± sample
+standard deviation is Final mAP `29.9795 ± 0.2237`, Average mAP
+`37.2071 ± 0.4779`, Forgetting `4.8062 ± 0.1337`, Final cF1
+`29.5144 ± 0.7446`, and Final oF1 `48.3410 ± 0.4796`.
+
+Across the three seeds, 221,955 of 222,060 attempted optimizer updates were
+applied; the 105 guarded AMP overflow skips represent `0.0473%` of attempts.
+All logged values are finite. Each seed contains eight task metrics and eight
+canonical score files. The final score artifacts contain exactly 5,368
+`emotic:test:` sample IDs and zero validation IDs: although the collected
+source's raw EMOTIC loader defaults to `val+test`, the benchmark explicitly
+passes `eval_splits=(split,)`, so formal stage evaluation did **not** merge
+EMOTIC validation and test samples.
+
+The checkpoint-free three-seed archive SHA-256 is
+`048bf3aea3ca7982a4e65023e06b3d9b687cba5b005277d5fe719cfee4795604`.
+The frozen result, per-task curves, complete class-forgetting audit, split
+isolation proof, stability counters, and bundle manifest are registered in
+[`original_ddp_tau2_seed012_formal_v0.1.json`](results/original_ddp_tau2_seed012_formal_v0.1.json).
+No post-test configuration change is permitted for this result.

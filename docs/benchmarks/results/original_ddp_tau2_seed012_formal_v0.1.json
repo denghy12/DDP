@@ -1,0 +1,227 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "method": "Original-DDP-Tau2",
+  "run_id": "original_ddp_tau2_formal_seed012_20260803_174253",
+  "status": "eligible_for_main_table",
+  "configuration_lock_confirmation": "ORIGINAL_DDP_TAU2_TRACK_A_V0_1",
+  "source": {
+    "formal_training_commit": "e9d3945fc7165482d6d1e4e1d8fae4ffbd434a2b",
+    "source_tree_hash": "8d93b94c2ecba23fe0fb4d2e1561ab4e29c14ade50af54a7e89779a19749d477",
+    "source_snapshot_tree_sha256": "e0b9963e1d891ce95fc0c0d2444389f388fe5a1c2bd04f6ece7dc0617306e5a4",
+    "source_snapshot_archive_sha256": "b99892e1c12c942b4a8506b89049f8f35933001e0b8018e928883ee60db847a5",
+    "source_git_commit": null,
+    "source_license_status": "no_license_file_observed_reference_only",
+    "core_runtime_version": "0.7.0",
+    "core_base_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+    "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+    "protocol_hash_by_seed": {
+      "0": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+      "1": "7324c4bcf8632259990ba1ade0a57608ea3ecd20f75ebaff5c87fba55a227090",
+      "2": "f7c21d4133f4b4cd6824a1a0e77f26a525e0cb520373fa5f271ee371263dba5a"
+    },
+    "data_split_hash": {
+      "task0": "9ad2cdb8e7ec95bc9152953622cbfd98e7eeabd0f413143d2af248d796132dfb",
+      "task1": "b9adf48fdbd522c7eb0cbb8b19ee950742184faf238059311c951c69f46f8a51",
+      "task2": "ac853116831a50f66a4173d7a364fa136645d03ed28ea4ff727fcdaa9ef1a975",
+      "task3": "a7f8d0a25d7085ab45f7219fc156c65b27f5190b24d4fe5b268b48c39081d62d",
+      "task4": "709f667258a29107c88422b5dfb4849ff02ed44193e2341f733be88b5ba23e7c",
+      "task5": "e76331ff24a47c88dd394d52bfb8c33a9cd5936e2e222ccd5b2778696a2d3118",
+      "task6": "7720625403cde13afe85ffe826dcbbf7ed572a74ee1a3ce222dc58022f60cd63",
+      "task7": "a0ad09e4d3c3ca81f8ba63eb0d41b618666192a75bffc61858cb44a2cbe5a415"
+    }
+  },
+  "eligibility": {
+    "reporting_split": "test",
+    "configuration_locked": true,
+    "configuration_was_frozen_before_all_held_out_seeds": true,
+    "test_labels_used_for_selection": false,
+    "prediction_reused_task_ids": [],
+    "all_seeds_clean": true,
+    "all_seeds_eligible_for_main_table": true,
+    "hyperparameters_changed_after_validation": false
+  },
+  "method_configuration": {
+    "backbone": "OpenAI CLIP ViT-B/16 (frozen)",
+    "clip_text_encoder_used": true,
+    "class_specific_positive_negative_text_prompts": true,
+    "class_specific_interlayer_visual_prompts": true,
+    "benchmark_added_adapter": false,
+    "replay_enabled": false,
+    "source_pcd": {"minimum": 1.0, "maximum": 7.0, "gamma": 0.2},
+    "registered_pcd": {"minimum": 1.0, "maximum": 2.0, "gamma": 0.7},
+    "optimizer": "one Adam instance retained across all tasks",
+    "optimizer_initial_lr": 0.0059,
+    "scheduler": "one MultiStepLR retained across all tasks",
+    "scheduler_milestones": [0, 20],
+    "scheduler_gamma": 0.1,
+    "epochs_per_task": 20,
+    "train_batch_size": 8,
+    "eval_batch_size": 1,
+    "workers": 0,
+    "amp": true,
+    "tf32": true,
+    "f1_threshold": 0.5
+  },
+  "resources": {
+    "total_parameters": 125388800,
+    "trainable_prompt_parameters": 1064960,
+    "prompt_capacity_parameters_per_class": 40960,
+    "physical_parameter_growth": 0,
+    "replay_memory_samples": 0,
+    "replay_memory_bytes": 0,
+    "train_peak_mib": 3138.8408203125,
+    "train_peak_reserved_mib": 3538.0,
+    "eval_peak_mib": 902.5673828125,
+    "eval_peak_reserved_mib": 1118.0
+  },
+  "per_seed": [
+    {
+      "seed": 0,
+      "physical_gpu": 0,
+      "final_mAP": 30.222903260532423,
+      "average_mAP": 37.63334543726799,
+      "forgetting": 4.933607428510665,
+      "final_cF1": 29.60851116452606,
+      "final_oF1": 48.4475324917026,
+      "parameter_growth": 0.0,
+      "per_task_mAP": [51.12090582757533, 43.38183199532196, 34.30462936385922, 37.25487383456171, 36.57406138604621, 35.14917696023435, 33.05838087001279, 30.222903260532423]
+    },
+    {
+      "seed": 1,
+      "physical_gpu": 0,
+      "final_mAP": 29.932780674617813,
+      "average_mAP": 37.297348007213216,
+      "forgetting": 4.8179700197663,
+      "final_cF1": 28.727210821503856,
+      "final_oF1": 48.75836617251516,
+      "parameter_growth": 0.0,
+      "per_task_mAP": [51.110294544198496, 42.91847289010773, 33.83351928057163, 36.99154309339097, 36.313063657068376, 34.65439577017483, 32.624714147575915, 29.932780674617813]
+    },
+    {
+      "seed": 2,
+      "physical_gpu": 0,
+      "final_mAP": 29.78286388459549,
+      "average_mAP": 36.69048726220984,
+      "forgetting": 4.6669786256847985,
+      "final_cF1": 30.207464172841814,
+      "final_oF1": 47.81709145427287,
+      "parameter_growth": 0.0,
+      "per_task_mAP": [48.97080063720073, 42.275704169303744, 33.466346045385606, 36.47263600484879, 35.77918892945129, 34.39074349072659, 32.385614936166526, 29.78286388459549]
+    }
+  ],
+  "aggregate": {
+    "aggregation": "mean_and_sample_standard_deviation",
+    "final_mAP": {"mean": 29.97951593991524, "std": 0.22371142541353867},
+    "average_mAP": {"mean": 37.20706023556368, "std": 0.47786953852549996},
+    "forgetting": {"mean": 4.806185357987254, "std": 0.1337044812787646},
+    "final_cF1": {"mean": 29.514395386290577, "std": 0.7446011219582378},
+    "final_oF1": {"mean": 48.340996706163544, "std": 0.47959558901312266},
+    "parameter_growth": {"mean": 0.0, "std": 0.0}
+  },
+  "per_task_mAP": [
+    {"task": 0, "mean": 50.40066700299152, "std": 1.2383119630563777},
+    {"task": 1, "mean": 42.85866968491114, "std": 0.5554835815636543},
+    {"task": 2, "mean": 33.868164896605485, "std": 0.42021419483467926},
+    {"task": 3, "mean": 36.90635097760049, "std": 0.39801668055891687},
+    {"task": 4, "mean": 36.22210465752196, "std": 0.4051675088925272},
+    {"task": 5, "mean": 34.73143874037859, "std": 0.38504161640108037},
+    {"task": 6, "mean": 32.68956998458508, "std": 0.34103989521994094},
+    {"task": 7, "mean": 29.97951593991524, "std": 0.22371142541353867}
+  ],
+  "training_stability": {
+    "attempted_optimizer_updates_by_seed": [74020, 74020, 74020],
+    "optimizer_updates_by_seed": [73986, 73985, 73984],
+    "amp_overflow_skips_by_seed": [34, 35, 36],
+    "total_attempted_optimizer_updates": 222060,
+    "total_amp_overflow_skips": 105,
+    "aggregate_amp_overflow_skip_fraction": 0.0004728451769791948,
+    "scheduler_last_epoch_by_seed": [160, 160, 160],
+    "all_logged_values_finite": true,
+    "nan_detected_in_training_logs": false,
+    "oom_detected_in_training_logs": false,
+    "traceback_detected_in_training_logs": false
+  },
+  "per_class_forgetting": {
+    "definition": "For each class and seed, maximum AP from its introduction through Task 7 minus final Task-7 AP; rows report mean and sample standard deviation across seeds.",
+    "rows": [
+      {"class": "Affection", "mean": 19.512079714134252, "std": 0.4843803215287324},
+      {"class": "Anger", "mean": 8.082057562642161, "std": 0.6008851395896881},
+      {"class": "Annoyance", "mean": 11.67487031247939, "std": 0.6664189649123423},
+      {"class": "Anticipation", "mean": 36.76107717834864, "std": 0.464718862749691},
+      {"class": "Aversion", "mean": 5.824631052761151, "std": 3.1173222624094747},
+      {"class": "Confidence", "mean": 5.491085318061001, "std": 0.1515053470830354},
+      {"class": "Disapproval", "mean": 4.654562651645736, "std": 0.05776770353103904},
+      {"class": "Disconnection", "mean": 7.105278290685397, "std": 0.32680576882321904},
+      {"class": "Disquietment", "mean": 1.6498688793350371, "std": 0.07387185548519619},
+      {"class": "Doubt/Confusion", "mean": 2.615281099071264, "std": 0.13397714456889875},
+      {"class": "Embarrassment", "mean": 0.24300297132051085, "std": 0.12326639397367972},
+      {"class": "Engagement", "mean": 1.8550492211610674, "std": 0.6859652235325258},
+      {"class": "Esteem", "mean": 0.615289219397687, "std": 0.04007913856020697},
+      {"class": "Excitement", "mean": 1.3566085124830494, "std": 0.13296840973404012},
+      {"class": "Fatigue", "mean": 1.159458167082974, "std": 0.2847797601425298},
+      {"class": "Fear", "mean": 0.18893153744478544, "std": 0.11664325928633676},
+      {"class": "Happiness", "mean": 0.19574883560441947, "std": 0.1728183938858104},
+      {"class": "Pain", "mean": 0.43492858492205383, "std": 0.48699386831918856},
+      {"class": "Peace", "mean": 0.017754085257629743, "std": 0.027910663545612467},
+      {"class": "Pleasure", "mean": 0.04128284171414739, "std": 0.0668551906937251},
+      {"class": "Sadness", "mean": 0.42027599441413815, "std": 0.727939375526821},
+      {"class": "Sensitivity", "mean": 0.08321226718205994, "std": 0.14412787457232412},
+      {"class": "Suffering", "mean": 0.5599289365582946, "std": 0.5666455266787774},
+      {"class": "Surprise", "mean": 0.0, "std": 0.0},
+      {"class": "Sympathy", "mean": 0.0, "std": 0.0},
+      {"class": "Yearning", "mean": 0.0, "std": 0.0}
+    ],
+    "largest_mean_forgetting": [
+      {"class": "Anticipation", "mean": 36.76107717834864, "std": 0.464718862749691},
+      {"class": "Affection", "mean": 19.512079714134252, "std": 0.4843803215287324},
+      {"class": "Annoyance", "mean": 11.67487031247939, "std": 0.6664189649123423},
+      {"class": "Anger", "mean": 8.082057562642161, "std": 0.6008851395896881},
+      {"class": "Disconnection", "mean": 7.105278290685397, "std": 0.32680576882321904}
+    ]
+  },
+  "split_isolation": {
+    "raw_emotic_eval_default": ["val", "test"],
+    "benchmark_override": "eval_splits=(split,)",
+    "formal_reporting_split": "test",
+    "final_task_test_samples": 5368,
+    "final_task_validation_samples": 2397,
+    "final_score_sample_id_prefix": "emotic:test:",
+    "final_score_test_sample_id_count": 5368,
+    "final_score_validation_sample_id_count": 0,
+    "validation_and_test_were_not_concatenated": true
+  },
+  "verification": {
+    "formal_preflight_core_tests": 109,
+    "formal_preflight_core_test_skips": 1,
+    "formal_preflight_legacy_regression_tests": 17,
+    "source_operator_worst_max_abs_error": 0.0,
+    "all_three_seed_task_metric_counts": [8, 8, 8],
+    "all_three_seed_score_file_counts": [8, 8, 8]
+  },
+  "sync_bundle": {
+    "bundle_count": 3,
+    "download_manifest_file_count": 57,
+    "download_manifest_total_bytes": 25807266,
+    "score_file_count": 24,
+    "canonical_scores_included": true,
+    "contains_pth": false,
+    "contains_checkpoint_directory": false,
+    "contains_symlink": false,
+    "all_download_manifest_sha256_verified": true,
+    "archive_bytes": 6108752,
+    "archive_sha256": "048bf3aea3ca7982a4e65023e06b3d9b687cba5b005277d5fe719cfee4795604"
+  },
+  "execution": {
+    "mode": "three isolated seed processes concurrently on one physical GPU",
+    "physical_gpu_by_seed": [0, 0, 0],
+    "oom_fallback_used": false,
+    "training_rerun_required": false,
+    "prediction_recomputation_required": false
+  },
+  "freeze_decision": {
+    "post_test_configuration_change_allowed": false,
+    "result_is_frozen": true
+  }
+}

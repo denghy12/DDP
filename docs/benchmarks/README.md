@@ -65,6 +65,7 @@ remain a reserved extension point.
 - [Frozen L3A seed-0 validation snapshot](results/l3a_seed0_validation_v0.1.json)
 - [Registered L3A three-seed formal result](results/l3a_seed012_formal_v0.1.json)
 - [Frozen Original-DDP-Tau2 seed-0 validation snapshot](results/original_ddp_tau2_seed0_validation_v0.1.json)
+- [Registered Original-DDP-Tau2 three-seed formal result](results/original_ddp_tau2_seed012_formal_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -90,8 +91,8 @@ not an evaluation of the unmodified original DDP method. Its seed-0 result is
 retained as project evidence, while additional seeds are intentionally deferred
 until the local modifications and upstream baseline are separately audited.
 
-Original-DDP-Tau2 is now the active next baseline on
-`codex/emotic-baseline-original-ddp`. It retains the collected original DDP
+Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It
+retains the collected original DDP
 model, random text/visual prompting, loss, optimizer, and cross-task scheduler
 without an Adapter or replay. For direct comparison with the modified DDP, its
 registered PCD is the user-requested `T=1→2, γ=0.7`; the collected source's
@@ -99,7 +100,18 @@ registered PCD is the user-requested `T=1→2, γ=0.7`; the collected source's
 identity/operator gates passed with zero numerical error. Seed-0 validation
 reached Final mAP `39.3939`, Average mAP `46.8123`, and Forgetting `0.7607`.
 The `T=1→2, γ=0.7` configuration, source optimizer/schedule, batch `8/1`, and
-zero-worker loader are frozen; locked held-out seeds 0--2 are the next run.
+zero-worker loader were frozen before held-out access. Locked test seeds 0--2
+then completed concurrently as isolated processes on GPU 0 from clean commit
+`e9d3945`. The registered formal result is Final mAP
+`29.9795 ± 0.2237`, Average mAP `37.2071 ± 0.4779`, and Forgetting
+`4.8062 ± 0.1337` (mean ± sample standard deviation). Canonical final-task
+scores contain 5,368 `emotic:test:` IDs and no validation IDs, so the raw
+source's default `val+test` behavior was not used by the benchmark run.
+
+AGCN is the next baseline candidate. Its collected source remains outside the
+benchmark repository. Work begins with an immutable official-source, commit,
+license, backbone, replay, and label-visibility audit before any Track-A code
+is added under `methods/agcn/`.
 
 KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
 official source is fixed at
