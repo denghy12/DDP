@@ -86,8 +86,62 @@ Before seed-0 validation, the server must pass:
 - a current-plus-replay CLIP training memory smoke at the intended batch size.
 
 Validation freezes optimizer settings and all replay policy values. Only then
-may a clean commit run `configuration_locked=true` seed-0 held-out test. Seeds
-1 and 2 follow only after seed 0 and artifact memory accounting are reviewed.
+may a clean commit run with `configuration_locked=true`. After the completed
+seed-0 validation/artifact review, the user authorized seeds 0--2 to run
+together under the same frozen configuration; test output cannot change it.
+
+## Frozen seed-0 validation
+
+Seed-0 validation passed from clean commit `9a716a5`. ER reached Final mAP
+`26.6088`, Average mAP `32.1604`, and Forgetting `6.0568`; PRS reached Final
+mAP `28.4171`, Average mAP `32.9586`, and Forgetting `5.8944`. Both finished
+with exactly 520 unique replay samples. Their serialized float32 image buffers
+occupied `313,206,300` and `313,206,184` bytes respectively.
+
+ER attempted 6,477 optimizer updates and guarded one AMP overflow. PRS
+attempted 8,384 and guarded two. Neither run reported NaN, OOM, or a training
+traceback. The shared current-32 plus replay-32 CUDA smoke peaked at
+`5827.2 MiB`. PRS's external-source oracle retained exactly the same sample
+IDs as the fixed source, had zero observation-count error, and differed in
+target partition proportions by at most `1.58e-8`.
+
+This evidence freezes the following values before held-out access:
+
+- memory capacity `20 × seen classes`, ending at 520 samples;
+- replay/current ratio `1:1` and equal sample weight;
+- PRS allocation power `q=-0.03`;
+- AdamW, visual/head learning rates `1e-5/1e-4`, weight decay `1e-4`, and
+  gradient clipping at 1.0;
+- ten epochs maximum with validation-only early stopping patience three; and
+- the global F1 threshold at 0.5, despite PRS's lower validation oF1.
+
+The machine-readable evidence is registered in
+[`results/er_prs_seed0_validation_v0.1.json`](results/er_prs_seed0_validation_v0.1.json).
+Formal test execution must use confirmation `REPLAY_20C_TRACK_A_V0_1` and a
+clean, explicitly pinned Git commit.
+
+## Locked formal execution
+
+The single-GPU formal launcher runs three isolated seeds concurrently on
+physical GPU 0. Because one process peaked at `5827.2 MiB`, it never starts all
+six ER/PRS workers together. It runs ER seeds 0--2 as the first three-process
+wave, waits for all three to succeed, then runs PRS seeds 0--2 as the second
+wave. A failed worker blocks aggregation and packaging; it is not silently
+retried. The result validator requires eight task metrics and canonical score
+files for every method/seed, verifies the locked configuration and memory
+schedule, aggregates with sample standard deviation, and emits one six-bundle
+checkpoint-free archive.
+
+Server entry point after synchronizing the frozen commit:
+
+```bash
+RUN_ID="replay_er_prs_formal_seed012_$(date +%Y%m%d_%H%M%S)" \
+GPU=0 \
+SESSION=emotic_replay_formal_seed012 \
+EXPECTED_GIT_COMMIT="$(git rev-parse HEAD)" \
+CONFIGURATION_LOCKED_CONFIRMATION=REPLAY_20C_TRACK_A_V0_1 \
+bash scripts/emotic-mlcil/launch_replay_formal_seed012_tmux.sh
+```
 
 The universal checkpoint-free download standard applies: synchronize only the
 generated `.tar.gz` and adjacent `.tar.gz.sha256`; `.pth` files remain in the

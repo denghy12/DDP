@@ -1,0 +1,212 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "methods": ["ER", "PRS"],
+  "status": "validation_passed_configuration_frozen",
+  "validation_runs": {
+    "ER": {
+      "run_id": "er_seed0_val_20260804_184736",
+      "reporting_split": "val",
+      "seed": 0,
+      "source": {
+        "git_commit": "9a716a5a1722ba192791d7877200771c8eb94dc2",
+        "git_dirty": false,
+        "source_tree_hash": "f25de5d227a134c1fa161cb301297131a3a9ee36cc530a294ffa88e2a0a7952d",
+        "core_runtime_version": "0.9.0",
+        "core_base_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+        "protocol_hash": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+        "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee"
+      },
+      "eligibility": {
+        "configuration_locked": false,
+        "reporting_split_is_test": false,
+        "test_labels_used_for_selection": false,
+        "prediction_reused_task_ids": [],
+        "eligible_for_main_table": false
+      },
+      "main_table": {
+        "final_mAP": 26.608759955111495,
+        "average_mAP": 32.16040307757096,
+        "forgetting": 6.056826726695924,
+        "final_cF1": 20.49346980291824,
+        "final_oF1": 53.07334145807944,
+        "parameter_growth": 10773,
+        "replay_memory": {"samples": 520, "bytes": 313206300}
+      },
+      "per_task_mAP": [
+        38.82158015003142,
+        38.27167192305272,
+        29.72639337404694,
+        34.013738384805144,
+        31.73602696856237,
+        28.846628306883993,
+        29.258425558073604,
+        26.608759955111495
+      ],
+      "training_stability": {
+        "epochs_completed_by_task": [10, 5, 6, 7, 5, 8, 8, 6],
+        "optimizer_attempts": 6477,
+        "optimizer_attempts_by_task": [1680, 690, 162, 2177, 680, 640, 160, 288],
+        "amp_overflow_skips": 1,
+        "amp_overflow_skips_by_task": [0, 0, 0, 0, 0, 0, 0, 1],
+        "memory_update_observations_by_task": [5353, 4394, 861, 9931, 4352, 2536, 627, 1526],
+        "replay_samples_after_by_task": [100, 160, 220, 280, 340, 400, 460, 520],
+        "replay_bytes_after_by_task": [60232007, 96371191, 132510315, 168649583, 204788789, 240927968, 277067124, 313206300],
+        "all_logged_values_finite": true,
+        "nan_detected": false,
+        "oom_detected": false,
+        "traceback_detected": false
+      },
+      "artifacts": {
+        "archive": "er_seed0_val_20260804_184736.tar.gz",
+        "archive_sha256": "1db089a00d2d3e69a0533a43ed6b054187e3ae242b9e098d1bc7b943d27396a0",
+        "manifest_file_count_excluding_download_manifest": 18,
+        "manifest_total_bytes_excluding_download_manifest": 4062144,
+        "score_tasks_present": [0, 1, 2, 3, 4, 5, 6, 7],
+        "canonical_scores_included": true,
+        "contains_pth": false,
+        "all_manifest_sha256_verified": true
+      }
+    },
+    "PRS": {
+      "run_id": "prs_seed0_val_20260804_184736",
+      "reporting_split": "val",
+      "seed": 0,
+      "source": {
+        "git_commit": "9a716a5a1722ba192791d7877200771c8eb94dc2",
+        "git_dirty": false,
+        "source_tree_hash": "f25de5d227a134c1fa161cb301297131a3a9ee36cc530a294ffa88e2a0a7952d",
+        "core_runtime_version": "0.9.0",
+        "core_base_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+        "protocol_hash": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+        "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+        "upstream_commit": "136cee1863af03cc914dc05dfd41bda8b7bc0bf2",
+        "upstream_tree": "8e08f4ea1ffcce30c73f9453d6db522d7cba7c77"
+      },
+      "eligibility": {
+        "configuration_locked": false,
+        "reporting_split_is_test": false,
+        "test_labels_used_for_selection": false,
+        "prediction_reused_task_ids": [],
+        "eligible_for_main_table": false
+      },
+      "main_table": {
+        "final_mAP": 28.417073206833958,
+        "average_mAP": 32.958585198457826,
+        "forgetting": 5.894368281582211,
+        "final_cF1": 24.071178078675477,
+        "final_oF1": 35.47607258322896,
+        "parameter_growth": 10773,
+        "replay_memory": {"samples": 520, "bytes": 313206184}
+      },
+      "per_task_mAP": [
+        38.82158015003142,
+        37.44191860511643,
+        26.734890443734066,
+        34.62258284507882,
+        33.706787556629386,
+        32.99521514025132,
+        30.9286336399872,
+        28.417073206833958
+      ],
+      "training_stability": {
+        "epochs_completed_by_task": [10, 10, 10, 10, 4, 9, 10, 10],
+        "optimizer_attempts": 8384,
+        "optimizer_attempts_by_task": [1680, 1380, 270, 3110, 544, 720, 200, 480],
+        "amp_overflow_skips": 2,
+        "amp_overflow_skips_by_task": [0, 0, 0, 2, 0, 0, 0, 0],
+        "memory_update_observations_by_task": [5353, 4394, 861, 9931, 4352, 2536, 627, 1526],
+        "replay_samples_after_by_task": [100, 160, 220, 280, 340, 400, 460, 520],
+        "replay_bytes_after_by_task": [60231936, 96371101, 132510250, 168649494, 204788658, 240927775, 277066965, 313206184],
+        "all_logged_values_finite": true,
+        "nan_detected": false,
+        "oom_detected": false,
+        "traceback_detected": false
+      },
+      "upstream_equivalence": {
+        "repository": "https://github.com/cdjkim/PRS",
+        "commit": "136cee1863af03cc914dc05dfd41bda8b7bc0bf2",
+        "git_tree": "8e08f4ea1ffcce30c73f9453d6db522d7cba7c77",
+        "license": "MIT",
+        "retained_id_exact_match": true,
+        "observed_count_max_abs_error": 0.0,
+        "target_proportion_max_abs_error": 1.579391517569917e-08,
+        "source_copied_into_repository": false
+      },
+      "artifacts": {
+        "archive": "prs_seed0_val_20260804_184736.tar.gz",
+        "archive_sha256": "3362800eabb892194e36450ca7dd760a9fb413a230933dc41fd06feef172570d",
+        "manifest_file_count_excluding_download_manifest": 19,
+        "manifest_total_bytes_excluding_download_manifest": 4066770,
+        "score_tasks_present": [0, 1, 2, 3, 4, 5, 6, 7],
+        "canonical_scores_included": true,
+        "contains_pth": false,
+        "all_manifest_sha256_verified": true
+      }
+    }
+  },
+  "shared_frozen_configuration": {
+    "backbone": "OpenAI CLIP ViT-B/16 visual encoder (fine-tuned)",
+    "clip_text_encoder_used": false,
+    "benchmark_added_adapter": false,
+    "memory_contract_id": "emotic_replay_20c_v0.1",
+    "samples_per_seen_class": 20,
+    "task_capacities": [100, 160, 220, 280, 340, 400, 460, 520],
+    "replay_to_current_ratio": 1.0,
+    "memory_update_timing": "task_end_single_pass",
+    "stored_targets": "capture_time_visible_columns_only",
+    "current_and_replay_equal_sample_weight": true,
+    "prs_allocation_power": -0.03,
+    "optimizer": "AdamW",
+    "backbone_learning_rate": 0.00001,
+    "head_learning_rate": 0.0001,
+    "weight_decay": 0.0001,
+    "gradient_clip_norm": 1.0,
+    "epochs_per_task_maximum": 10,
+    "early_stopping_patience": 3,
+    "selection_metric": "current_label_validation_mAP",
+    "train_batch_size": 32,
+    "eval_batch_size": 64,
+    "workers": 2,
+    "amp": true,
+    "tf32": true,
+    "f1_threshold": 0.5
+  },
+  "resource_gate": {
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "current_batch_size": 32,
+    "replay_batch_size": 32,
+    "optimizer": "AdamW",
+    "single_process_peak_allocated_mib": 5827.2,
+    "planned_max_concurrent_processes_on_gpu0": 3,
+    "estimated_three_process_peak_allocated_mib": 17481.6,
+    "six_process_concurrency_is_forbidden": true
+  },
+  "validation_comparison": {
+    "prs_minus_er": {
+      "final_mAP": 1.8083132517224634,
+      "average_mAP": 0.7981821208868638,
+      "forgetting": -0.162458445113713,
+      "final_cF1": 3.577708275757235,
+      "final_oF1": -17.597268874850478,
+      "per_task_mAP": [0.0, -0.8297533179362944, -2.9915029303128726, 0.6088444602736729, 1.9707605880670158, 4.148586833367325, 1.6702080819135965, 1.8083132517224634]
+    },
+    "interpretation": "PRS improves the threshold-free primary mAP metrics but has lower fixed-0.5 oF1; the held-out run must retain threshold 0.5 without calibration."
+  },
+  "freeze_decision": {
+    "hyperparameters_changed_after_validation": false,
+    "configuration_is_locked_for_held_out_test": true,
+    "memory_20_per_seen_class_is_frozen": true,
+    "replay_ratio_1_to_1_is_frozen": true,
+    "prs_q_minus_0_03_is_frozen": true,
+    "optimizer_and_early_stopping_are_frozen": true,
+    "global_threshold_remains": 0.5,
+    "test_metrics_must_not_change_configuration": true,
+    "required_confirmation": "REPLAY_20C_TRACK_A_V0_1",
+    "formal_seeds": [0, 1, 2],
+    "formal_execution": "GPU0 only; ER seeds 0-2 run concurrently, then PRS seeds 0-2 run concurrently automatically, never more than three training processes at once",
+    "formal_results_pending": true,
+    "formal_result_snapshot": "er_prs_seed012_formal_v0.1.json"
+  }
+}

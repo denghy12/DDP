@@ -71,6 +71,7 @@ remain a reserved extension point.
 - [Registered Original-DDP-Tau2 three-seed formal result](results/original_ddp_tau2_seed012_formal_v0.1.json)
 - [Frozen AGCN seed-0 validation snapshot](results/agcn_seed0_validation_v0.1.json)
 - [Registered AGCN three-seed formal result](results/agcn_seed012_formal_v0.1.json)
+- [Frozen ER/PRS seed-0 validation snapshot](results/er_prs_seed0_validation_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -142,8 +143,16 @@ capture-time-visible labels, stable-ID deduplication, and task-end updates. ER
 is the conventional reservoir control. PRS is an independent Track-A port of
 the official ECCV 2020 source fixed at `136cee1`, retaining allocation power
 `q=-0.03` while replacing only ResNet-101 with the common trainable CLIP visual
-tower. Both interfaces and preflight gates are implemented; no validation or
-held-out result has been registered yet.
+tower. Both seed-0 validation runs passed from clean commit `9a716a5`. ER
+reached Final mAP `26.6088` and PRS reached `28.4171`; both finished with
+exactly 520 stored samples and no NaN/OOM/training traceback. PRS's
+fixed-source oracle passed with exact retained IDs and maximum target-
+proportion error `1.58e-8`. The 20-per-seen-class capacity, 1:1 replay,
+`q=-0.03`, optimizer, early stopping, and fixed F1 threshold 0.5 are now
+frozen. The locked formal runner uses GPU 0 in two automatic waves: three
+concurrent ER seeds followed by three concurrent PRS seeds, so at most three
+approximately `5827.2 MiB` workers are resident at once. Held-out results have
+not yet been registered.
 
 KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
 official source is fixed at
