@@ -7,13 +7,20 @@ import argparse
 import ast
 import hashlib
 import json
+import sys
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import torch
 
-if not hasattr(np, "int"):
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
+# The fixed AGCN source uses the removed NumPy alias. Inspecting __dict__ avoids
+# triggering NumPy's own deprecation warning while retaining source fidelity.
+if "int" not in np.__dict__:
     np.int = int
 
 from benchmarks.emotic_mlcil.methods.agcn import (

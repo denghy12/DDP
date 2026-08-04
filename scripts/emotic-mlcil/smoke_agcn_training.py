@@ -6,9 +6,15 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import sys
+from pathlib import Path
 
 import torch
 import torch.nn.functional as F
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
 
 from benchmarks.emotic_mlcil.methods.agcn import AGCNModel
 
