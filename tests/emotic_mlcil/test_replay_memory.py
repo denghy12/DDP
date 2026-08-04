@@ -3,7 +3,7 @@ from pathlib import Path
 
 import torch
 
-from benchmarks.emotic_mlcil.protocol import BenchmarkProtocol
+from benchmarks.emotic_mlcil.protocol import load_protocol
 from benchmarks.emotic_mlcil.replay_memory import (
     PartitionedReservoirReplayBuffer,
     ReplayMemoryContract,
@@ -30,7 +30,7 @@ def record(sample_id, positives, visible=(0, 1, 2, 3), image_value=1.0):
 
 class ReplayMemoryTest(unittest.TestCase):
     def test_registered_emotic_budget_matches_b5c3_seen_classes(self):
-        protocol = BenchmarkProtocol.from_yaml(
+        protocol = load_protocol(
             ROOT / "configs/emotic_mlcil/protocol_b5c3.yaml"
         )
         contract = ReplayMemoryContract.from_yaml(
@@ -116,14 +116,29 @@ class ReplayMemoryTest(unittest.TestCase):
             [item.sample_id for item in right.records],
         )
         proportions = left._active_proportions()
-        self.assertLess(proportions[0], proportions[1])
+        self.assertTrue(proportions)
+        expected_weights = {
+            index: left.observed_positive_counts[index] ** left.allocation_power
+            for index in proportions
+        }
+        expected_total = sum(expected_weights.values())
+        for index, proportion in proportions.items():
+            self.assertAlmostEqual(
+                proportion,
+                expected_weights[index] / expected_total,
+                places=12,
+            )
         restored = PartitionedReservoirReplayBuffer(
             num_classes=4,
             seed=99,
             allocation_power=-0.03,
         )
         restored.load_state_dict(left.state_dict())
-        self.assertEqual(restored.observed_positive_counts, left.observed_positive_counts)
+        self.assertEqual(
+            restored.observed_positive_counts,
+            left.observed_positive_counts,
+        )
+        self.assertEqual(restored.substream_order, left.substream_order)
 
     def test_repeated_id_is_merged_without_growing_sample_count(self):
         memory = ReservoirReplayBuffer(num_classes=4, seed=0)
