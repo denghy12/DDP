@@ -99,3 +99,4 @@ clone fallback when `codeload.github.com` is unavailable. It verifies the
 resolved commit and three critical files, and prepares only
 `/mnt/haoyuan/workspace/baseline_sources/derpp_official`. It never copies the
 external repository into `benchmarks/emotic_mlcil/methods/`.
+Set `DERPP_SOURCE_TRANSPORT=ssh` to skip the HTTPS attempts immediately.

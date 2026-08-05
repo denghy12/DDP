@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SOURCE_BASE="${DERPP_SOURCE_BASE:-/mnt/haoyuan/workspace/baseline_sources}"
+SOURCE_TRANSPORT="${DERPP_SOURCE_TRANSPORT:-auto}"
 ARCHIVE_NAME="derpp_neurips2020_cb9a36d.tar.gz"
 ARCHIVE_PATH="${SOURCE_BASE}/${ARCHIVE_NAME}"
 SOURCE_ROOT="${SOURCE_BASE}/derpp_official"
@@ -12,6 +13,10 @@ EXPECTED_BUFFER_SHA="3f4c9b416e22241bd6417d1cd2d6ec0625d7309c1d9e308757635debe54
 EXPECTED_LICENSE_SHA="309ca56cfbbe29aa036d1c53f8f05d5ee0a1dd78dcc37f53f94e840b22b60275"
 
 mkdir -p "${SOURCE_BASE}"
+[[ "${SOURCE_TRANSPORT}" == "auto" || "${SOURCE_TRANSPORT}" == "ssh" ]] || {
+  echo "DERPP_SOURCE_TRANSPORT must be auto or ssh" >&2
+  exit 2
+}
 
 verify_source() {
   [[ "$(sha256sum "${SOURCE_ROOT}/models/derpp.py" | awk '{print $1}')" == "${EXPECTED_DERPP_SHA}" ]]
@@ -29,21 +34,28 @@ if [[ -d "${SOURCE_ROOT}" ]]; then
 fi
 
 if [[ ! -f "${ARCHIVE_PATH}" ]]; then
-  set +e
-  curl --http1.1 -fL \
-    --retry 10 \
-    --retry-all-errors \
-    --retry-delay 3 \
-    --connect-timeout 30 \
-    --max-time 600 \
-    "${URL}" \
-    -o "${ARCHIVE_PATH}.download"
-  DOWNLOAD_RC=$?
-  set -e
+  DOWNLOAD_RC=1
+  if [[ "${SOURCE_TRANSPORT}" == "auto" ]]; then
+    set +e
+    curl --http1.1 -fL \
+      --retry 10 \
+      --retry-all-errors \
+      --retry-delay 3 \
+      --connect-timeout 30 \
+      --max-time 600 \
+      "${URL}" \
+      -o "${ARCHIVE_PATH}.download"
+    DOWNLOAD_RC=$?
+    set -e
+  fi
   if [[ "${DOWNLOAD_RC}" -eq 0 ]]; then
     mv "${ARCHIVE_PATH}.download" "${ARCHIVE_PATH}"
   else
-    echo "HTTPS archive download failed with exit code ${DOWNLOAD_RC}" >&2
+    if [[ "${SOURCE_TRANSPORT}" == "auto" ]]; then
+      echo "HTTPS archive download failed with exit code ${DOWNLOAD_RC}" >&2
+    else
+      echo "Skipping HTTPS archive download by request" >&2
+    fi
     echo "Falling back to the configured GitHub SSH transport..." >&2
     git clone \
       --depth 1 \
