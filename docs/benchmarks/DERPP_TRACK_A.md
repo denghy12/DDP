@@ -89,9 +89,9 @@ Before seed-0 validation, the server must:
    merge tests, checkpoint/RNG restoration, and all legacy regressions; and
 5. pass the current batch plus two replay batches CUDA memory smoke.
 
-Seed-0 reports validation only. Held-out test remains blocked until the
-validation result is reviewed, the configuration is frozen, and
-`configuration_locked=true` is enforced by a formal runner.
+Seed-0 reported validation only. Held-out test was blocked until the
+validation result was reviewed, the configuration was frozen, and
+`configuration_locked=true` was enforced by the formal runner.
 
 ## Frozen validation result
 
@@ -129,6 +129,43 @@ three formal seeds run concurrently as isolated processes on three distinct
 physical GPUs. The formal validator rejects missing seeds, unlocked/test-
 ineligible manifests, configuration drift, incomplete task scores, invalid
 online-buffer statistics, or non-finite training logs before packaging.
+
+## Registered formal result
+
+Locked held-out seeds 0--2 completed concurrently on physical GPUs 0/1/2 from
+clean commit `dfb3957f97ff42c716bb01ba17110e1c3f64c275`. All three manifests are
+test-only, configuration-locked, and eligible for the main table. The formal
+preflight passed 142 Core/baseline tests with three intentional skips, 17
+selected legacy regressions, and the immutable-source oracle with exactly zero
+dense-logit-MSE and weighted-objective error. No worker needed an OOM fallback
+or rerun.
+
+The registered result is Final mAP `23.0844 ± 1.2413`, Average mAP
+`30.4140 ± 0.4120`, Forgetting `9.1229 ± 1.3788`, Final cF1
+`20.0096 ± 1.0554`, and Final oF1 `44.9475 ± 0.5622`, where all dispersions are
+sample standard deviations across seeds. The mean task-wise mAP curve is
+`42.4815/35.3560/28.5319/30.2722/29.6635/27.3299/26.5923/23.0844`.
+Anticipation, Affection, and Anger have the largest mean class forgetting at
+`40.7264`, `31.4549`, and `19.2136` points.
+
+Relative to the paired ER runs, DER++ gains `+2.7614 ± 2.4241` Final mAP and
+`+4.4881 ± 1.8248` Average mAP. Relative to PRS it gains
+`+2.5241 ± 1.6853` and `+4.0885 ± 1.8378`. Every seed has a positive Final-mAP
+difference, but DER++ forgetting is `0.4243` worse than ER and `0.3750` worse
+than PRS on average, and its fixed-0.5 cF1 does not improve. These limitations
+are retained without post-test tuning.
+
+The three seeds completed 24,319 of 24,325 optimizer attempts. Guarded AMP
+overflows were `2/1/3` for seeds 0/1/2, with no NaN, OOM, or training
+traceback. Every final buffer contains exactly 520 unique samples and its
+capture-time logits/masks; mean charged storage is 313,273,881 bytes
+(`298.7613 MiB`). The checkpoint-free archive contains 24 canonical score
+tensors, excludes every `.pth`, and passed its outer checksum plus all 57
+internal SHA-256 checks. Its SHA-256 is
+`7f37bac988e7cf49550512626ebd7a2e2267956de038a93cd4b061de34b1c790`.
+Complete machine-readable evidence is in
+`results/derpp_seed012_formal_v0.1.json`. DER++ Track A is now frozen; no more
+GPU runs or algorithm/threshold changes are required.
 
 On the server, `scripts/emotic-mlcil/prepare_derpp_source.sh` downloads or
 accepts the adjacent fixed archive, with an automatic fixed-tag GitHub SSH

@@ -1,0 +1,303 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "method": "DER++",
+  "run_id": "derpp_formal_seed012_20260805_131333",
+  "status": "eligible_for_main_table_and_frozen",
+  "configuration_lock_confirmation": "DERPP_20C_TRACK_A_V0_1",
+  "source": {
+    "formal_training_commit": "dfb3957f97ff42c716bb01ba17110e1c3f64c275",
+    "source_tree_hash": "f80bd7d2997493c5d02d0565a59196651207175df9839936a792684f7baba57b",
+    "core_runtime_version": "0.10.0",
+    "core_base_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+    "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+    "protocol_hash_by_seed": {
+      "0": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+      "1": "7324c4bcf8632259990ba1ade0a57608ea3ecd20f75ebaff5c87fba55a227090",
+      "2": "f7c21d4133f4b4cd6824a1a0e77f26a525e0cb520373fa5f271ee371263dba5a"
+    },
+    "data_split_hash": {
+      "task0": "9ad2cdb8e7ec95bc9152953622cbfd98e7eeabd0f413143d2af248d796132dfb",
+      "task1": "b9adf48fdbd522c7eb0cbb8b19ee950742184faf238059311c951c69f46f8a51",
+      "task2": "ac853116831a50f66a4173d7a364fa136645d03ed28ea4ff727fcdaa9ef1a975",
+      "task3": "a7f8d0a25d7085ab45f7219fc156c65b27f5190b24d4fe5b268b48c39081d62d",
+      "task4": "709f667258a29107c88422b5dfb4849ff02ed44193e2341f733be88b5ba23e7c",
+      "task5": "e76331ff24a47c88dd394d52bfb8c33a9cd5936e2e222ccd5b2778696a2d3118",
+      "task6": "7720625403cde13afe85ffe826dcbbf7ed572a74ee1a3ce222dc58022f60cd63",
+      "task7": "a0ad09e4d3c3ca81f8ba63eb0d41b618666192a75bffc61858cb44a2cbe5a415"
+    }
+  },
+  "upstream_equivalence": {
+    "repository": "https://github.com/aimagelab/mammoth",
+    "tag": "neurips2020",
+    "tag_object": "1f3978bd58a7f873675f5245d3e6a1ad46bee28a",
+    "commit": "cb9a36d788d6ad051c9eee0da358b25421d909f5",
+    "archive_sha256": "d7cdffefdb7d77939a1055984cb586ad83af0220439cd76e4a106ea201c1695b",
+    "license": "MIT",
+    "source_copied_into_repository": false,
+    "independent_get_data_calls": 2,
+    "mse_loss_calls": 1,
+    "stored_payload_fields": ["examples", "labels", "logits"],
+    "dense_logit_mse_abs_error": 0.0,
+    "weighted_objective_abs_error": 0.0
+  },
+  "eligibility": {
+    "reporting_split": "test",
+    "checkpoint_selection_split": "val",
+    "configuration_locked": true,
+    "configuration_was_frozen_before_all_held_out_seeds": true,
+    "test_labels_used_for_selection": false,
+    "prediction_reused_task_ids": [],
+    "all_seeds_clean": true,
+    "all_seeds_eligible_for_main_table": true,
+    "hyperparameters_changed_after_validation": false
+  },
+  "method_configuration": {
+    "backbone": "OpenAI CLIP ViT-B/16 visual encoder (fine-tuned)",
+    "clip_text_encoder_used": false,
+    "benchmark_added_adapter": false,
+    "derpp_alpha": 0.5,
+    "derpp_beta": 0.5,
+    "memory_contract_id": "emotic_derpp_replay_20c_v0.1",
+    "samples_per_seen_class": 20,
+    "task_capacities": [100, 160, 220, 280, 340, 400, 460, 520],
+    "replay_to_current_ratio_per_draw": 1.0,
+    "independent_replay_draws_per_current_batch": 2,
+    "memory_update_timing": "online_after_optimizer_attempt",
+    "stored_logits": "pre_update_capture_time_visible_columns_only",
+    "stored_targets": "capture_time_visible_columns_only",
+    "stable_id_logit_merge": "latest_coherent_image_logit_capture",
+    "objective": "current_BCE_plus_0.5_masked_logit_MSE_plus_0.5_visible_replay_BCE",
+    "optimizer": "AdamW",
+    "backbone_learning_rate": 0.00001,
+    "head_learning_rate": 0.0001,
+    "weight_decay": 0.0001,
+    "gradient_clip_norm": 1.0,
+    "epochs_per_task_maximum": 10,
+    "early_stopping_patience": 3,
+    "selection_metric": "current_label_validation_mAP",
+    "train_batch_size": 32,
+    "eval_batch_size": 64,
+    "workers": 2,
+    "amp": true,
+    "tf32": true,
+    "f1_threshold": 0.5
+  },
+  "resources": {
+    "total_parameters": 86205978,
+    "trainable_parameters": 86205978,
+    "incremental_parameters": 10773,
+    "per_task_incremental_parameters": {
+      "0": 0,
+      "1": 1539,
+      "2": 1539,
+      "3": 1539,
+      "4": 1539,
+      "5": 1539,
+      "6": 1539,
+      "7": 1539
+    },
+    "replay_memory_samples": {"mean": 520, "std": 0.0},
+    "replay_memory_bytes": {"mean": 313273881, "std": 28.160255680657446},
+    "replay_memory_mib_mean": 298.7612543106079,
+    "gpu_smoke_current_batch_size": 32,
+    "gpu_smoke_replay_batch_size_per_draw": 32,
+    "gpu_smoke_independent_replay_draws": 2,
+    "gpu_smoke_peak_allocated_mib": 8434.0,
+    "launcher_minimum_free_mib_per_gpu": 12000
+  },
+  "execution": {
+    "mode": "three_seed_three_gpu_parallel",
+    "max_concurrent_training_processes": 3,
+    "physical_gpu_by_seed": {"0": 0, "1": 1, "2": 2},
+    "completion_exit_code_by_seed": {"0": 0, "1": 0, "2": 0},
+    "all_processes_completed": true,
+    "oom_fallback_used": false,
+    "training_rerun_used": false
+  },
+  "per_seed": [
+    {
+      "seed": 0,
+      "physical_gpu": 0,
+      "final_mAP": 23.831153652425122,
+      "average_mAP": 30.887281806658837,
+      "forgetting": 8.528243068633996,
+      "final_cF1": 21.17007437862835,
+      "final_oF1": 44.652144418481946,
+      "parameter_growth": 10773.0,
+      "replay_memory_samples": 520,
+      "replay_memory_bytes": 313273870,
+      "per_task_mAP": [42.04294848979807, 35.708494112945495, 29.136769432493477, 30.97667237259728, 30.21083578403008, 28.37158166671574, 26.81979894226542, 23.831153652425122]
+    },
+    {
+      "seed": 1,
+      "physical_gpu": 1,
+      "final_mAP": 23.770556640482855,
+      "average_mAP": 30.135377724838403,
+      "forgetting": 8.141170654994458,
+      "final_cF1": 19.751396181322583,
+      "final_oF1": 45.59588720984577,
+      "parameter_growth": 10773.0,
+      "replay_memory_samples": 520,
+      "replay_memory_bytes": 313273860,
+      "per_task_mAP": [40.31591000701333, 34.75671497619497, 28.541467286412626, 30.228639077523624, 29.071499937323914, 27.51398679182505, 26.884247081930845, 23.770556640482855]
+    },
+    {
+      "seed": 2,
+      "physical_gpu": 2,
+      "final_mAP": 21.65148493027568,
+      "average_mAP": 30.219209562755054,
+      "forgetting": 10.699270693908103,
+      "final_cF1": 19.107292459967336,
+      "final_oF1": 44.594513114259875,
+      "parameter_growth": 10773.0,
+      "replay_memory_samples": 520,
+      "replay_memory_bytes": 313273913,
+      "per_task_mAP": [45.08557269350895, 35.602914300848184, 27.91735022963185, 29.611306028913333, 29.708023243856392, 26.10402312152202, 26.073001953484027, 21.65148493027568]
+    }
+  ],
+  "aggregate": {
+    "aggregation": "mean_and_sample_standard_deviation",
+    "final_mAP": {"mean": 23.084398407727885, "std": 1.2413092986287562},
+    "average_mAP": {"mean": 30.413956364750764, "std": 0.4120493595799234},
+    "forgetting": {"mean": 9.122894805845519, "std": 1.3788317405321833},
+    "final_cF1": {"mean": 20.00958767330609, "std": 1.0553503901018868},
+    "final_oF1": {"mean": 44.947514914195864, "std": 0.5622457800031331},
+    "parameter_growth": {"mean": 10773.0, "std": 0.0},
+    "replay_memory_samples": {"mean": 520, "std": 0.0},
+    "replay_memory_bytes": {"mean": 313273881, "std": 28.160255680657446}
+  },
+  "per_task_mAP": [
+    {"task": 0, "mean": 42.48147706344012, "std": 2.41488116025666},
+    {"task": 1, "mean": 35.356041129996214, "std": 0.5217093569730867},
+    {"task": 2, "mean": 28.531862316179318, "std": 0.6097663402212425},
+    {"task": 3, "mean": 30.272205826344745, "std": 0.6837249880751403},
+    {"task": 4, "mean": 29.663452988403463, "std": 0.5709741006830077},
+    {"task": 5, "mean": 27.329863860020936, "std": 1.1449372818990455},
+    {"task": 6, "mean": 26.59234932589343, "std": 0.4509209028177752},
+    {"task": 7, "mean": 23.084398407727885, "std": 1.2413092986287562}
+  ],
+  "per_class_forgetting": {
+    "Affection": {"mean": 31.45485616147705, "std": 8.672706835040525},
+    "Anger": {"mean": 19.213586436845645, "std": 1.672020187109813},
+    "Annoyance": {"mean": 9.940766341467299, "std": 6.449601411690985},
+    "Anticipation": {"mean": 40.72636517026748, "std": 3.304235066750754},
+    "Aversion": {"mean": 5.431741580368518, "std": 4.616869055810172},
+    "Confidence": {"mean": 13.38499766741342, "std": 3.8506664369146004},
+    "Disapproval": {"mean": 7.255771792976456, "std": 4.192463306421652},
+    "Disconnection": {"mean": 7.700833041254886, "std": 2.9746596289314837},
+    "Disquietment": {"mean": 4.79736826352067, "std": 2.7757695872132073},
+    "Doubt/Confusion": {"mean": 5.889575760684547, "std": 2.328474310489927},
+    "Embarrassment": {"mean": 0.39869647815905007, "std": 0.3683241099636922},
+    "Engagement": {"mean": 1.9119518323221787, "std": 0.33289594736378775},
+    "Esteem": {"mean": 2.5086707312665513, "std": 0.8542117713251853},
+    "Excitement": {"mean": 13.648441026541688, "std": 8.6199850696989},
+    "Fatigue": {"mean": 1.9987317233522148, "std": 2.268005561065685},
+    "Fear": {"mean": 1.8798211384282946, "std": 0.8161858024621581},
+    "Happiness": {"mean": 9.959028164101603, "std": 6.445273202203144},
+    "Pain": {"mean": 6.177618357343631, "std": 2.536839632016339},
+    "Peace": {"mean": 1.336170195065975, "std": 0.9412275723705892},
+    "Pleasure": {"mean": 0.2637897561397627, "std": 0.4568972601502732},
+    "Sadness": {"mean": 13.007755521311628, "std": 3.5285530742791584},
+    "Sensitivity": {"mean": 0.14067853628754787, "std": 0.24366237238445487},
+    "Suffering": {"mean": 10.799364857850854, "std": 4.485129684843788}
+  },
+  "training_stability": {
+    "optimizer_attempts_total": 24325,
+    "successful_optimizer_updates_total": 24319,
+    "amp_overflow_skips_total": 6,
+    "common_memory_update_observations_by_selected_epoch": [5353, 4394, 861, 9931, 4352, 2536, 627, 1526],
+    "common_two_draw_replay_examples_by_selected_epoch": [10706, 8788, 1722, 19862, 8704, 5072, 1254, 3052],
+    "common_selected_replay_samples_by_task": [100, 160, 220, 280, 340, 400, 460, 520],
+    "per_seed": [
+      {
+        "seed": 0,
+        "epochs_completed_by_task": [10, 10, 8, 8, 10, 9, 10, 10],
+        "selected_epoch_zero_based_by_task": [6, 9, 4, 4, 7, 5, 9, 6],
+        "optimizer_attempts": 8524,
+        "amp_overflow_skips": 2,
+        "selected_replay_bytes_by_task": [60245019, 96392014, 132538921, 168685995, 204832989, 240979971, 277126893, 313273870],
+        "selected_dark_logit_loss_by_task": [0.014787470495017866, 0.01867214633502822, 0.0146435074577177, 0.030525402624124117, 0.029599921476534185, 0.034414997021667657, 0.034772107284516095, 0.033379976210805275]
+      },
+      {
+        "seed": 1,
+        "epochs_completed_by_task": [9, 9, 4, 5, 10, 9, 10, 7],
+        "selected_epoch_zero_based_by_task": [5, 5, 0, 1, 9, 5, 8, 3],
+        "optimizer_attempts": 7033,
+        "amp_overflow_skips": 1,
+        "selected_replay_bytes_by_task": [60244990, 96391983, 132538902, 168685958, 204832991, 240979961, 277126877, 313273860],
+        "selected_dark_logit_loss_by_task": [0.016927977583171532, 0.020088731598082013, 0.017096457037108916, 0.028269122842807096, 0.031319090487051976, 0.03822334604337811, 0.03993193805217743, 0.03366289512875179]
+      },
+      {
+        "seed": 2,
+        "epochs_completed_by_task": [10, 8, 6, 10, 10, 10, 6, 9],
+        "selected_epoch_zero_based_by_task": [9, 4, 2, 8, 6, 6, 2, 5],
+        "optimizer_attempts": 8768,
+        "amp_overflow_skips": 3,
+        "selected_replay_bytes_by_task": [60245000, 96392006, 132538929, 168685970, 204832996, 240979998, 277126938, 313273913],
+        "selected_dark_logit_loss_by_task": [0.015818433184731043, 0.017679378653512053, 0.012678101003445961, 0.041174010550333755, 0.028388307046364334, 0.03249240710865706, 0.03372614439576864, 0.029706667526625097]
+      }
+    ],
+    "all_logged_values_finite": true,
+    "nan_detected": false,
+    "oom_detected": false,
+    "traceback_detected": false
+  },
+  "paired_comparison": {
+    "DERPP_minus_ER": {
+      "final_mAP": {"mean": 2.761438767831013, "std": 2.424083731273693, "per_seed": [5.18365334721733, 2.765172757804489, 0.33549019847121997]},
+      "average_mAP": {"mean": 4.488065250880143, "std": 1.8247977695329691, "per_seed": [6.472160195438441, 4.110356722447264, 2.881678834754723]},
+      "forgetting": {"mean": 0.4242615626832477, "std": 0.7908037567257891},
+      "final_cF1": {"mean": -1.2106321546467989, "std": 4.699179070279811},
+      "final_oF1": {"mean": -0.4550241709091978, "std": 0.9054486315814473}
+    },
+    "DERPP_minus_PRS": {
+      "final_mAP": {"mean": 2.524117282046871, "std": 1.6852782041234897, "per_seed": [3.5216896708765084, 3.4723278471575334, 0.5783343281065711]},
+      "average_mAP": {"mean": 4.0885327888690135, "std": 1.8378365845801379, "per_seed": [5.739353102837434, 4.417998179233127, 2.1082470845364796]},
+      "forgetting": {"mean": 0.3750420212668688, "std": 0.8773382691118516},
+      "final_cF1": {"mean": -0.88705004387097, "std": 2.4284816992061695},
+      "final_oF1": {"mean": 13.57171766399211, "std": 2.2065551863876047}
+    },
+    "interpretation": "DER++ improves threshold-free Final and Average mAP over ER and PRS for every paired seed, but it does not reduce the registered forgetting metric and does not improve fixed-0.5 cF1."
+  },
+  "validation_test_audit": {
+    "seed0_training_records_identical": true,
+    "validation_final_mAP": 33.46711235111716,
+    "test_final_mAP": 23.831153652425122,
+    "test_minus_validation_final_mAP": -9.635958698692036,
+    "validation_average_mAP": 40.195552263280966,
+    "test_average_mAP": 30.887281806658837,
+    "test_minus_validation_average_mAP": -9.308270456622129,
+    "interpretation": "The held-out gap is an evaluation-split difference, not a training or checkpoint-selection drift."
+  },
+  "verification": {
+    "core_and_baseline_tests": 142,
+    "core_and_baseline_skips": 3,
+    "legacy_regression_tests": 17,
+    "three_manifests_configuration_locked": true,
+    "three_manifests_eligible_for_main_table": true,
+    "eight_task_metrics_per_seed": true,
+    "eight_score_files_per_seed": true,
+    "all_download_manifest_sha256_verified": true,
+    "download_manifest_files_verified": 57,
+    "archive_sha256_verified": true
+  },
+  "sync_bundle": {
+    "archive": "derpp_formal_seed012_20260805_131333.tar.gz",
+    "archive_sha256": "7f37bac988e7cf49550512626ebd7a2e2267956de038a93cd4b061de34b1c790",
+    "bundle_count": 3,
+    "file_count_excluding_download_manifest": 57,
+    "total_bytes_excluding_download_manifest": 25741598,
+    "canonical_scores_included": true,
+    "contains_pth": false
+  },
+  "freeze_decision": {
+    "formal_results_complete": true,
+    "gpu_rerun_required": false,
+    "hyperparameters_must_not_change_from_test": true,
+    "configuration_is_frozen": true,
+    "track_a_status": "frozen",
+    "next_action": "create the next baseline branch from this registered result"
+  }
+}

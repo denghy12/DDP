@@ -75,6 +75,7 @@ remain a reserved extension point.
 - [Frozen ER/PRS seed-0 validation snapshot](results/er_prs_seed0_validation_v0.1.json)
 - [Registered ER/PRS three-seed formal result](results/er_prs_seed012_formal_v0.1.json)
 - [Frozen DER++ seed-0 validation snapshot](results/derpp_seed0_validation_v0.1.json)
+- [Registered DER++ three-seed formal result](results/derpp_seed012_formal_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -186,6 +187,17 @@ replay draws, online pre-update logits, optimizer, learning rates, early
 stopping, and threshold 0.5 are frozen before held-out access. The formal
 runner requires `configuration_locked=true` and assigns seeds 0--2 to three
 distinct GPUs because the measured single-process peak is `8434.2 MiB`.
+Locked held-out seeds 0--2 then completed concurrently on GPUs 0/1/2 from
+clean commit `dfb3957`, without OOM fallback or rerun. DER++ is registered at
+Final mAP `23.0844 ± 1.2413`, Average mAP `30.4140 ± 0.4120`, and Forgetting
+`9.1229 ± 1.3788`. Its paired Final-mAP gains are `+2.7614 ± 2.4241` over ER
+and `+2.5241 ± 1.6853` over PRS, with a positive difference in every seed.
+Those gains do not extend to all metrics: forgetting is `0.4243` worse than ER
+and `0.3750` worse than PRS, while fixed-threshold cF1 does not improve. All
+three runs ended at 520 samples, and six guarded AMP overflows occurred in
+24,325 optimizer attempts without NaN, OOM, or traceback. The checkpoint-free
+archive passed its outer checksum and all 57 internal SHA-256 checks. DER++
+Track A is frozen without held-out threshold or hyperparameter tuning.
 
 KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
 official source is fixed at
