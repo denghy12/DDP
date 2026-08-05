@@ -53,3 +53,13 @@ DER++ seed 1; isolated retries used unchanged code and configurations. This
 does not invalidate the results, but future 24 GiB scheduling must not pair
 DER++ with ER or PRS. Exact provenance is registered in
 [`results/b10c4_12baseline_seed012_formal_v0.1.json`](results/b10c4_12baseline_seed012_formal_v0.1.json).
+
+## B4-C2 12-baseline sweep
+
+The alphabetic `4/2×11` Track-A protocol, standard/DER++ replay contracts,
+36-job aggregator, checkpoint-free packager, and eight-GPU launcher are ready.
+Execution has not started and no B4-C2 result is registered yet. The launcher
+uses two slots per GPU with a `20000 MiB` reservation budget, at least 4 GiB
+physical headroom, dynamic compatible-job backfill, and explicit DER++/ER and
+DER++/PRS colocation bans. All method hyperparameters remain frozen from
+B5-C3; B4-C2 test results may not be used for tuning.

@@ -1,0 +1,95 @@
+protocol_id: emotic_b4c2_v0.1
+dataset: EMOTIC
+class_order:
+  - Affection
+  - Anger
+  - Annoyance
+  - Anticipation
+  - Aversion
+  - Confidence
+  - Disapproval
+  - Disconnection
+  - Disquietment
+  - Doubt/Confusion
+  - Embarrassment
+  - Engagement
+  - Esteem
+  - Excitement
+  - Fatigue
+  - Fear
+  - Happiness
+  - Pain
+  - Peace
+  - Pleasure
+  - Sadness
+  - Sensitivity
+  - Suffering
+  - Surprise
+  - Sympathy
+  - Yearning
+tasks:
+  - [Affection, Anger, Annoyance, Anticipation]
+  - [Aversion, Confidence]
+  - [Disapproval, Disconnection]
+  - [Disquietment, Doubt/Confusion]
+  - [Embarrassment, Engagement]
+  - [Esteem, Excitement]
+  - [Fatigue, Fear]
+  - [Happiness, Pain]
+  - [Peace, Pleasure]
+  - [Sadness, Sensitivity]
+  - [Suffering, Surprise]
+  - [Sympathy, Yearning]
+train_split: train
+validation_split: val
+test_split: test
+label_visibility:
+  train:
+    current: true
+    old: false
+    future: false
+  validation_selection:
+    current: true
+    old: false
+    future: false
+  evaluator:
+    seen: true
+    future: false
+evaluation_scope:
+  sample_filter: intersects_seen_classes
+  target_columns: seen_classes
+  class_order: protocol
+threshold_policy:
+  kind: fixed_global
+  value: 0.5
+  per_task_selection: false
+  per_class_selection: false
+primary_metric: final_mAP
+auxiliary_metrics:
+  - average_mAP
+  - cPrecision
+  - cRecall
+  - cF1
+  - oPrecision
+  - oRecall
+  - oF1
+  - forgetting
+checkpoint_selection:
+  split: val
+  metric: mAP
+  mode: max
+  tie_break: earliest_epoch
+  test_allowed: false
+track: A
+seed: 0
+output_schema_version: 1
+method_options:
+  ddp:
+    temperature:
+      minimum: 1.0
+      maximum: 2.0
+      gamma: 0.7
+  original_ddp:
+    temperature_minimum: 1.0
+    temperature_maximum: 2.0
+    temperature_gamma: 0.7

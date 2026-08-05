@@ -43,6 +43,7 @@ remain a reserved extension point.
 
 - [Frozen B5-C3 contract](EMOTIC_B5C3_BENCHMARK_CONTRACT.md)
 - [B10-C4 12-baseline sweep contract and launcher](EMOTIC_B10C4_12BASELINE_SWEEP.md)
+- [B4-C2 12-baseline sweep contract and OOM-safe launcher](EMOTIC_B4C2_12BASELINE_SWEEP.md)
 - [Baseline source audit](BASELINE_SOURCE_AUDIT.md)
 - [Baseline porting checklist](BASELINE_PORTING_CHECKLIST.md)
 - [Implementation status](BASELINE_STATUS.md)

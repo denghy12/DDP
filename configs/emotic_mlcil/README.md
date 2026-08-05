@@ -12,6 +12,13 @@ hash and must never reuse B5-C3 predictions. The adjacent
 `replay_derpp_b10c4_20c_v0.1.yaml` retain 20 samples per seen class with task
 capacities `200/280/360/440/520`.
 
+`protocol_b4c2.yaml` is the registered twelve-task extension over that same
+alphabetical order. Task sizes are `4/2/2/2/2/2/2/2/2/2/2/2`, seen-class
+counts are `4/6/8/10/12/14/16/18/20/22/24/26`, and all visibility,
+selection, held-out test, and fixed-threshold rules remain unchanged. Its
+standard and DER++ replay contracts retain 20 samples per seen class with
+capacities `80/120/160/200/240/280/320/360/400/440/480/520`.
+
 To add B10-C2, B2-C2, or a custom class order, add another YAML file with the
 same schema and change `class_order` plus `tasks`. Every class must occur exactly
 once, and flattening `tasks` must equal `class_order`. No runner, evaluator, or
