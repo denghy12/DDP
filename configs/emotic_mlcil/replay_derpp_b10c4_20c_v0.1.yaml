@@ -1,0 +1,21 @@
+contract_id: emotic_b10c4_derpp_replay_20c_v0.1
+protocol_id: emotic_b10c4_v0.1
+sample_unit: unique_emotic_person_sample
+capacity:
+  kind: per_seen_class
+  samples_per_seen_class: 20
+  task_capacities: [200, 280, 360, 440, 520]
+payload:
+  image: post_transform_float32_tensor
+  targets: visible_binary_columns_only
+  visible_mask: true
+  stable_sample_id: true
+  logits: capture_time_visible_logits_only
+  logit_mask: true
+training:
+  update_timing: online_after_optimizer_attempt
+  replay_to_current_ratio: 1.0
+  replay_draws_per_current_batch: 2
+  sample_without_replacement: true
+  current_and_replay_equal_sample_weight: false
+  objective_weighting: source_derpp_weighted_sum

@@ -839,6 +839,13 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--replay-contract",
+        help=(
+            "Machine-readable replay contract for ER, PRS, or DER++. "
+            "Omit only when using the registered B5-C3 default."
+        ),
+    )
+    parser.add_argument(
         "--input-mode",
         choices=("full", "person_crop"),
         default="full",
@@ -929,6 +936,14 @@ def main() -> None:
             raise ValueError("--ewc-lambda is valid only with --method ewc")
         if not math.isfinite(args.ewc_lambda) or args.ewc_lambda <= 0:
             raise ValueError("--ewc-lambda must be finite and positive")
+    if args.replay_contract is not None and args.method not in {
+        "er",
+        "prs",
+        "derpp",
+    }:
+        raise ValueError(
+            "--replay-contract is valid only with ER, PRS, or DER++"
+        )
     method_classes = {
         "ddp": DDPBenchmarkMethod,
         "finetune": SequentialFineTuningMethod,
@@ -1005,6 +1020,13 @@ def main() -> None:
             clip_model_path=args.clip_model_path,
             class_embedding_path=args.agcn_word_embeddings,
             device=args.device,
+        )
+    elif args.method in {"er", "prs", "derpp"}:
+        method = method_class(
+            protocol,
+            clip_model_path=args.clip_model_path,
+            device=args.device,
+            memory_contract_path=args.replay_contract,
         )
     else:
         option_overrides = (

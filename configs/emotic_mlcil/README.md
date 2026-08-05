@@ -3,6 +3,15 @@
 `protocol_b5c3.yaml` is the frozen Core v0.1 protocol. The loader validates
 configuration content and never infers a protocol from the filename.
 
+`protocol_b10c4.yaml` is the registered five-task extension over the identical
+alphabetical 26-class order. Task sizes are `10/4/4/4/4`, seen-class counts are
+`10/14/18/22/26`, and all label-visibility, validation-selection, held-out test,
+and fixed-threshold rules are unchanged. It is a distinct protocol with its own
+hash and must never reuse B5-C3 predictions. The adjacent
+`replay_b10c4_20c_v0.1.yaml` and
+`replay_derpp_b10c4_20c_v0.1.yaml` retain 20 samples per seen class with task
+capacities `200/280/360/440/520`.
+
 To add B10-C2, B2-C2, or a custom class order, add another YAML file with the
 same schema and change `class_order` plus `tasks`. Every class must occur exactly
 once, and flattening `tasks` must equal `class_order`. No runner, evaluator, or
