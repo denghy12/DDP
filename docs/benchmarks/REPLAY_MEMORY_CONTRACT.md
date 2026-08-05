@@ -76,6 +76,15 @@ read validation or test. ER and PRS share this lifecycle, optimizer, visual
 model, classifier, batch sizes, label visibility, and random-seed convention;
 only their admission/eviction policy differs.
 
+DER++ shares the capacity scale, sample identity, visible-target safety, and
+per-draw 1:1 size, but not this task-end lifecycle. Its defining source
+behavior stores pre-update logits online and makes two independent replay
+draws: one for logit MSE and one for supervised replay. The registered DER++
+contract is `replay_derpp_20c_v0.1.yaml`; it masks logits to capture-time seen
+columns, uses `alpha=beta=0.5`, and restores buffer/RNG state together with the
+validation-selected model. This explicit exception prevents a nominal DER++
+port from silently becoming task-boundary logit replay.
+
 This task-end mapping is a deliberate Track-A adaptation of PRS's original
 online stream, which updates memory after every optimizer step. It keeps the
 benchmark's task-level B5-C3 training contract consistent and is recorded in
@@ -89,6 +98,10 @@ every resolved method configuration.
   Positive-label stream frequencies define target partitions with the
   official COCO allocation power `q=-0.03`; admission and eviction follow the
   fixed upstream operators.
+- **DER++:** independent multi-label mapping of the NeurIPS 2020 method. It
+  uses uniform reservoir replacement, capture-time logits, two independent
+  replay draws, and visible-mask sigmoid supervision. Stored logits and their
+  mask are charged in addition to the common image/target/ID payload.
 
 No method may silently substitute a paper-specific memory size in the primary
 table. Original-budget runs, including PRS's released COCO capacity of 2,000,

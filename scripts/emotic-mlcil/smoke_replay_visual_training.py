@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Worst-step CLIP visual + equal-size replay GPU memory smoke."""
+"""Worst-step CLIP visual + one/two equal-size replay GPU memory smoke."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--clip-model-path", required=True)
     parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--replay-draws", type=int, choices=(1, 2), default=1)
     args = parser.parse_args()
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is required for replay memory smoke")
@@ -44,6 +45,11 @@ def main() -> None:
     scaler = torch.cuda.amp.GradScaler()
     current_images = torch.rand(args.batch_size, 3, 224, 224, device=device)
     replay_images = torch.rand(args.batch_size, 3, 224, 224, device=device)
+    dark_images = (
+        torch.rand(args.batch_size, 3, 224, 224, device=device)
+        if args.replay_draws == 2
+        else None
+    )
     current_targets = torch.randint(
         0, 2, (args.batch_size, 3), device=device
     ).float()
@@ -51,6 +57,7 @@ def main() -> None:
         0, 2, (args.batch_size, 26), device=device
     ).float()
     replay_mask = torch.ones_like(replay_targets)
+    stored_logits = torch.randn_like(replay_targets)
 
     torch.cuda.reset_peak_memory_stats()
     optimizer.zero_grad(set_to_none=True)
@@ -70,7 +77,12 @@ def main() -> None:
         replay_losses = (
             replay_raw * replay_mask
         ).sum(dim=1) / replay_mask.sum(dim=1)
-        loss = torch.cat([current_losses, replay_losses]).mean()
+        if dark_images is None:
+            loss = torch.cat([current_losses, replay_losses]).mean()
+        else:
+            dark_features = F.normalize(visual(dark_images).float(), dim=-1)
+            dark_loss = F.mse_loss(head(dark_features), stored_logits)
+            loss = current_losses.mean() + 0.5 * dark_loss + 0.5 * replay_losses.mean()
     scaler.scale(loss).backward()
     scaler.unscale_(optimizer)
     torch.nn.utils.clip_grad_norm_(
@@ -84,6 +96,7 @@ def main() -> None:
             {
                 "current_batch_size": args.batch_size,
                 "replay_batch_size": args.batch_size,
+                "independent_replay_draws": args.replay_draws,
                 "seen_classes": 26,
                 "optimizer": "AdamW",
                 "peak_mib": round(peak, 1),

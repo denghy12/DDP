@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${ROOT}"
 
-METHOD="${METHOD:?METHOD is required (er or prs)}"
+METHOD="${METHOD:?METHOD is required (er, prs, or derpp)}"
 SEED="${SEED:-0}"
 GPU="${GPU:-0}"
 RUN_ID="${RUN_ID:?RUN_ID is required}"
@@ -21,8 +21,8 @@ WORKERS="${WORKERS:-2}"
 EXPORT_SYNC_RESULTS="${EXPORT_SYNC_RESULTS:-1}"
 CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:-}"
 
-[[ "${METHOD}" == "er" || "${METHOD}" == "prs" ]] || {
-  echo "METHOD must be er or prs" >&2
+[[ "${METHOD}" == "er" || "${METHOD}" == "prs" || "${METHOD}" == "derpp" ]] || {
+  echo "METHOD must be er, prs, or derpp" >&2
   exit 2
 }
 [[ "${SEED}" =~ ^[0-9]+$ ]] || { echo "Invalid SEED" >&2; exit 2; }

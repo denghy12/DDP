@@ -75,6 +75,13 @@ registered B5-C3 protocol hash remains unchanged. ER and PRS record the full
 resolved replay contract and actual sample/byte usage in their method
 artifacts.
 
+DER++ uses the adjacent `replay_derpp_20c_v0.1.yaml`. It keeps the identical
+20-per-seen-class capacity schedule but registers the method-defining online
+pre-update logit payload, two independent 1:1 replay draws, and source-style
+weighted objective instead of ER/PRS task-end insertion. Logits and a logit
+mask are included in actual replay byte accounting. These method details do
+not change the frozen B5-C3 protocol hash.
+
 The only registered tuning override is runner option `--ewc-lambda`. It is
 kept outside the frozen protocol object, validated as finite and positive, and
 written into method configuration. The official tuning launcher permits this

@@ -54,6 +54,7 @@ remain a reserved extension point.
 - [AGCN source audit and Track-A porting contract](AGCN_TRACK_A.md)
 - [Shared replay memory contract](REPLAY_MEMORY_CONTRACT.md)
 - [ER control and PRS Track-A porting contract](ER_PRS_TRACK_A.md)
+- [DER++ source audit and Track-A porting contract](DERPP_TRACK_A.md)
 - [Universal checkpoint-free download standard](DOWNLOAD_STANDARD.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
@@ -136,7 +137,7 @@ NaN, traceback, or skipped update. The registered formal result is Final mAP
 archive and all 57 manifest entries passed independent SHA-256 verification.
 AGCN Track A is now frozen and must not be rerun or tuned from held-out test.
 
-Replay-baseline development is active on `codex/emotic-baseline-er-prs`,
+ER/PRS replay-baseline development completed on `codex/emotic-baseline-er-prs`,
 branched from the frozen AGCN result. A machine-readable shared memory contract
 now fixes 20 unique person-samples per seen class (task capacities
 `100/160/220/280/340/400/460/520`), 1:1 replay/current exposure, masked
@@ -161,6 +162,19 @@ registered at `20.5603 ± 0.4442`, `26.3254 ± 1.5723`, and
 without post-test threshold tuning. Every run ended at exactly 520 replay
 samples, and the six-bundle checkpoint-free archive passed all 108 internal
 SHA-256 checks. ER and PRS Track A are now frozen.
+
+DER++ development is active on `codex/emotic-baseline-derpp`, branched from
+the frozen ER/PRS commit `895f895`. The official Mammoth `neurips2020` tag is
+fixed at dereferenced commit `cb9a36d` under MIT, with the complete source
+archive retained outside this repository. The independent Track-A port keeps
+the defining online pre-update trajectory logits, reservoir sampling, two
+independent replay draws, and paper-stable `alpha=beta=0.5`. Softmax CE is
+mapped to visible-mask sigmoid BCE and logit MSE is limited to columns that
+existed at capture time. It uses the same `20 × seen classes` sample scale as
+ER/PRS but separately charges stored logits and their mask in byte accounting.
+Task-end insertion is not used because it would change the method into
+boundary-logit replay. Full server preflight and seed-0 validation remain
+pending; held-out test is still locked.
 
 KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
 official source is fixed at

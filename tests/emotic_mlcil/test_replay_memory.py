@@ -43,6 +43,19 @@ class ReplayMemoryTest(unittest.TestCase):
         )
         self.assertEqual(contract.samples_per_seen_class, 20)
         self.assertEqual(contract.replay_to_current_ratio, 1.0)
+        self.assertFalse(contract.stores_logits)
+        self.assertEqual(contract.replay_draws_per_current_batch, 1)
+
+        derpp = ReplayMemoryContract.from_yaml(
+            ROOT / "configs/emotic_mlcil/replay_derpp_20c_v0.1.yaml",
+            protocol,
+        )
+        self.assertEqual(derpp.task_capacities, contract.task_capacities)
+        self.assertEqual(derpp.samples_per_seen_class, 20)
+        self.assertTrue(derpp.stores_logits)
+        self.assertEqual(derpp.update_timing, "online_after_optimizer_attempt")
+        self.assertEqual(derpp.replay_draws_per_current_batch, 2)
+        self.assertEqual(derpp.objective_weighting, "source_derpp_weighted_sum")
 
     def test_record_rejects_hidden_truth_and_merges_newly_visible_columns(self):
         first = record("person", (0,), visible=(0, 1), image_value=1.0)
@@ -147,6 +160,48 @@ class ReplayMemoryTest(unittest.TestCase):
         memory.observe(record("same", (2,), visible=(2, 3)))
         self.assertEqual(len(memory), 1)
         self.assertEqual(memory.records[0].positive_indices, (0, 2))
+
+    def test_dark_record_keeps_latest_image_and_logits_coherent(self):
+        first = ReplayRecord(
+            image=torch.zeros(1),
+            sample_id="dark",
+            targets=torch.tensor([1.0, 0.0, 0.0, 0.0]),
+            visible_mask=torch.tensor([True, True, False, False]),
+            logits=torch.tensor([0.25, -0.5, 0.0, 0.0]),
+            logit_mask=torch.tensor([True, True, False, False]),
+        )
+        later = ReplayRecord(
+            image=torch.ones(1),
+            sample_id="dark",
+            targets=torch.tensor([0.0, 0.0, 1.0, 0.0]),
+            visible_mask=torch.tensor([False, False, True, True]),
+            logits=torch.tensor([9.0, 9.0, 0.75, -0.25]),
+            logit_mask=torch.tensor([True, True, True, True]),
+        )
+        merged = first.merged_with(later)
+        self.assertEqual(merged.logits.tolist(), [9.0, 9.0, 0.75, -0.25])
+        self.assertTrue(torch.equal(merged.image, later.image))
+        self.assertTrue(bool(merged.logit_mask.all()))
+        self.assertEqual(merged.byte_count(), first.byte_count())
+        label_only = ReplayRecord(
+            image=torch.zeros(1),
+            sample_id="dark",
+            targets=torch.tensor([1.0, 0.0, 0.0, 0.0]),
+            visible_mask=torch.tensor([True, True, False, False]),
+        )
+        self.assertGreater(merged.byte_count(), label_only.byte_count())
+        restored = ReplayRecord.from_state_dict(merged.state_dict())
+        self.assertTrue(torch.equal(restored.logits, merged.logits))
+
+        with self.assertRaisesRegex(ValueError, "Hidden replay logit"):
+            ReplayRecord(
+                image=torch.zeros(1),
+                sample_id="invalid-dark",
+                targets=torch.zeros(4),
+                visible_mask=torch.tensor([True, False, False, False]),
+                logits=torch.tensor([0.0, 1.0, 0.0, 0.0]),
+                logit_mask=torch.tensor([True, False, False, False]),
+            )
 
 
 if __name__ == "__main__":

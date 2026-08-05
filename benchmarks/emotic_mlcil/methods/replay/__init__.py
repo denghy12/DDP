@@ -1,5 +1,21 @@
 """Controlled Track-A replay baselines."""
 
-from .method import ERBenchmarkMethod, PRSBenchmarkMethod, ReplayOptions
+from .method import (
+    DERPPBenchmarkMethod,
+    DERPPOptions,
+    ERBenchmarkMethod,
+    PRSBenchmarkMethod,
+    ReplayOptions,
+    derpp_weighted_loss,
+    masked_logit_mse,
+)
 
-__all__ = ["ERBenchmarkMethod", "PRSBenchmarkMethod", "ReplayOptions"]
+__all__ = [
+    "DERPPBenchmarkMethod",
+    "DERPPOptions",
+    "ERBenchmarkMethod",
+    "PRSBenchmarkMethod",
+    "ReplayOptions",
+    "derpp_weighted_loss",
+    "masked_logit_mse",
+]

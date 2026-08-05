@@ -19,10 +19,12 @@ WORKERS="${WORKERS:-2}"
 REQUIRE_CLEAN="${REQUIRE_CLEAN:-1}"
 RUN_GPU_SMOKE="${RUN_GPU_SMOKE:-1}"
 PRS_SOURCE_ROOT="${PRS_SOURCE_ROOT:-/mnt/haoyuan/workspace/baseline_sources/PRS-master}"
+DERPP_SOURCE_ROOT="${DERPP_SOURCE_ROOT:-/mnt/haoyuan/workspace/baseline_sources/derpp_official}"
 export PRS_SOURCE_ROOT
+export DERPP_SOURCE_ROOT
 
-[[ "${METHOD}" == "er" || "${METHOD}" == "prs" ]] || {
-  echo "METHOD must be er or prs" >&2
+[[ "${METHOD}" == "er" || "${METHOD}" == "prs" || "${METHOD}" == "derpp" ]] || {
+  echo "METHOD must be er, prs, or derpp" >&2
   exit 2
 }
 [[ "${RUN_ID}" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$ ]] || {
@@ -44,6 +46,14 @@ if [[ "${METHOD}" == "prs" && ! -d "${PRS_SOURCE_ROOT}" ]]; then
   echo "Missing fixed PRS source: ${PRS_SOURCE_ROOT}" >&2
   exit 2
 fi
+if [[ "${METHOD}" == "derpp" && ! -d "${DERPP_SOURCE_ROOT}" ]]; then
+  echo "Missing fixed DER++ source: ${DERPP_SOURCE_ROOT}" >&2
+  exit 2
+fi
+REPLAY_DRAWS=1
+if [[ "${METHOD}" == "derpp" ]]; then
+  REPLAY_DRAWS=2
+fi
 if [[ "${REQUIRE_CLEAN}" == "1" && -n "$(git status --porcelain)" ]]; then
   echo "Replay validation requires a clean Git worktree" >&2
   exit 2
@@ -52,7 +62,7 @@ fi
 RUN_ROOT="${OUTPUT_BASE}/${RUN_ID}"
 LOG_DIR="${OUTPUT_BASE}/_launcher_logs"
 PREFLIGHT_LOG="${LOG_DIR}/${RUN_ID}_preflight.log"
-ORACLE_JSON="${RUN_ROOT}/prs_upstream_equivalence.json"
+ORACLE_JSON="${RUN_ROOT}/${METHOD}_upstream_equivalence.json"
 mkdir -p "${LOG_DIR}" "${RUN_ROOT}"
 
 set +e
@@ -60,9 +70,9 @@ set +e
 "${PYTHON}" - <<'PY'
 from benchmarks.emotic_mlcil.registry import method_names
 from benchmarks.emotic_mlcil.runner import CORE_RUNTIME_VERSION
-if CORE_RUNTIME_VERSION != "0.9.0":
+if CORE_RUNTIME_VERSION != "0.10.0":
     raise RuntimeError(f"Unexpected runtime: {CORE_RUNTIME_VERSION}")
-required = {"er", "prs"}
+required = {"er", "prs", "derpp"}
 if not required.issubset(set(method_names())):
     raise RuntimeError(f"Missing replay methods: {required - set(method_names())}")
 print({"runtime": CORE_RUNTIME_VERSION, "methods": tuple(method_names())})
@@ -78,12 +88,18 @@ if [[ "${METHOD}" == "prs" ]]; then
   "${PYTHON}" "${SCRIPT_DIR}/compare_prs_upstream_reference.py" \
     --upstream-root "${PRS_SOURCE_ROOT}" > "${ORACLE_JSON}"
 fi
+if [[ "${METHOD}" == "derpp" ]]; then
+  echo "Running immutable DER++ source/objective equivalence..."
+  "${PYTHON}" "${SCRIPT_DIR}/compare_derpp_upstream_reference.py" \
+    --upstream-root "${DERPP_SOURCE_ROOT}" > "${ORACLE_JSON}"
+fi
 if [[ "${RUN_GPU_SMOKE}" == "1" ]]; then
   echo "Running current+replay CLIP memory smoke on GPU ${GPU}..."
   CUDA_VISIBLE_DEVICES="${GPU}" "${PYTHON}" \
     "${SCRIPT_DIR}/smoke_replay_visual_training.py" \
-    --clip-model-path "${CLIP_MODEL_PATH}" \
-    --batch-size "${TRAIN_BATCH_SIZE}"
+      --clip-model-path "${CLIP_MODEL_PATH}" \
+      --batch-size "${TRAIN_BATCH_SIZE}" \
+      --replay-draws "${REPLAY_DRAWS}"
 fi
 ) 2>&1 | tee "${PREFLIGHT_LOG}"
 PREFLIGHT_RC="${PIPESTATUS[0]}"
@@ -95,7 +111,7 @@ if [[ "${PREFLIGHT_RC}" -ne 0 ]]; then
 fi
 
 extra_args=()
-if [[ "${METHOD}" == "prs" ]]; then
+if [[ "${METHOD}" == "prs" || "${METHOD}" == "derpp" ]]; then
   extra_args=(--extra "${ORACLE_JSON}")
 fi
 printf -v command \

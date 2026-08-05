@@ -12,7 +12,7 @@ from .multi_lane import MultiLaneBenchmarkMethod
 from .l3a import L3ABenchmarkMethod
 from .original_ddp import OriginalDDPBenchmarkMethod
 from .agcn import AGCNBenchmarkMethod
-from .replay import ERBenchmarkMethod, PRSBenchmarkMethod
+from .replay import DERPPBenchmarkMethod, ERBenchmarkMethod, PRSBenchmarkMethod
 
 __all__ = [
     "DDPBenchmarkMethod",
@@ -27,4 +27,5 @@ __all__ = [
     "SequentialFineTuningMethod",
     "ERBenchmarkMethod",
     "PRSBenchmarkMethod",
+    "DERPPBenchmarkMethod",
 ]

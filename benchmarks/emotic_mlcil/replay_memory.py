@@ -27,6 +27,9 @@ class ReplayMemoryContract:
     update_timing: str
     sample_unit: str
     image_payload: str
+    stores_logits: bool
+    replay_draws_per_current_batch: int
+    objective_weighting: str
 
     @classmethod
     def from_mapping(
@@ -61,7 +64,10 @@ class ReplayMemoryContract:
         if not math.isfinite(ratio) or ratio != 1.0:
             raise ValueError("Registered replay-to-current ratio must be 1.0")
         update_timing = str(training.get("update_timing", ""))
-        if update_timing != "task_end_single_pass":
+        if update_timing not in {
+            "task_end_single_pass",
+            "online_after_optimizer_attempt",
+        }:
             raise ValueError("Unexpected replay memory update timing")
         sample_unit = str(value.get("sample_unit", ""))
         if sample_unit != "unique_emotic_person_sample":
@@ -77,8 +83,34 @@ class ReplayMemoryContract:
             raise ValueError("Replay payload must carry a stable sample ID")
         if training.get("sample_without_replacement") is not True:
             raise ValueError("Replay batches must sample without replacement")
-        if training.get("current_and_replay_equal_sample_weight") is not True:
-            raise ValueError("Current and replay samples must have equal weight")
+        equal_sample_weight = training.get(
+            "current_and_replay_equal_sample_weight"
+        )
+        objective_weighting = str(
+            training.get("objective_weighting", "equal_sample_mean")
+        )
+        if objective_weighting == "equal_sample_mean":
+            if equal_sample_weight is not True:
+                raise ValueError("Equal-sample replay requires equal sample weight")
+        elif objective_weighting == "source_derpp_weighted_sum":
+            if equal_sample_weight is not False:
+                raise ValueError("DER++ source weighting is not equal-sample replay")
+        else:
+            raise ValueError("Unexpected replay objective weighting")
+        stores_logits = payload.get("logits") is not None
+        if stores_logits:
+            if payload.get("logits") != "capture_time_visible_logits_only":
+                raise ValueError("Unexpected replay logit payload")
+            if payload.get("logit_mask") is not True:
+                raise ValueError("Replay logits require a capture-time mask")
+        replay_draws = int(training.get("replay_draws_per_current_batch", 1))
+        if replay_draws not in {1, 2}:
+            raise ValueError("Replay draws per current batch must be one or two")
+        if objective_weighting == "source_derpp_weighted_sum":
+            if not stores_logits or replay_draws != 2:
+                raise ValueError(
+                    "DER++ weighting requires logits and two independent draws"
+                )
         contract = cls(
             contract_id=str(value.get("contract_id", "")),
             protocol_id=str(value.get("protocol_id", "")),
@@ -88,6 +120,9 @@ class ReplayMemoryContract:
             update_timing=update_timing,
             sample_unit=sample_unit,
             image_payload=image_payload,
+            stores_logits=stores_logits,
+            replay_draws_per_current_batch=replay_draws,
+            objective_weighting=objective_weighting,
         )
         if not contract.contract_id:
             raise ValueError("Replay contract_id must not be empty")
@@ -131,6 +166,16 @@ class ReplayMemoryContract:
             "replay_to_current_ratio": self.replay_to_current_ratio,
             "update_timing": self.update_timing,
             "image_payload": self.image_payload,
+            "stores_logits": self.stores_logits,
+            "stored_logits": (
+                "capture_time_visible_columns_only"
+                if self.stores_logits
+                else "none"
+            ),
+            "replay_draws_per_current_batch": (
+                self.replay_draws_per_current_batch
+            ),
+            "objective_weighting": self.objective_weighting,
             "deduplicate_by_sample_id": True,
             "stored_targets": "visible_columns_only",
             "future_truth_stored": False,
@@ -145,6 +190,8 @@ class ReplayRecord:
     sample_id: str
     targets: torch.Tensor
     visible_mask: torch.Tensor
+    logits: Optional[torch.Tensor] = None
+    logit_mask: Optional[torch.Tensor] = None
 
     def __post_init__(self) -> None:
         self.image = self.image.detach().cpu().float().contiguous().clone()
@@ -152,6 +199,13 @@ class ReplayRecord:
         self.visible_mask = (
             self.visible_mask.detach().cpu().bool().contiguous().clone()
         )
+        if (self.logits is None) != (self.logit_mask is None):
+            raise ValueError("Replay logits and logit_mask must appear together")
+        if self.logits is not None and self.logit_mask is not None:
+            self.logits = self.logits.detach().cpu().float().contiguous().clone()
+            self.logit_mask = (
+                self.logit_mask.detach().cpu().bool().contiguous().clone()
+            )
         self.sample_id = str(self.sample_id)
         if not self.sample_id:
             raise ValueError("Replay sample_id must not be empty")
@@ -164,6 +218,17 @@ class ReplayRecord:
             raise ValueError("Visible replay targets must be binary")
         if bool((self.targets[~self.visible_mask] != 0).any()):
             raise ValueError("Hidden replay target columns must be zero")
+        if self.logits is not None and self.logit_mask is not None:
+            if self.logits.ndim != 1 or self.logit_mask.ndim != 1:
+                raise ValueError("Replay logits and logit_mask must be vectors")
+            if self.logits.shape != self.targets.shape:
+                raise ValueError("Replay logits width differs from targets")
+            if self.logit_mask.shape != self.targets.shape:
+                raise ValueError("Replay logit mask width differs from targets")
+            if not bool(torch.isfinite(self.logits[self.logit_mask]).all()):
+                raise ValueError("Visible replay logits must be finite")
+            if bool((self.logits[~self.logit_mask] != 0).any()):
+                raise ValueError("Hidden replay logit columns must be zero")
 
     @property
     def positive_indices(self) -> Tuple[int, ...]:
@@ -183,26 +248,47 @@ class ReplayRecord:
         visible_mask = self.visible_mask | other.visible_mask
         targets = torch.where(other.visible_mask, other.targets, self.targets)
         targets = torch.where(visible_mask, targets, torch.zeros_like(targets))
+        if (self.logits is None) != (other.logits is None):
+            raise ValueError("Repeated replay sample changed logit payload kind")
+        logits = None
+        logit_mask = None
+        if self.logits is not None and other.logits is not None:
+            assert self.logit_mask is not None and other.logit_mask is not None
+            if bool((self.logit_mask & ~other.logit_mask).any()):
+                raise ValueError("Repeated replay sample lost stored logit columns")
+            logit_mask = self.logit_mask | other.logit_mask
+            # Image and logits remain one coherent latest-capture snapshot.
+            # Label visibility is merged independently and never exposes truth.
+            logits = torch.where(other.logit_mask, other.logits, self.logits)
+            logits = torch.where(logit_mask, logits, torch.zeros_like(logits))
         return ReplayRecord(
             image=other.image,
             sample_id=self.sample_id,
             targets=targets,
             visible_mask=visible_mask,
+            logits=logits,
+            logit_mask=logit_mask,
         )
 
     def byte_count(self) -> int:
-        tensors = (self.image, self.targets, self.visible_mask)
+        tensors = [self.image, self.targets, self.visible_mask]
+        if self.logits is not None and self.logit_mask is not None:
+            tensors.extend((self.logits, self.logit_mask))
         return sum(value.numel() * value.element_size() for value in tensors) + len(
             self.sample_id.encode("utf-8")
         )
 
     def state_dict(self) -> Dict[str, Any]:
-        return {
+        payload = {
             "image": self.image,
             "sample_id": self.sample_id,
             "targets": self.targets,
             "visible_mask": self.visible_mask,
         }
+        if self.logits is not None and self.logit_mask is not None:
+            payload["logits"] = self.logits
+            payload["logit_mask"] = self.logit_mask
+        return payload
 
     @classmethod
     def from_state_dict(cls, payload: Mapping[str, Any]) -> "ReplayRecord":
@@ -211,6 +297,8 @@ class ReplayRecord:
             sample_id=str(payload["sample_id"]),
             targets=payload["targets"],
             visible_mask=payload["visible_mask"],
+            logits=payload.get("logits"),
+            logit_mask=payload.get("logit_mask"),
         )
 
 

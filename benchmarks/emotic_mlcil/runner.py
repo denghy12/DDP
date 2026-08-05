@@ -28,7 +28,11 @@ from .methods.multi_lane import MultiLaneBenchmarkMethod
 from .methods.l3a import L3ABenchmarkMethod
 from .methods.original_ddp import OriginalDDPBenchmarkMethod
 from .methods.agcn import AGCNBenchmarkMethod
-from .methods.replay import ERBenchmarkMethod, PRSBenchmarkMethod
+from .methods.replay import (
+    DERPPBenchmarkMethod,
+    ERBenchmarkMethod,
+    PRSBenchmarkMethod,
+)
 from .protocol import BenchmarkProtocol
 from .protocol import load_protocol
 from .types import (
@@ -43,7 +47,7 @@ from .types import (
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
 CORE_BASE_COMMIT = "00f399f13bc7552c254c8f6e6c095a8be4f56146"
-CORE_RUNTIME_VERSION = "0.9.0"
+CORE_RUNTIME_VERSION = "0.10.0"
 
 
 def _current_git_commit() -> str:
@@ -795,6 +799,7 @@ def _parse_args() -> argparse.Namespace:
             "agcn",
             "er",
             "prs",
+            "derpp",
         ),
         default="ddp",
     )
@@ -937,6 +942,7 @@ def main() -> None:
         "agcn": AGCNBenchmarkMethod,
         "er": ERBenchmarkMethod,
         "prs": PRSBenchmarkMethod,
+        "derpp": DERPPBenchmarkMethod,
     }
     method_class = method_classes[args.method]
     artifacts = ArtifactStore(
