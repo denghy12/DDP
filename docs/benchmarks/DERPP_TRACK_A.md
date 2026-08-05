@@ -94,7 +94,8 @@ validation result is reviewed, the configuration is frozen, and
 `configuration_locked=true` is enforced by a formal runner.
 
 On the server, `scripts/emotic-mlcil/prepare_derpp_source.sh` downloads or
-accepts the adjacent fixed archive, verifies the archive and three critical
-files, and extracts only to
+accepts the adjacent fixed archive, with an automatic fixed-tag GitHub SSH
+clone fallback when `codeload.github.com` is unavailable. It verifies the
+resolved commit and three critical files, and prepares only
 `/mnt/haoyuan/workspace/baseline_sources/derpp_official`. It never copies the
 external repository into `benchmarks/emotic_mlcil/methods/`.

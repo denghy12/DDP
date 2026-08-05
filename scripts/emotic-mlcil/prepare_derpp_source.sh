@@ -29,6 +29,7 @@ if [[ -d "${SOURCE_ROOT}" ]]; then
 fi
 
 if [[ ! -f "${ARCHIVE_PATH}" ]]; then
+  set +e
   curl --http1.1 -fL \
     --retry 10 \
     --retry-all-errors \
@@ -37,7 +38,34 @@ if [[ ! -f "${ARCHIVE_PATH}" ]]; then
     --max-time 600 \
     "${URL}" \
     -o "${ARCHIVE_PATH}.download"
-  mv "${ARCHIVE_PATH}.download" "${ARCHIVE_PATH}"
+  DOWNLOAD_RC=$?
+  set -e
+  if [[ "${DOWNLOAD_RC}" -eq 0 ]]; then
+    mv "${ARCHIVE_PATH}.download" "${ARCHIVE_PATH}"
+  else
+    echo "HTTPS archive download failed with exit code ${DOWNLOAD_RC}" >&2
+    echo "Falling back to the configured GitHub SSH transport..." >&2
+    git clone \
+      --depth 1 \
+      --branch neurips2020 \
+      --single-branch \
+      git@github.com:aimagelab/mammoth.git \
+      "${SOURCE_ROOT}"
+    ACTUAL_COMMIT="$(git -C "${SOURCE_ROOT}" rev-parse HEAD)"
+    if [[ "${ACTUAL_COMMIT}" != "cb9a36d788d6ad051c9eee0da358b25421d909f5" ]]; then
+      echo "DER++ SSH clone resolved to an unexpected commit" >&2
+      echo "actual=${ACTUAL_COMMIT}" >&2
+      exit 2
+    fi
+    if ! verify_source; then
+      echo "SSH-cloned DER++ source failed immutable hash checks" >&2
+      exit 2
+    fi
+    echo "DER++ source prepared successfully through GitHub SSH"
+    echo "source=${SOURCE_ROOT}"
+    echo "commit=${ACTUAL_COMMIT}"
+    exit 0
+  fi
 fi
 
 ACTUAL_ARCHIVE_SHA="$(sha256sum "${ARCHIVE_PATH}" | awk '{print $1}')"
