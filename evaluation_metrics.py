@@ -2,9 +2,8 @@ import numpy as np
 import torch
 
 
-def prf_cal(preds, targets, outputs_test):
-    thre = 0.8 # The thre is the same wih KRT and CSC
-    prediction = preds.gt(thre).long()
+def prf_cal(preds, targets, outputs_test, threshold=0.8):
+    prediction = preds.gt(float(threshold)).long()
     tp_c = (prediction + targets).eq(2).sum(dim=0)
     fp_c = (prediction - targets).eq(1).sum(dim=0)
     fn_c = (prediction - targets).eq(-1).sum(dim=0)
@@ -20,13 +19,26 @@ def prf_cal(preds, targets, outputs_test):
     mean_f_c = sum(f1_c) / len(f1_c)
 
     #  of1
-    precision_o = tp_c.sum().float() / (tp_c + fp_c).sum().float() * 100.0
-    recall_o = tp_c.sum().float() / (tp_c + fn_c).sum().float() * 100.0
-    f1_o = 2 * precision_o * recall_o / (precision_o + recall_o)
+    true_positive = float(tp_c.sum().item())
+    predicted_positive = float((tp_c + fp_c).sum().item())
+    target_positive = float((tp_c + fn_c).sum().item())
+    precision_o = (
+        100.0 * true_positive / predicted_positive
+        if predicted_positive > 0
+        else 0.0
+    )
+    recall_o = (
+        100.0 * true_positive / target_positive
+        if target_positive > 0
+        else 0.0
+    )
+    f1_o = (
+        2.0 * precision_o * recall_o / (precision_o + recall_o)
+        if precision_o + recall_o > 0
+        else 0.0
+    )
 
-    recall_o = tp_c.sum().float() / (tp_c + fn_c).sum().float() * 100.0
-
-    return mean_p_c, mean_r_c, mean_f_c, precision_o.item(), recall_o.item(), f1_o.item()
+    return mean_p_c, mean_r_c, mean_f_c, precision_o, recall_o, f1_o
 
 def average_precision(output, target):
     epsilon = 1e-8

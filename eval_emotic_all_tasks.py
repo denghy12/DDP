@@ -83,6 +83,17 @@ def main():
 
     first_checkpoint = torch.load(checkpoint_paths[0], map_location="cpu")
     classnames = first_checkpoint["classnames"]
+    first_saved_args = first_checkpoint.get("args", {})
+    training_protocol = first_checkpoint.get(
+        "ddp_main_loss_protocol",
+        {
+            "ddp_main_classification_loss": first_saved_args.get(
+                "ddp_classification_loss", "two_way_bce"
+            ),
+            "loss_w": float(first_saved_args.get("loss_w", 0.03)),
+            "checkpoint_rule": "fixed_last_epoch",
+        },
+    )
     model_args = checkpoint_model_args(first_checkpoint, args)
     cfg = setup_cfg(model_args)
     model = ddp(cfg, classnames)
@@ -125,12 +136,22 @@ def main():
         "t_min": args.t_min,
         "t_max": args.t_max,
         "t_gamma": args.t_gamma,
+        "training_protocol": training_protocol,
         "rows": [],
     }
 
     for task_id, checkpoint_path in enumerate(checkpoint_paths):
         high_range = 5 if task_id == 0 else min(5 + task_id * 3, 26)
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        checkpoint_loss = checkpoint.get("args", {}).get(
+            "ddp_classification_loss", "two_way_bce"
+        )
+        expected_loss = training_protocol["ddp_main_classification_loss"]
+        if checkpoint_loss != expected_loss:
+            raise RuntimeError(
+                f"Task {task_id} loss mismatch: {checkpoint_loss} != "
+                f"{expected_loss}"
+            )
         model.load_state_dict(checkpoint["model"], strict=True)
         model.to(device).eval()
         rebuild_text_feature_cache(model, high_range)

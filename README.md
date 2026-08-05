@@ -9,11 +9,23 @@ EMOTIC experiment launchers are grouped by branch under `scripts/`:
 - `scripts/emotic/`: baseline EMOTIC DDP and upper-bound runs.
 - `scripts/emotic-prototype-adapter/`: external CLIP Prototype Adapter and score fusion.
 - `scripts/emotic-ddp-internal-adapter/`: DDP-internal Feature Adapter / CLS gate / final ablation.
+- `scripts/emotic-ddp-main-asl/`: controlled DDP main two-way BCE / ASL training and evaluation.
 
 See `scripts/README.md` and `docs/emotic_experiment_code_map.md` for the full
 map. Result directories keep their original `output/emotic_*` paths for
 backward compatibility; run `python tools/organize_emotic_artifacts.py` to
 regenerate the branch-oriented index at `output/by_branch/`.
+
+The DDP main-loss ASL protocol is documented in
+[`docs/ddp_main_asl.md`](docs/ddp_main_asl.md). It changes only the objective
+used to train the original positive/negative prompts; Adapter auxiliary losses
+and the inference architecture are unchanged.
+The follow-up Task-0 mild-ASL ablation compares pre-registered
+`gamma_neg={9.8,4,2}` settings against two-way BCE over three seeds, using
+validation-only fixed-last reports before authorizing a full Task 0--7 run.
+The subsequent ASL-2 scale-alignment check uses `loss_w=0.09`, derived only
+from the observed training-gradient ratio, to separate loss shape from update
+magnitude before deciding whether to continue the main-loss route.
 
 # Setup
 

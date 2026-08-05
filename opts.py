@@ -71,6 +71,28 @@ def arg_parser():
 
     parser.add_argument('--lr', dest="lr", type=float, help='the learning rate')
     parser.add_argument('--loss_w', dest="loss_w", type=float, default=0.03, help='the loss weights')
+    parser.add_argument(
+        '--ddp_classification_loss',
+        choices=('two_way_bce', 'asl'),
+        default='two_way_bce',
+        help='classification loss used to train the DDP prompts',
+    )
+    parser.add_argument(
+        '--ddp_asl_gamma_neg', type=float, default=9.8,
+        help='negative focusing exponent for the DDP main ASL loss',
+    )
+    parser.add_argument(
+        '--ddp_asl_gamma_pos', type=float, default=0.0,
+        help='positive focusing exponent for the DDP main ASL loss',
+    )
+    parser.add_argument(
+        '--ddp_asl_clip', type=float, default=0.05,
+        help='negative probability shift for the DDP main ASL loss',
+    )
+    parser.add_argument(
+        '--ddp_asl_eps', type=float, default=1e-8,
+        help='numerical epsilon for the DDP main ASL loss',
+    )
     parser.add_argument('--reset_optimizer_each_task', action='store_true',
                         help='rebuild Adam and scheduler at the start of each incremental task')
     parser.add_argument('--t_min', dest="t_min", type=float, default=1.0,
