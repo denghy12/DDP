@@ -93,6 +93,43 @@ Seed-0 reports validation only. Held-out test remains blocked until the
 validation result is reviewed, the configuration is frozen, and
 `configuration_locked=true` is enforced by a formal runner.
 
+## Frozen validation result
+
+Seed 0 completed validation from clean commit
+`f4887886752e4c6a17ba8e7bec1f9adf0ff64934`. The server preflight passed 139
+Core/baseline tests with three intentional skips, 17 selected legacy
+regressions, and the immutable-source oracle with zero dense-logit-MSE and
+weighted-objective error. The run reported Final mAP `33.4671`, Average mAP
+`40.1956`, Forgetting `5.9787`, Final cF1 `25.5183`, and Final oF1 `55.2067`.
+It ended at 520 unique samples and 313,273,870 bytes (`298.7612 MiB`), including
+the float32 logit payload and mask.
+
+The eight task mAP values were
+`46.9458/47.2586/38.6057/40.1672/39.6223/38.6264/36.8715/33.4671`.
+Two guarded AMP overflow skips occurred in 8,524 optimizer attempts, one each
+in Tasks 3 and 4. All logged values were finite, and no OOM or training
+traceback occurred. The checkpoint-free archive contains all eight canonical
+score tensors, excludes every `.pth`, and passed its outer and 19 internal
+SHA-256 checks. The complete machine-readable evidence is
+`results/derpp_seed0_validation_v0.1.json`.
+
+## Frozen formal configuration
+
+Validation review freezes `alpha=0.5`, `beta=0.5`, 20 samples per seen class,
+two independent 1:1 replay draws, online insertion of pre-update logits, the
+AdamW optimizer, backbone/head learning rates `1e-5/1e-4`, weight decay
+`1e-4`, gradient clipping at 1.0, ten-epoch maximum, patience 3, train/eval
+batch sizes `32/64`, two workers, AMP/TF32, and the global F1 threshold 0.5.
+Held-out metrics may not change any of these values.
+
+Formal execution requires confirmation `DERPP_20C_TRACK_A_V0_1`, a clean
+frozen Git commit, `reporting_split=test`, and `configuration_locked=true`.
+The measured current-32 plus two replay-32 peak is `8434.2 MiB`; therefore the
+three formal seeds run concurrently as isolated processes on three distinct
+physical GPUs. The formal validator rejects missing seeds, unlocked/test-
+ineligible manifests, configuration drift, incomplete task scores, invalid
+online-buffer statistics, or non-finite training logs before packaging.
+
 On the server, `scripts/emotic-mlcil/prepare_derpp_source.sh` downloads or
 accepts the adjacent fixed archive, with an automatic fixed-tag GitHub SSH
 clone fallback when `codeload.github.com` is unavailable. It verifies the

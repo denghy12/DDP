@@ -46,10 +46,17 @@ runner_args=(
   --device cuda
 )
 if [[ "${REPORTING_SPLIT}" == "test" ]]; then
-  [[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "REPLAY_20C_TRACK_A_V0_1" ]] || {
-    echo "Held-out replay test requires the frozen configuration confirmation" >&2
-    exit 2
-  }
+  if [[ "${METHOD}" == "derpp" ]]; then
+    [[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "DERPP_20C_TRACK_A_V0_1" ]] || {
+      echo "Held-out DER++ test requires its frozen configuration confirmation" >&2
+      exit 2
+    }
+  else
+    [[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "REPLAY_20C_TRACK_A_V0_1" ]] || {
+      echo "Held-out ER/PRS test requires the frozen configuration confirmation" >&2
+      exit 2
+    }
+  fi
   runner_args+=(--configuration-locked)
 fi
 

@@ -74,6 +74,7 @@ remain a reserved extension point.
 - [Registered AGCN three-seed formal result](results/agcn_seed012_formal_v0.1.json)
 - [Frozen ER/PRS seed-0 validation snapshot](results/er_prs_seed0_validation_v0.1.json)
 - [Registered ER/PRS three-seed formal result](results/er_prs_seed012_formal_v0.1.json)
+- [Frozen DER++ seed-0 validation snapshot](results/derpp_seed0_validation_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -173,8 +174,18 @@ mapped to visible-mask sigmoid BCE and logit MSE is limited to columns that
 existed at capture time. It uses the same `20 × seen classes` sample scale as
 ER/PRS but separately charges stored logits and their mask in byte accounting.
 Task-end insertion is not used because it would change the method into
-boundary-logit replay. Full server preflight and seed-0 validation remain
-pending; held-out test is still locked.
+boundary-logit replay. Seed-0 validation completed from clean commit `f488788`
+after 139 Core/baseline tests (3 skips), 17 legacy regressions, and zero-error
+fixed-source objective checks. It reached Final mAP `33.4671`, Average mAP
+`40.1956`, and Forgetting `5.9787`, ending at exactly 520 samples and
+`298.7612 MiB` after charging stored logits and masks. Two guarded AMP overflow
+skips occurred in 8,524 optimizer attempts; no NaN, OOM, or traceback was
+observed. The checkpoint-free archive and all 19 manifest entries passed
+SHA-256 verification. `alpha=beta=0.5`, 20 samples per seen class, both 1:1
+replay draws, online pre-update logits, optimizer, learning rates, early
+stopping, and threshold 0.5 are frozen before held-out access. The formal
+runner requires `configuration_locked=true` and assigns seeds 0--2 to three
+distinct GPUs because the measured single-process peak is `8434.2 MiB`.
 
 KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
 official source is fixed at
