@@ -132,6 +132,44 @@ files for every method/seed, verifies the locked configuration and memory
 schedule, aggregates with sample standard deviation, and emits one six-bundle
 checkpoint-free archive.
 
+## Registered formal result
+
+Locked held-out seeds 0--2 completed from clean commit `84c79eb` in the
+planned two GPU-0 waves. All six workers exited successfully without OOM,
+training rerun, NaN, or traceback. Formal preflight passed 133 Core/baseline
+tests (two skips), 17 legacy regressions, the fixed-source PRS oracle, and the
+current-32 plus replay-32 memory smoke (`5827.4 MiB` peak).
+
+The three-seed results are:
+
+| Method | Final mAP | Average mAP | Forgetting | Final cF1 | Final oF1 |
+|---|---:|---:|---:|---:|---:|
+| ER | `20.3230 ± 1.4593` | `25.9259 ± 1.4637` | `8.6986 ± 0.6386` | `21.2202 ± 3.6461` | `45.4025 ± 0.4687` |
+| PRS | `20.5603 ± 0.4442` | `26.3254 ± 1.5723` | `8.7479 ± 1.6186` | `20.8966 ± 1.5407` | `31.3758 ± 2.5214` |
+
+Values are mean ± sample standard deviation. PRS minus ER is only `+0.2373`
+Final mAP and `+0.3995` Average mAP; paired Final-mAP differences are
+`+1.6620/-0.7072/-0.2428`. The result supports a small average gain and lower
+PRS Final-mAP variance, not a claim of consistent superiority. Forgetting is
+effectively unchanged. PRS's `-14.0267` fixed-0.5 oF1 difference is reported
+as a score-calibration limitation; the held-out result did not trigger a
+threshold scan.
+
+Every run retained exactly 520 samples. ER used
+`313,206,297 ± 33.6` bytes and PRS `313,206,120.3 ± 62.1` bytes, so their
+sample and byte budgets are effectively identical. Task-0 score tensors are
+identical between ER and PRS for each seed, as expected before replay begins.
+Across all tasks, ER recorded two guarded AMP overflows in 22,764 optimizer
+attempts and PRS recorded two in 24,266; no training instability followed.
+
+The full per-seed metrics, task curves, class forgetting, memory accounting,
+paired comparison, execution record, oracle result, and archive SHA-256 are in
+[`results/er_prs_seed012_formal_v0.1.json`](results/er_prs_seed012_formal_v0.1.json).
+The registered archive SHA-256 is
+`ac7a7c38ad797743424aa6b14a670decef03317999902bef0066381378e9ad66`.
+ER and PRS Track A are frozen; neither method may be rerun or tuned from these
+held-out metrics.
+
 Server entry point after synchronizing the frozen commit:
 
 ```bash

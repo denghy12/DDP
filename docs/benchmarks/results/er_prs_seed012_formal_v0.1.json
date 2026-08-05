@@ -1,0 +1,362 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "methods": ["ER", "PRS"],
+  "run_id": "replay_er_prs_formal_seed012_20260804_230939",
+  "status": "eligible_for_main_table",
+  "configuration_lock_confirmation": "REPLAY_20C_TRACK_A_V0_1",
+  "source": {
+    "formal_training_commit": "84c79eb9d391f3cd213f32d722eb8935e6fb962e",
+    "source_tree_hash": "01862b0a3d0c5131e6b3757f0dbf68492ddebc062f04486cda2144241865891f",
+    "core_runtime_version": "0.9.0",
+    "core_base_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+    "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+    "protocol_hash_by_seed": {
+      "0": "7730b23374e32cd99253171cc3e9cff9716bc824bceae0482378a7fcf0a1f170",
+      "1": "7324c4bcf8632259990ba1ade0a57608ea3ecd20f75ebaff5c87fba55a227090",
+      "2": "f7c21d4133f4b4cd6824a1a0e77f26a525e0cb520373fa5f271ee371263dba5a"
+    },
+    "data_split_hash": {
+      "task0": "9ad2cdb8e7ec95bc9152953622cbfd98e7eeabd0f413143d2af248d796132dfb",
+      "task1": "b9adf48fdbd522c7eb0cbb8b19ee950742184faf238059311c951c69f46f8a51",
+      "task2": "ac853116831a50f66a4173d7a364fa136645d03ed28ea4ff727fcdaa9ef1a975",
+      "task3": "a7f8d0a25d7085ab45f7219fc156c65b27f5190b24d4fe5b268b48c39081d62d",
+      "task4": "709f667258a29107c88422b5dfb4849ff02ed44193e2341f733be88b5ba23e7c",
+      "task5": "e76331ff24a47c88dd394d52bfb8c33a9cd5936e2e222ccd5b2778696a2d3118",
+      "task6": "7720625403cde13afe85ffe826dcbbf7ed572a74ee1a3ce222dc58022f60cd63",
+      "task7": "a0ad09e4d3c3ca81f8ba63eb0d41b618666192a75bffc61858cb44a2cbe5a415"
+    }
+  },
+  "eligibility": {
+    "reporting_split": "test",
+    "configuration_locked": true,
+    "configuration_was_frozen_before_all_held_out_seeds": true,
+    "test_labels_used_for_selection": false,
+    "prediction_reused_task_ids": [],
+    "all_six_runs_clean": true,
+    "all_six_runs_eligible_for_main_table": true,
+    "hyperparameters_changed_after_validation": false,
+    "global_f1_threshold": 0.5
+  },
+  "method_configuration": {
+    "backbone": "OpenAI CLIP ViT-B/16 visual encoder (fine-tuned)",
+    "clip_text_encoder_used": false,
+    "visual_encoder_trainable": true,
+    "benchmark_added_adapter": false,
+    "memory_contract_id": "emotic_replay_20c_v0.1",
+    "samples_per_seen_class": 20,
+    "task_capacities": [100, 160, 220, 280, 340, 400, 460, 520],
+    "replay_to_current_ratio": 1.0,
+    "update_timing": "task_end_single_pass",
+    "stored_targets": "capture_time_visible_columns_only",
+    "current_and_replay_equal_sample_weight": true,
+    "er_policy": "uniform_reservoir",
+    "prs_policy": "partitioned_reservoir",
+    "prs_allocation_power": -0.03,
+    "optimizer": "AdamW",
+    "backbone_learning_rate": 0.00001,
+    "head_learning_rate": 0.0001,
+    "weight_decay": 0.0001,
+    "gradient_clip_norm": 1.0,
+    "epochs_per_task_maximum": 10,
+    "early_stopping_patience": 3,
+    "selection_metric": "current_label_validation_mAP",
+    "train_batch_size": 32,
+    "eval_batch_size": 64,
+    "workers": 2,
+    "amp": true,
+    "tf32": true
+  },
+  "resources": {
+    "total_parameters": 86205978,
+    "trainable_parameters": 86205978,
+    "incremental_parameters": 10773,
+    "final_replay_samples_by_method_and_seed": {
+      "ER": [520, 520, 520],
+      "PRS": [520, 520, 520]
+    },
+    "final_replay_bytes_by_method_and_seed": {
+      "ER": [313206300, 313206329, 313206262],
+      "PRS": [313206184, 313206117, 313206060]
+    },
+    "final_replay_bytes_mean_and_sample_std": {
+      "ER": {"mean": 313206297.0, "std": 33.60059523282288},
+      "PRS": {"mean": 313206120.3333333, "std": 62.06716791777544}
+    },
+    "gpu_smoke_current_batch_size": 32,
+    "gpu_smoke_replay_batch_size": 32,
+    "gpu_smoke_peak_allocated_mib": 5827.4,
+    "three_process_estimated_peak_mib": 17482.2,
+    "launcher_minimum_free_mib": 21000
+  },
+  "execution": {
+    "mode": "two_automatic_three_process_waves_on_one_physical_gpu",
+    "physical_gpu": 0,
+    "waves": ["ER_seed012", "PRS_seed012"],
+    "max_concurrent_training_processes": 3,
+    "all_six_processes_completed": true,
+    "completion_exit_code_by_method_and_seed": {
+      "ER": {"0": 0, "1": 0, "2": 0},
+      "PRS": {"0": 0, "1": 0, "2": 0}
+    },
+    "oom_fallback_used": false,
+    "training_rerun_used": false,
+    "automatic_wave_handoff": true
+  },
+  "results": {
+    "ER": {
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 18.647500305207792,
+          "average_mAP": 24.415121611220396,
+          "forgetting": 8.234819671505296,
+          "final_cF1": 17.318420652106923,
+          "final_oF1": 45.129234304950884,
+          "parameter_growth": 10773.0,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313206300,
+          "per_task_mAP": [35.60131970104715, 28.806368169065998, 22.7964384830819, 24.727523534964785, 22.781192163498247, 20.851006644100657, 21.109623888796662, 18.647500305207792]
+        },
+        {
+          "seed": 1,
+          "final_mAP": 21.005383882678366,
+          "average_mAP": 26.02502100239114,
+          "forgetting": 8.434133997869221,
+          "final_cF1": 21.80135858669996,
+          "final_oF1": 45.134631566294026,
+          "parameter_growth": 10773.0,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313206329,
+          "per_task_mAP": [36.98935523827804, 30.047056374933316, 21.01417608101643, 23.501683178665697, 26.48203007624369, 24.804014990299034, 24.356468197014554, 21.005383882678366]
+        },
+        {
+          "seed": 2,
+          "final_mAP": 21.31599473180446,
+          "average_mAP": 27.33753072800033,
+          "forgetting": 9.426946060112297,
+          "final_cF1": 24.540880245051785,
+          "final_oF1": 45.943751384070275,
+          "parameter_growth": 10773.0,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313206262,
+          "per_task_mAP": [36.134859956267185, 32.6059702350452, 26.519666277647392, 25.553541964564996, 26.633918158165265, 24.83199317617366, 25.1043013243345, 21.31599473180446]
+        }
+      ],
+      "aggregate": {
+        "aggregation": "mean_and_sample_standard_deviation",
+        "final_mAP": {"mean": 20.322959639896872, "std": 1.459278164554753},
+        "average_mAP": {"mean": 25.925891113870623, "std": 1.4637242952681313},
+        "forgetting": {"mean": 8.698633243162272, "std": 0.6385618370007224},
+        "final_cF1": {"mean": 21.22021982795289, "std": 3.6461311462451373},
+        "final_oF1": {"mean": 45.40253908510506, "std": 0.46871136856375706},
+        "parameter_growth": {"mean": 10773.0, "std": 0.0}
+      },
+      "per_task_mAP": [
+        {"task": 0, "mean": 36.24184496519746, "std": 0.700174983311897},
+        {"task": 1, "mean": 30.48646492634817, "std": 1.9375380954295398},
+        {"task": 2, "mean": 23.443426947248575, "std": 2.8091904760755315},
+        {"task": 3, "mean": 24.59424955939849, "std": 1.0324013675603445},
+        {"task": 4, "mean": 25.2990467993024, "std": 2.1818481781823875},
+        {"task": 5, "mean": 23.49567160352445, "std": 2.2903897605919066},
+        {"task": 6, "mean": 23.523464470048573, "std": 2.1236250517342277},
+        {"task": 7, "mean": 20.322959639896872, "std": 1.459278164554753}
+      ]
+    },
+    "PRS": {
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 20.309463981548614,
+          "average_mAP": 25.147928703821403,
+          "forgetting": 7.221642024140009,
+          "final_cF1": 20.00550851463248,
+          "final_oF1": 28.533014198543206,
+          "parameter_growth": 10773.0,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313206184,
+          "per_task_mAP": [35.60131970104715, 28.08155493562382, 20.984519417420742, 25.839806142885045, 24.609366142143784, 23.762616693249765, 21.99478261665231, 20.309463981548614]
+        },
+        {
+          "seed": 1,
+          "final_mAP": 20.298228793325322,
+          "average_mAP": 25.717379545605276,
+          "forgetting": 8.576684562938528,
+          "final_cF1": 20.008755013219577,
+          "final_oF1": 33.34149626545855,
+          "parameter_growth": 10773.0,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313206117,
+          "per_task_mAP": [36.98935523827804, 28.696672307860215, 23.40739300973656, 26.03469604577645, 24.383233608424717, 23.561556746299036, 22.367900615141835, 20.298228793325322]
+        },
+        {
+          "seed": 2,
+          "final_mAP": 21.073150602169108,
+          "average_mAP": 28.110962478218575,
+          "forgetting": 10.445231766657413,
+          "final_cF1": 22.67564962367912,
+          "final_oF1": 32.2528812866095,
+          "parameter_growth": 10773.0,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313206060,
+          "per_task_mAP": [36.134859956267185, 34.95387144882205, 26.918106599070903, 26.70696781009686, 27.63779519681015, 26.370539748932735, 25.09240846357961, 21.073150602169108]
+        }
+      ],
+      "aggregate": {
+        "aggregation": "mean_and_sample_standard_deviation",
+        "final_mAP": {"mean": 20.560281125681016, "std": 0.44419351897397286},
+        "average_mAP": {"mean": 26.32542357588175, "std": 1.5723169032102693},
+        "forgetting": {"mean": 8.747852784578651, "std": 1.6185971169782913},
+        "final_cF1": {"mean": 20.89663771717706, "std": 1.540670359793211},
+        "final_oF1": {"mean": 31.375797250203753, "std": 2.5213750716920256},
+        "parameter_growth": {"mean": 10773.0, "std": 0.0}
+      },
+      "per_task_mAP": [
+        {"task": 0, "mean": 36.24184496519746, "std": 0.700174983311897},
+        {"task": 1, "mean": 30.577366230768696, "std": 3.8026228827143678},
+        {"task": 2, "mean": 23.77000634207607, "std": 2.983367314320103},
+        {"task": 3, "mean": 26.19382333291945, "std": 0.45495434870491325},
+        {"task": 4, "mean": 25.54346498245955, "std": 1.8172639504920358},
+        {"task": 5, "mean": 24.56490439616051, "std": 1.5669542258638605},
+        {"task": 6, "mean": 23.15169723179125, "std": 1.6910275941247448},
+        {"task": 7, "mean": 20.560281125681016, "std": 0.44419351897397286}
+      ]
+    }
+  },
+  "paired_comparison": {
+    "definition": "PRS minus ER for the same seed; mean and sample standard deviation are across the three paired differences.",
+    "final_mAP": {"per_seed": [1.6619636763408216, -0.7071550893530443, -0.24284412963535118], "mean": 0.23732148578414206, "std": 1.25542829152608},
+    "average_mAP": {"per_seed": [0.7328070926010071, -0.30764145678586274, 0.7734317502182435], "mean": 0.3995324620111293, "std": 0.6127673329018531},
+    "forgetting": {"per_seed": [-1.0131776473652865, 0.14255056506930686, 1.0182857065451163], "mean": 0.04921954141637889, "std": 1.0189425153325888},
+    "final_cF1": {"per_seed": [2.6870878625255585, -1.7926035734803811, -1.865230621372664], "mean": -0.3235821107758288, "std": 2.60756954617232},
+    "final_oF1": {"per_seed": [-16.596220106407678, -11.793135300835473, -13.690870097460774], "mean": -14.026741834901308, "std": 2.4190934831850006},
+    "interpretation": "PRS gives only a small primary-mAP gain under the shared 20/class budget, with lower Final-mAP variance but no forgetting gain. Its much lower fixed-0.5 oF1 is retained as a calibration limitation and must not trigger post-test threshold tuning."
+  },
+  "training_stability": {
+    "ER": {
+      "epochs_completed_by_seed_and_task": [[10, 5, 6, 7, 5, 8, 8, 6], [10, 10, 10, 10, 10, 6, 10, 9], [5, 10, 4, 9, 6, 10, 10, 9]],
+      "optimizer_attempts_by_seed": [6477, 8912, 7375],
+      "total_optimizer_attempts": 22764,
+      "amp_overflow_skips_by_seed": [1, 1, 0],
+      "total_amp_overflow_skips": 2
+    },
+    "PRS": {
+      "epochs_completed_by_seed_and_task": [[10, 10, 10, 10, 4, 9, 10, 10], [10, 10, 5, 10, 10, 7, 5, 10], [5, 9, 5, 8, 7, 10, 7, 10]],
+      "optimizer_attempts_by_seed": [8384, 8805, 7077],
+      "total_optimizer_attempts": 24266,
+      "amp_overflow_skips_by_seed": [2, 0, 0],
+      "total_amp_overflow_skips": 2
+    },
+    "memory_update_observations_by_task": [5353, 4394, 861, 9931, 4352, 2536, 627, 1526],
+    "replay_samples_after_by_task": [100, 160, 220, 280, 340, 400, 460, 520],
+    "all_logged_values_finite": true,
+    "nan_detected": false,
+    "oom_detected": false,
+    "traceback_detected": false
+  },
+  "per_class_forgetting": {
+    "definition": "For each class and method, maximum AP from introduction through Task 7 minus final Task-7 AP; values are mean and sample standard deviation across seeds. Task-7-only classes are omitted.",
+    "ER": [
+      {"class": "Affection", "mean": 25.148203623528484, "std": 4.175644758359785},
+      {"class": "Anger", "mean": 11.015741955469448, "std": 2.9616055025725347},
+      {"class": "Annoyance", "mean": 13.398338669267906, "std": 5.589863024221698},
+      {"class": "Anticipation", "mean": 43.929764190362185, "std": 0.9123358670499591},
+      {"class": "Aversion", "mean": 5.468488209216524, "std": 2.1707231489050756},
+      {"class": "Confidence", "mean": 25.937747804598754, "std": 3.1238608549699625},
+      {"class": "Disapproval", "mean": 5.387608870393338, "std": 1.4350656626876668},
+      {"class": "Disconnection", "mean": 7.77316088478177, "std": 1.6090450276123835},
+      {"class": "Disquietment", "mean": 3.908239346835442, "std": 3.506119641884339},
+      {"class": "Doubt/Confusion", "mean": 4.578165263732331, "std": 0.57337538515919},
+      {"class": "Embarrassment", "mean": 0.15643847054396032, "std": 0.16355586820458848},
+      {"class": "Engagement", "mean": 5.262123213761579, "std": 2.1778216360288596},
+      {"class": "Esteem", "mean": 2.452353016021108, "std": 1.5843856134981327},
+      {"class": "Excitement", "mean": 8.836378547399555, "std": 1.370544015813889},
+      {"class": "Fatigue", "mean": 1.7765419264181839, "std": 0.658549002904174},
+      {"class": "Fear", "mean": 1.0645743313629479, "std": 1.1973964520320388},
+      {"class": "Happiness", "mean": 2.9003285055064034, "std": 1.8877890769893253},
+      {"class": "Pain", "mean": 4.728586616507306, "std": 2.4371254104976736},
+      {"class": "Peace", "mean": 0.6529214683526566, "std": 1.130893156539276},
+      {"class": "Pleasure", "mean": 0.49537834357683624, "std": 0.5590379237587455},
+      {"class": "Sadness", "mean": 11.443991679273514, "std": 5.619033799750996},
+      {"class": "Sensitivity", "mean": 0.0, "std": 0.0},
+      {"class": "Suffering", "mean": 13.753489655822001, "std": 7.5707042784622685}
+    ],
+    "PRS": [
+      {"class": "Affection", "mean": 25.67795015404924, "std": 1.5914046544808613},
+      {"class": "Anger", "mean": 12.453403717606545, "std": 1.4590200987808257},
+      {"class": "Annoyance", "mean": 15.907124051748553, "std": 0.7324120902434298},
+      {"class": "Anticipation", "mean": 43.76658145001758, "std": 2.532785727440899},
+      {"class": "Aversion", "mean": 5.710089987415845, "std": 1.2590620380755921},
+      {"class": "Confidence", "mean": 30.46789943605742, "std": 1.382135230714659},
+      {"class": "Disapproval", "mean": 9.790624771409867, "std": 4.97416148304671},
+      {"class": "Disconnection", "mean": 8.829017734527506, "std": 4.285786570840493},
+      {"class": "Disquietment", "mean": 1.6134228128109367, "std": 0.4562249983340931},
+      {"class": "Doubt/Confusion", "mean": 1.7258302039536595, "std": 1.5784672708449896},
+      {"class": "Embarrassment", "mean": 0.0, "std": 0.0},
+      {"class": "Engagement", "mean": 1.4338307436772102, "std": 1.208527359044039},
+      {"class": "Esteem", "mean": 2.072275735561401, "std": 0.0714850401656607},
+      {"class": "Excitement", "mean": 7.610826408748108, "std": 1.1493383888905069},
+      {"class": "Fatigue", "mean": 3.608251263103405, "std": 3.2112287653456373},
+      {"class": "Fear", "mean": 0.8100992948673245, "std": 0.9311889797525404},
+      {"class": "Happiness", "mean": 1.4278456377644844, "std": 2.4731011899736735},
+      {"class": "Pain", "mean": 3.4622743033534875, "std": 4.308543781854187},
+      {"class": "Peace", "mean": 1.7070009194134304, "std": 0.11581222352174424},
+      {"class": "Pleasure", "mean": 0.0, "std": 0.0},
+      {"class": "Sadness", "mean": 11.489500335458247, "std": 8.730630549553071},
+      {"class": "Sensitivity", "mean": 0.11654312344461297, "std": 0.20185861107884123},
+      {"class": "Suffering", "mean": 11.5202219603201, "std": 11.277492079140341}
+    ],
+    "largest_mean_forgetting": {
+      "ER": ["Anticipation", "Confidence", "Affection", "Suffering", "Annoyance"],
+      "PRS": ["Anticipation", "Confidence", "Affection", "Annoyance", "Anger"]
+    }
+  },
+  "upstream_equivalence": {
+    "method": "PRS",
+    "repository": "https://github.com/cdjkim/PRS",
+    "commit": "136cee1863af03cc914dc05dfd41bda8b7bc0bf2",
+    "git_tree": "8e08f4ea1ffcce30c73f9453d6db522d7cba7c77",
+    "license": "MIT",
+    "retained_id_exact_match": true,
+    "observed_count_max_abs_error": 0.0,
+    "target_proportion_max_abs_error": 1.579391517569917e-08,
+    "source_copied_into_repository": false,
+    "verified_file_sha256": {
+      "LICENSE": "116db92b1b611a171ebe1a30c2290b91b42936a7cc6ce33b43b666b5fd07755a",
+      "code/configs/mlab_prs-coco.yaml": "23150ec815627f96725c947be30e56a9279ed24156e646942404da2dd9d0074a",
+      "code/models/reservoir/mlab_stratified_reservoir.py": "d1e4c97e7c21b28e6ce63a441b358185db40a148a95feddfe155771bd942adfb"
+    }
+  },
+  "verification": {
+    "formal_preflight_core_tests": 133,
+    "formal_preflight_core_test_skips": 2,
+    "formal_preflight_legacy_regression_tests": 17,
+    "all_method_seed_task_metric_counts": [8, 8, 8, 8, 8, 8],
+    "all_method_seed_score_file_counts": [8, 8, 8, 8, 8, 8],
+    "final_task_samples_by_method_and_seed": [5368, 5368, 5368, 5368, 5368, 5368],
+    "task0_scores_identical_between_er_and_prs_for_each_seed": true,
+    "all_task_thresholds": 0.5,
+    "all_task_split_hashes_equal_across_methods_and_seeds": true
+  },
+  "sync_bundle": {
+    "bundle_count": 6,
+    "download_manifest_file_count": 108,
+    "download_manifest_total_bytes": 51392989,
+    "score_file_count": 48,
+    "canonical_scores_included": true,
+    "contains_pth": false,
+    "contains_checkpoint_directory": false,
+    "contains_symlink": false,
+    "all_download_manifest_sha256_verified": true,
+    "archive_bytes": 7466246,
+    "archive_sha256": "ac7a7c38ad797743424aa6b14a670decef03317999902bef0066381378e9ad66"
+  },
+  "freeze_decision": {
+    "training_rerun_required": false,
+    "prediction_recomputation_required": false,
+    "post_test_configuration_change_allowed": false,
+    "er_result_is_frozen": true,
+    "prs_result_is_frozen": true
+  }
+}

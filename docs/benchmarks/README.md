@@ -72,6 +72,7 @@ remain a reserved extension point.
 - [Frozen AGCN seed-0 validation snapshot](results/agcn_seed0_validation_v0.1.json)
 - [Registered AGCN three-seed formal result](results/agcn_seed012_formal_v0.1.json)
 - [Frozen ER/PRS seed-0 validation snapshot](results/er_prs_seed0_validation_v0.1.json)
+- [Registered ER/PRS three-seed formal result](results/er_prs_seed012_formal_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -149,10 +150,17 @@ exactly 520 stored samples and no NaN/OOM/training traceback. PRS's
 fixed-source oracle passed with exact retained IDs and maximum target-
 proportion error `1.58e-8`. The 20-per-seen-class capacity, 1:1 replay,
 `q=-0.03`, optimizer, early stopping, and fixed F1 threshold 0.5 are now
-frozen. The locked formal runner uses GPU 0 in two automatic waves: three
-concurrent ER seeds followed by three concurrent PRS seeds, so at most three
-approximately `5827.2 MiB` workers are resident at once. Held-out results have
-not yet been registered.
+frozen. Locked test seeds 0--2 completed from clean commit `84c79eb` on GPU 0
+in two automatic three-process waves: ER first, then PRS. No worker required an
+OOM fallback or rerun. ER is registered at Final mAP `20.3230 ± 1.4593`,
+Average mAP `25.9259 ± 1.4637`, and Forgetting `8.6986 ± 0.6386`; PRS is
+registered at `20.5603 ± 0.4442`, `26.3254 ± 1.5723`, and
+`8.7479 ± 1.6186`. PRS therefore has only a small paired Final-mAP gain
+(`+0.2373 ± 1.2554`) under the shared budget. Its fixed-0.5 Final oF1 is
+`14.0267` points lower than ER, which is retained as a calibration limitation
+without post-test threshold tuning. Every run ended at exactly 520 replay
+samples, and the six-bundle checkpoint-free archive passed all 108 internal
+SHA-256 checks. ER and PRS Track A are now frozen.
 
 KRT Track A is frozen on `codex/emotic-baseline-krt` at commit `029eda4`. Its
 official source is fixed at
