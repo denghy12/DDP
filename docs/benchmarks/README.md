@@ -80,6 +80,8 @@ remain a reserved extension point.
 - [EMOTIC B5-C3 Track-A baseline summary table](results/TRACK_A_BASELINE_SUMMARY_V0.1.md)
 - [Paper-ready Track-A summary LaTeX](results/track_a_baseline_summary_v0.1.tex)
 - [Machine-readable Track-A summary data](results/track_a_baseline_summary_v0.1.json)
+- [EMOTIC B10-C4 Track-A baseline summary table](results/B10C4_TRACK_A_BASELINE_SUMMARY_V0.1.md)
+- [Registered B10-C4 12-baseline three-seed result](results/b10c4_12baseline_seed012_formal_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -92,6 +94,18 @@ without vendoring external repositories. KRT then received its own frozen
 branch. CSC Track A is complete on `codex/emotic-baseline-csc`: its seed-0
 validation configuration was frozen before the locked held-out seeds 0--2
 were run, and the three-seed result is now registered.
+
+The separate B10-C4 Track-A sweep is also complete. It evaluated the same 12
+registered baselines over the alphabetic `10/4/4/4/4` task split, using seeds
+0--2 and unchanged frozen B5-C3 hyperparameters. All 36 held-out jobs used
+clean commit `c759b3c`, were configuration-locked, and are eligible for the
+main table. MULTI-LANE ranks first in Final mAP (`33.6902 ± 0.1599`) and
+Average mAP (`37.4430 ± 0.1702`); Original-DDP-Tau2 ranks second and has the
+highest fixed-threshold oF1 (`51.0957 ± 1.6497`). The checkpoint-free archive
+SHA-256 is `7d905ece7a7c8838c33edd80b15507956c1d7c1dd1998e694153cd086eb9e205`.
+Two initial OOMs were isolated scheduling failures for ER seed 0 and PRS seed
+0 while sharing a GPU with DER++ seed 1; both retries used unchanged code and
+configuration. The registered result is frozen without B10-C4 test tuning.
 
 The baseline branch removes the earlier benchmark-added residual Adapter.
 Fine-Tuning and LwF have completed three-seed execution. EWC coefficient

@@ -23,3 +23,33 @@ approved external source port has occurred.
 | EmoGrowth/AESL | Not started | Reserved | Not started | Not started | Not started | Not started | Identity/source audit |
 | Modified DDP variant | Repository-local DDP derivative with additional project modifications; not the unmodified original DDP method | Core v0.1 wrapper | 36 Core tests and 17 selected legacy regressions passed | Strict task-7 pure-test equivalence passed: 5,368 samples, score max error 0, targets/IDs/AP/mAP identical; clean eight-task formal run passed | Seed 0 complete; additional seeds intentionally deferred | Eligible seed-0 result at `00f399f`: Final mAP 30.8051, Average mAP 37.7374, Forgetting 4.8990 | Audit and name the local modifications before treating this result as a DDP-family comparison; do not present it as the original DDP baseline |
 | Task-routed Adapter Bank | Local implementation noted; external audit pending | Reserved | Existing repository tests | Existing server smoke | Existing work, not benchmark-frozen | Existing work, not benchmark-frozen | Port through core after Core v0.1 freeze |
+
+## B10-C4 12-baseline formal sweep
+
+The separate alphabetic B10-C4 Track-A sweep is complete and frozen. All 36
+configuration-locked held-out jobs used clean execution commit `c759b3c`, and
+all B5-C3 method settings were transferred without B10-C4 test tuning.
+
+| Method | Memory | Final mAP | Final cF1 | Final oF1 | Average mAP | Forgetting |
+|---|---:|---:|---:|---:|---:|---:|
+| Sequential Fine-Tuning | 0 | `18.0287 ± 0.4106` | `8.5835 ± 1.0368` | `39.7911 ± 2.5193` | `22.3037 ± 0.3572` | `6.3729 ± 0.2931` |
+| LwF | 0 | `19.9747 ± 2.7052` | `7.4213 ± 0.0668` | `39.9916 ± 0.3631` | `24.1200 ± 2.3415` | `4.8243 ± 1.8440` |
+| EWC | 0 | `18.3353 ± 0.7764` | `8.8222 ± 1.6384` | `39.7710 ± 11.4323` | `22.6919 ± 0.6703` | `6.1975 ± 0.8682` |
+| AGCN | 0 | `18.0574 ± 0.2413` | `8.4186 ± 1.2316` | `43.2266 ± 2.8435` | `21.4235 ± 0.3221` | `2.2180 ± 0.3710` |
+| CSC | 0 | `21.8995 ± 0.8604` | `6.8716 ± 1.3166` | `16.3183 ± 2.9881` | `28.7411 ± 0.2963` | `6.6547 ± 1.7610` |
+| MULTI-LANE | 0 | `33.6902 ± 0.1599` | `27.5882 ± 0.1382` | `50.3609 ± 0.2298` | `37.4430 ± 0.1702` | `2.1909 ± 0.0593` |
+| L3A | 0 | `28.7621 ± 0.3590` | `26.4316 ± 0.1387` | `34.8970 ± 0.2553` | `32.6125 ± 0.3756` | `2.3856 ± 0.1918` |
+| Original-DDP-Tau2 | 0 | `31.9185 ± 0.3279` | `27.3105 ± 1.0806` | `51.0957 ± 1.6497` | `35.6599 ± 0.3993` | `2.1929 ± 0.0254` |
+| ER | 20/class | `18.6232 ± 2.0166` | `8.6335 ± 2.4440` | `41.9801 ± 4.5213` | `23.0198 ± 0.6797` | `6.4142 ± 1.4910` |
+| PRS | 20/class | `18.6987 ± 0.7494` | `1.0844 ± 0.9843` | `4.8498 ± 5.0874` | `23.3191 ± 0.1766` | `6.3929 ± 1.1537` |
+| DER++ | 20/class | `22.3543 ± 1.6888` | `7.4629 ± 0.0286` | `39.8740 ± 0.2720` | `26.4528 ± 1.8968` | `5.5703 ± 0.0893` |
+| KRT | 20/class | `25.6310 ± 0.5615` | `28.2478 ± 0.8808` | `42.9115 ± 0.8394` | `31.7631 ± 0.1576` | `6.4666 ± 1.0907` |
+
+The archive SHA-256 is
+`7d905ece7a7c8838c33edd80b15507956c1d7c1dd1998e694153cd086eb9e205`.
+It contains 36 result bundles and 180 task-score files with no `.pth`.
+ER seed 0 and PRS seed 0 experienced scheduling-only OOMs when colocated with
+DER++ seed 1; isolated retries used unchanged code and configurations. This
+does not invalidate the results, but future 24 GiB scheduling must not pair
+DER++ with ER or PRS. Exact provenance is registered in
+[`results/b10c4_12baseline_seed012_formal_v0.1.json`](results/b10c4_12baseline_seed012_formal_v0.1.json).
