@@ -10,6 +10,7 @@ RUN_OUTPUT_ROOT="${RUN_OUTPUT_ROOT:?RUN_OUTPUT_ROOT is required}"
 EXPECTED_GIT_COMMIT="${EXPECTED_GIT_COMMIT:?EXPECTED_GIT_COMMIT is required}"
 CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:?CONFIGURATION_LOCKED_CONFIRMATION is required}"
 GPUS="${GPUS:-0 1 2 3 4 5 6 7}"
+SLOTS_PER_GPU="${SLOTS_PER_GPU:-2}"
 PYTHON="${PYTHON:-/opt/conda/envs/ddp/bin/python}"
 DATA_ROOT="${DATA_ROOT:-/mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC}"
 CLIP_MODEL_PATH="${CLIP_MODEL_PATH:-${ROOT}/pretrained/clip/ViT-B-16.pt}"
@@ -46,7 +47,8 @@ export REPLAY_CONTRACT DERPP_REPLAY_CONTRACT AGCN_WORD_EMBEDDINGS
   --run-root "${RUN_OUTPUT_ROOT}" \
   --run-id "${RUN_ID}" \
   --job-script "${SCRIPT_DIR}/run_b10c4_baseline_job.sh" \
-  --gpus "${gpu_values[@]}"
+  --gpus "${gpu_values[@]}" \
+  --slots-per-gpu "${SLOTS_PER_GPU}"
 
 SUMMARY_JSON="${RUN_OUTPUT_ROOT}/b10c4_seed012_summary.json"
 SUMMARY_MD="${RUN_OUTPUT_ROOT}/b10c4_seed012_summary.md"

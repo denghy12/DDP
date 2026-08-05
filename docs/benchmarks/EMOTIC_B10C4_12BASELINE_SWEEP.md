@@ -44,19 +44,20 @@ retain the 20-per-seen-class memory scale; the five task capacities are
 ## Eight-GPU scheduling
 
 There are 36 independent method/seed jobs. The scheduler uses eight physical
-GPU slots with exactly one training process per GPU. It starts estimated
-long-running methods first and immediately backfills a GPU when its current
-job completes. This avoids the unsafe three-process DER++/KRT packing used in
-some earlier single-GPU experiments while keeping all eight GPUs occupied for
-most of the sweep.
+GPUs with two bounded training slots per GPU, for at most 16 concurrent jobs.
+It starts estimated long-running methods first and immediately backfills a slot
+when its current job completes. The largest registered single-process memory
+smoke is DER++ at `8434.2 MiB`; two such processes are approximately
+`16868.4 MiB`. The launcher therefore requires at least `23000 MiB` initially
+free on every card and never permits a third process on one GPU.
 
 The initial priority is Original-DDP, KRT, MULTI-LANE, CSC, LwF, DER++, EWC,
 ER, PRS, Fine-Tuning, AGCN, and L3A. Priority affects only scheduling, never
 method configuration or result aggregation. Dataloader workers are fixed at
 two per process except AGCN and Original-DDP, whose frozen settings use zero.
 AGCN retains its frozen `train=8/eval=32` batch sizes; Original-DDP retains
-`train=8/eval=1`. Each GPU runs one process, so the measured DER++ peak does not
-need a multi-process memory estimate.
+`train=8/eval=1`. The two-slot cap uses the measured worst-case memory estimate
+instead of relying on a transient `nvidia-smi` reading.
 
 ## One-command execution
 
@@ -66,6 +67,7 @@ From a clean server checkout of the sweep branch:
 RUN_ID="b10c4_12baseline_seed012_$(date +%Y%m%d_%H%M%S)" \
 SESSION=emotic_b10c4_12baseline \
 GPUS="0 1 2 3 4 5 6 7" \
+SLOTS_PER_GPU=2 \
 bash scripts/emotic-mlcil/launch_b10c4_12baseline_8gpu_tmux.sh
 ```
 

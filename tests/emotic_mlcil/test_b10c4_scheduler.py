@@ -52,8 +52,17 @@ class B10C4SchedulerTest(unittest.TestCase):
             self.assertEqual(list(states.glob("*.failed.json")), [])
             plan = json.loads((run_root / "sweep_plan.json").read_text())
             self.assertEqual(len(plan["jobs"]), 36)
-            self.assertEqual(plan["maximum_concurrent_training_processes"], 8)
-            self.assertFalse(plan["gpu_sharing"])
+            self.assertEqual(plan["slots_per_gpu"], 2)
+            self.assertEqual(len(plan["slots"]), 16)
+            self.assertEqual(
+                sorted(slot["physical_gpu"] for slot in plan["slots"]),
+                sorted(list(range(8)) * 2),
+            )
+            self.assertEqual(plan["maximum_concurrent_training_processes"], 16)
+            self.assertTrue(plan["gpu_sharing"])
+            self.assertEqual(
+                plan["memory_safety_basis"]["maximum_processes_per_gpu"], 2
+            )
 
 
 if __name__ == "__main__":

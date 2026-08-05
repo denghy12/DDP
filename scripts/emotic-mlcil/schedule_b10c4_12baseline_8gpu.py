@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the B10-C4 12-baseline sweep with dynamic one-process-per-GPU slots."""
+"""Run the B10-C4 12-baseline sweep with bounded multi-slot GPUs."""
 
 from __future__ import annotations
 
@@ -47,6 +47,7 @@ class Job:
 @dataclass
 class ActiveJob:
     job: Job
+    slot: int
     gpu: int
     process: subprocess.Popen[bytes]
     log_stream: IO[bytes]
@@ -76,6 +77,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--job-script", type=Path, required=True)
     parser.add_argument("--gpus", type=int, nargs="+", required=True)
+    parser.add_argument("--slots-per-gpu", type=int, default=2)
     parser.add_argument("--poll-seconds", type=float, default=5.0)
     return parser.parse_args()
 
@@ -85,6 +87,8 @@ def _validate_args(args: argparse.Namespace) -> None:
         raise ValueError("B10-C4 sweep requires exactly eight distinct GPUs")
     if min(args.gpus) < 0:
         raise ValueError("GPU indices must be non-negative")
+    if args.slots_per_gpu not in {1, 2}:
+        raise ValueError("slots-per-gpu must be one or two")
     if args.poll_seconds <= 0:
         raise ValueError("poll-seconds must be positive")
     if not args.job_script.is_file():
@@ -100,6 +104,15 @@ def main() -> None:
     state_dir.mkdir(parents=True, exist_ok=True)
     log_dir.mkdir(parents=True, exist_ok=True)
     jobs = [Job(method, seed) for method in METHOD_PRIORITY for seed in SEEDS]
+    slot_assignments = [
+        (slot, gpu)
+        for slot, gpu in enumerate(
+            gpu
+            for _lane in range(args.slots_per_gpu)
+            for gpu in args.gpus
+        )
+    ]
+    slot_rank = {slot: rank for rank, (slot, _gpu) in enumerate(slot_assignments)}
     plan = {
         "schema_version": 1,
         "run_id": args.run_id,
@@ -108,8 +121,18 @@ def main() -> None:
         "seeds": list(SEEDS),
         "physical_gpus": args.gpus,
         "scheduling": "longest_processing_time_first_dynamic_backfill",
-        "maximum_concurrent_training_processes": len(args.gpus),
-        "gpu_sharing": False,
+        "slots_per_gpu": args.slots_per_gpu,
+        "slots": [
+            {"scheduler_slot": slot, "physical_gpu": gpu}
+            for slot, gpu in slot_assignments
+        ],
+        "maximum_concurrent_training_processes": len(slot_assignments),
+        "gpu_sharing": args.slots_per_gpu > 1,
+        "memory_safety_basis": {
+            "largest_registered_single_process_peak_mib": 8434.2,
+            "largest_registered_two_process_estimate_mib": 16868.4,
+            "maximum_processes_per_gpu": 2,
+        },
         "jobs": [job.key for job in jobs],
     }
     _write_json_atomic(run_root / "sweep_plan.json", plan)
@@ -131,7 +154,7 @@ def main() -> None:
         )
 
     pending: List[Job] = list(jobs)
-    free_gpus: List[int] = list(args.gpus)
+    free_slots = list(slot_assignments)
     active: Dict[int, ActiveJob] = {}
     failures: List[str] = []
     interrupted = False
@@ -153,10 +176,10 @@ def main() -> None:
     with event_path.open("a", encoding="utf-8") as events:
         _event(events, "scheduler_started", jobs=len(jobs), gpus=args.gpus)
         while pending or active:
-            while pending and free_gpus and not interrupted:
+            while pending and free_slots and not interrupted:
                 job = pending.pop(0)
-                gpu = free_gpus.pop(0)
-                log_path = log_dir / f"{job.key}_gpu{gpu}.log"
+                slot, gpu = free_slots.pop(0)
+                log_path = log_dir / f"{job.key}_gpu{gpu}_slot{slot}.log"
                 log_stream = log_path.open("wb")
                 env = dict(os.environ)
                 env.update(
@@ -180,13 +203,15 @@ def main() -> None:
                     "method": job.method,
                     "seed": job.seed,
                     "physical_gpu": gpu,
+                    "scheduler_slot": slot,
                     "pid": process.pid,
                     "log": str(log_path),
                     "started_unix": time.time(),
                 }
                 _write_json_atomic(state_dir / f"{job.key}.started.json", started)
-                active[gpu] = ActiveJob(
+                active[slot] = ActiveJob(
                     job=job,
+                    slot=slot,
                     gpu=gpu,
                     process=process,
                     log_stream=log_stream,
@@ -195,23 +220,25 @@ def main() -> None:
                 )
                 _event(events, "job_started", **started)
                 print(
-                    f"START {job.key:28s} GPU={gpu} "
-                    f"active={len(active)}/8 pending={len(pending)}",
+                    f"START {job.key:28s} GPU={gpu} slot={slot} "
+                    f"active={len(active)}/{len(slot_assignments)} "
+                    f"pending={len(pending)}",
                     flush=True,
                 )
 
             if interrupted and not active:
                 break
-            completed_gpus = [
-                gpu
-                for gpu, record in active.items()
+            completed_slots = [
+                slot
+                for slot, record in active.items()
                 if record.process.poll() is not None
             ]
-            if not completed_gpus:
+            if not completed_slots:
                 time.sleep(args.poll_seconds)
                 continue
-            for gpu in completed_gpus:
-                record = active.pop(gpu)
+            for slot in completed_slots:
+                record = active.pop(slot)
+                gpu = record.gpu
                 return_code = int(record.process.returncode)
                 duration = time.monotonic() - record.started_monotonic
                 record.log_stream.close()
@@ -223,6 +250,7 @@ def main() -> None:
                     "method": record.job.method,
                     "seed": record.job.seed,
                     "physical_gpu": gpu,
+                    "scheduler_slot": slot,
                     "exit_code": return_code,
                     "duration_seconds": duration,
                     "log": str(record.log_path),
@@ -236,11 +264,12 @@ def main() -> None:
                 _event(events, f"job_{suffix}", **result)
                 if return_code != 0:
                     failures.append(record.job.key)
-                free_gpus.append(gpu)
-                free_gpus.sort(key=args.gpus.index)
+                free_slots.append((slot, gpu))
+                free_slots.sort(key=lambda item: slot_rank[item[0]])
                 print(
                     f"{suffix.upper():5s} {record.job.key:28s} GPU={gpu} "
-                    f"seconds={duration:.1f} active={len(active)}/8 "
+                    f"slot={slot} seconds={duration:.1f} "
+                    f"active={len(active)}/{len(slot_assignments)} "
                     f"pending={len(pending)}",
                     flush=True,
                 )
