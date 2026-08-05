@@ -76,6 +76,9 @@ remain a reserved extension point.
 - [Registered ER/PRS three-seed formal result](results/er_prs_seed012_formal_v0.1.json)
 - [Frozen DER++ seed-0 validation snapshot](results/derpp_seed0_validation_v0.1.json)
 - [Registered DER++ three-seed formal result](results/derpp_seed012_formal_v0.1.json)
+- [EMOTIC B5-C3 Track-A baseline summary table](results/TRACK_A_BASELINE_SUMMARY_V0.1.md)
+- [Paper-ready Track-A summary LaTeX](results/track_a_baseline_summary_v0.1.tex)
+- [Machine-readable Track-A summary data](results/track_a_baseline_summary_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase

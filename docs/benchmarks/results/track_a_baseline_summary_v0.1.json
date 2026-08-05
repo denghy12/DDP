@@ -1,0 +1,178 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_v0.1",
+  "track": "A",
+  "reporting_split": "test",
+  "metric_unit": "percent",
+  "f1_threshold": 0.5,
+  "aggregation": "mean_and_sample_standard_deviation_across_seeds_0_1_2",
+  "rows": [
+    {
+      "method": "Sequential Fine-Tuning",
+      "citation": "repository-native control",
+      "memory": {"display": "0", "policy": "none", "final_samples_mean": 0.0, "final_samples_std": 0.0},
+      "seeds": [0, 1, 2],
+      "final_mAP": {"mean": 18.1787888608347, "std": 0.822246808498927},
+      "final_cF1": {"mean": 13.9390882776474, "std": 1.4415472002529095},
+      "final_oF1": {"mean": 36.88594432873205, "std": 6.244992065029938},
+      "average_mAP": {"mean": 23.80120497339645, "std": 0.444046587611474},
+      "status": "registered_three_seed_formal",
+      "source": "clip_continual_seed012_lambda100_v0.2.json plus synchronized per-seed summaries"
+    },
+    {
+      "method": "LwF",
+      "citation": "Li and Hoiem, 2016",
+      "memory": {"display": "0", "policy": "none", "final_samples_mean": 0.0, "final_samples_std": 0.0},
+      "seeds": [0, 1, 2],
+      "final_mAP": {"mean": 23.328940583549763, "std": 1.3573509039126674},
+      "final_cF1": {"mean": 16.81039054054861, "std": 2.0981342073357254},
+      "final_oF1": {"mean": 46.49544969834225, "std": 0.6664928478028266},
+      "average_mAP": {"mean": 28.632823629768072, "std": 1.1302397277402687},
+      "status": "registered_three_seed_formal",
+      "source": "clip_continual_seed012_lambda100_v0.2.json plus synchronized per-seed summaries"
+    },
+    {
+      "method": "EWC",
+      "citation": "Kirkpatrick et al., 2017",
+      "memory": {"display": "0", "policy": "none", "final_samples_mean": 0.0, "final_samples_std": 0.0},
+      "seeds": [0, 1, 2],
+      "final_mAP": {"mean": 20.4155037188212, "std": 1.288682746500965},
+      "final_cF1": {"mean": 16.507340470387597, "std": 2.2618260408210937},
+      "final_oF1": {"mean": 42.684410011132016, "std": 4.229251016545407},
+      "average_mAP": {"mean": 24.968848426829517, "std": 0.4050253358267395},
+      "status": "registered_three_seed_formal_lambda_1e6",
+      "source": "ewc_lambda1e6_seed012_v0.3.json plus synchronized per-seed summaries"
+    },
+    {
+      "method": "AGCN",
+      "citation": "Du et al., 2022",
+      "memory": {"display": "0", "policy": "none", "final_samples_mean": 0.0, "final_samples_std": 0.0},
+      "seeds": [0, 1, 2],
+      "final_mAP": {"mean": 17.908951651250458, "std": 0.3754683956163129},
+      "final_cF1": {"mean": 13.709591179358826, "std": 0.3868069986460756},
+      "final_oF1": {"mean": 47.8887475778027, "std": 3.5333904183141067},
+      "average_mAP": {"mean": 21.782587068341837, "std": 0.1163064996850592},
+      "status": "registered_three_seed_formal",
+      "source": "agcn_seed012_formal_v0.1.json"
+    },
+    {
+      "method": "CSC",
+      "citation": "Du et al., 2024",
+      "memory": {"display": "0", "policy": "none", "final_samples_mean": 0.0, "final_samples_std": 0.0},
+      "seeds": [0, 1, 2],
+      "final_mAP": {"mean": 20.56141744967663, "std": 0.47848276482170493},
+      "final_cF1": {"mean": 2.339119582449218, "std": 0.7218618758116845},
+      "final_oF1": {"mean": 3.7206957578154345, "std": 0.7036942296732529},
+      "average_mAP": {"mean": 30.39674866236938, "std": 0.24106360527892864},
+      "status": "registered_three_seed_formal",
+      "source": "csc_seed012_formal_v0.1.json"
+    },
+    {
+      "method": "MULTI-LANE",
+      "citation": "Min et al., 2024",
+      "memory": {"display": "0", "policy": "none", "final_samples_mean": 0.0, "final_samples_std": 0.0},
+      "seeds": [0, 1, 2],
+      "final_mAP": {"mean": 31.29948550210784, "std": 0.14104568543406878},
+      "final_cF1": {"mean": 31.81111031544187, "std": 0.2026318585702292},
+      "final_oF1": {"mean": 49.10920380189815, "std": 0.1330790191749395},
+      "average_mAP": {"mean": 37.998575699304666, "std": 0.4824589306101728},
+      "status": "registered_three_seed_formal",
+      "source": "multi_lane_seed012_formal_v0.1.json"
+    },
+    {
+      "method": "L3A",
+      "citation": "Zhang et al., 2025",
+      "memory": {"display": "0", "policy": "none", "final_samples_mean": 0.0, "final_samples_std": 0.0},
+      "seeds": [0, 1, 2],
+      "final_mAP": {"mean": 28.829625067484308, "std": 0.6470487497025824},
+      "final_cF1": {"mean": 26.5486850072884, "std": 0.09159050714681609},
+      "final_oF1": {"mean": 34.84932117555059, "std": 0.08466102957504033},
+      "average_mAP": {"mean": 33.77464719270587, "std": 1.3091401429550351},
+      "status": "registered_three_seed_formal",
+      "source": "l3a_seed012_formal_v0.1.json"
+    },
+    {
+      "method": "Original-DDP-Tau2",
+      "citation": "fixed original DDP snapshot; registered T=1 to 2, gamma=0.7 mapping",
+      "memory": {"display": "0", "policy": "none", "final_samples_mean": 0.0, "final_samples_std": 0.0},
+      "seeds": [0, 1, 2],
+      "final_mAP": {"mean": 29.97951593991524, "std": 0.22371142541353867},
+      "final_cF1": {"mean": 29.514395386290577, "std": 0.7446011219582378},
+      "final_oF1": {"mean": 48.340996706163544, "std": 0.47959558901312266},
+      "average_mAP": {"mean": 37.20706023556368, "std": 0.47786953852549996},
+      "status": "registered_three_seed_formal",
+      "source": "original_ddp_tau2_seed012_formal_v0.1.json"
+    },
+    {
+      "method": "ER",
+      "citation": "Rolnick et al., 2019; repository-native controlled implementation",
+      "memory": {"display": "20/class", "policy": "uniform_reservoir", "final_samples_mean": 520.0, "final_samples_std": 0.0},
+      "seeds": [0, 1, 2],
+      "final_mAP": {"mean": 20.322959639896872, "std": 1.459278164554753},
+      "final_cF1": {"mean": 21.22021982795289, "std": 3.6461311462451373},
+      "final_oF1": {"mean": 45.40253908510506, "std": 0.46871136856375706},
+      "average_mAP": {"mean": 25.925891113870623, "std": 1.4637242952681313},
+      "status": "registered_three_seed_formal",
+      "source": "er_prs_seed012_formal_v0.1.json"
+    },
+    {
+      "method": "PRS",
+      "citation": "Kim et al., 2020",
+      "memory": {"display": "20/class", "policy": "partitioned_reservoir", "final_samples_mean": 520.0, "final_samples_std": 0.0},
+      "seeds": [0, 1, 2],
+      "final_mAP": {"mean": 20.560281125681016, "std": 0.44419351897397286},
+      "final_cF1": {"mean": 20.89663771717706, "std": 1.540670359793211},
+      "final_oF1": {"mean": 31.375797250203753, "std": 2.5213750716920256},
+      "average_mAP": {"mean": 26.32542357588175, "std": 1.5723169032102693},
+      "status": "registered_three_seed_formal",
+      "source": "er_prs_seed012_formal_v0.1.json"
+    },
+    {
+      "method": "DER++",
+      "citation": "Buzzega et al., 2020",
+      "memory": {"display": "20/class", "policy": "reservoir_with_capture_time_logits", "final_samples_mean": 520.0, "final_samples_std": 0.0},
+      "seeds": [0, 1, 2],
+      "final_mAP": {"mean": 23.084398407727885, "std": 1.2413092986287562},
+      "final_cF1": {"mean": 20.00958767330609, "std": 1.0553503901018868},
+      "final_oF1": {"mean": 44.947514914195864, "std": 0.5622457800031331},
+      "average_mAP": {"mean": 30.413956364750764, "std": 0.4120493595799234},
+      "status": "registered_three_seed_formal",
+      "source": "derpp_seed012_formal_v0.1.json"
+    },
+    {
+      "method": "KRT",
+      "citation": "Dong et al., 2023",
+      "memory": {"display": "20/class", "policy": "herding_with_stable_id_deduplication", "final_samples_mean": 509.6666666666667, "final_samples_std": 5.8594652770823155},
+      "seeds": [0, 1, 2],
+      "final_mAP": {"mean": 22.17263423265204, "std": 2.8439094095298767},
+      "final_cF1": {"mean": 24.53969535904314, "std": 2.3698001901634775},
+      "final_oF1": {"mean": 36.73827711396712, "std": 1.9540907419329374},
+      "average_mAP": {"mean": 30.06538163960815, "std": 2.390130145758809},
+      "status": "registered_three_seed_formal",
+      "source": "krt_seed012_formal_v0.1.json"
+    }
+  ],
+  "provisional_project_result": {
+    "method": "Modified DDP",
+    "memory": {"display": "0", "policy": "none", "final_samples": 0},
+    "seeds": [0],
+    "final_mAP": 30.805144470640787,
+    "final_cF1": 31.492723345851537,
+    "final_oF1": 49.31224209078405,
+    "average_mAP": 37.737386721952674,
+    "status": "eligible_seed0_only_not_a_three_seed_baseline",
+    "source": "ddp_seed0_core_v0.1.json",
+    "warning": "The method is still changing and must not be compared as a final three-seed result."
+  },
+  "pending_not_in_table": [
+    {"method": "Joint Training", "reason": "not run"},
+    {"method": "OCDM", "reason": "no audited authoritative implementation"},
+    {"method": "EmoGrowth/AESL", "reason": "method identity and MLCIL scope unresolved"}
+  ],
+  "best_registered_three_seed": {
+    "final_mAP": "MULTI-LANE",
+    "final_cF1": "MULTI-LANE",
+    "final_oF1": "MULTI-LANE",
+    "average_mAP": "MULTI-LANE"
+  }
+}

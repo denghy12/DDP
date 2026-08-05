@@ -1,0 +1,58 @@
+% Requires: \usepackage{booktabs,multirow,graphicx}
+\begin{table*}[t]
+  \centering
+  \caption{EMOTIC B5-C3 Track-A results. Values are mean $\pm$ sample
+  standard deviation over seeds 0, 1, and 2.}
+  \label{tab:emotic-b5c3-track-a}
+  \scriptsize
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{l c c c c c}
+    \toprule
+    & & \multicolumn{4}{c}{\textbf{EMOTIC B5-C3 Track A}} \\
+    \cmidrule(lr){3-6}
+    \textbf{Method} & \textbf{Memory} & \multicolumn{3}{c}{\textbf{Last}} & \textbf{Avg.} \\
+    \cmidrule(lr){3-5}\cmidrule(lr){6-6}
+    & & \textbf{mAP} & \textbf{cF1} & \textbf{oF1} & \textbf{mAP} \\
+    \midrule
+    Sequential Fine-Tuning
+      & \multirow{8}{*}{0} & $18.2{\pm}0.8$ & $13.9{\pm}1.4$ & $36.9{\pm}6.2$ & $23.8{\pm}0.4$ \\
+    LwF (Li \& Hoiem, 2016)
+      & & $23.3{\pm}1.4$ & $16.8{\pm}2.1$ & $46.5{\pm}0.7$ & $28.6{\pm}1.1$ \\
+    EWC (Kirkpatrick et al., 2017)
+      & & $20.4{\pm}1.3$ & $16.5{\pm}2.3$ & $42.7{\pm}4.2$ & $25.0{\pm}0.4$ \\
+    AGCN (Du et al., 2022)
+      & & $17.9{\pm}0.4$ & $13.7{\pm}0.4$ & $47.9{\pm}3.5$ & $21.8{\pm}0.1$ \\
+    CSC (Du et al., 2024)
+      & & $20.6{\pm}0.5$ & $2.3{\pm}0.7$ & $3.7{\pm}0.7$ & $30.4{\pm}0.2$ \\
+    \textbf{MULTI-LANE (Min et al., 2024)}
+      & & $\mathbf{31.3{\pm}0.1}$ & $\mathbf{31.8{\pm}0.2}$ & $\mathbf{49.1{\pm}0.1}$ & $\mathbf{38.0{\pm}0.5}$ \\
+    L3A (Zhang et al., 2025)
+      & & $28.8{\pm}0.6$ & $26.5{\pm}0.1$ & $34.8{\pm}0.1$ & $33.8{\pm}1.3$ \\
+    Original-DDP-Tau2
+      & & $30.0{\pm}0.2$ & $29.5{\pm}0.7$ & $48.3{\pm}0.5$ & $37.2{\pm}0.5$ \\
+    \midrule
+    ER (Rolnick et al., 2019)
+      & \multirow{4}{*}{20/class} & $20.3{\pm}1.5$ & $21.2{\pm}3.6$ & $45.4{\pm}0.5$ & $25.9{\pm}1.5$ \\
+    PRS (Kim et al., 2020)
+      & & $20.6{\pm}0.4$ & $20.9{\pm}1.5$ & $31.4{\pm}2.5$ & $26.3{\pm}1.6$ \\
+    DER++ (Buzzega et al., 2020)
+      & & $23.1{\pm}1.2$ & $20.0{\pm}1.1$ & $44.9{\pm}0.6$ & $30.4{\pm}0.4$ \\
+    KRT (Dong et al., 2023)
+      & & $22.2{\pm}2.8$ & $24.5{\pm}2.4$ & $36.7{\pm}2.0$ & $30.1{\pm}2.4$ \\
+    \midrule
+    Modified DDP (seed 0 only)$^{\dagger}$
+      & 0 & $30.8$ & $31.5$ & $49.3$ & $37.7$ \\
+    \bottomrule
+  \end{tabular}%
+  }
+
+  \vspace{2pt}
+  \begin{minipage}{\textwidth}
+    \footnotesize
+    Memory denotes replay image-sample capacity. KRT targets 20/class but
+    stable-ID deduplication yields $509.7{\pm}5.9$ final samples; ER, PRS, and
+    DER++ end at exactly 520. All cF1/oF1 values use the fixed threshold 0.5.
+    $^{\dagger}$The modified DDP is provisional, is still changing, and is not
+    included in three-seed ranking or boldface.
+  \end{minipage}
+\end{table*}
