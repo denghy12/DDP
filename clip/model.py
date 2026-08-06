@@ -281,7 +281,14 @@ class ResidualAttentionBlock_visual(nn.Module):
         self.attn_mask = self.attn_mask.to(dtype=v.dtype, device=v.device) if self.attn_mask is not None else None
         return self.attn(q, k, v, need_weights=False, attn_mask=self.attn_mask)[0]
 
-    def forward(self, x: torch.Tensor, visual_prompts=None):
+    def forward(
+        self,
+        x: torch.Tensor,
+        visual_prompts=None,
+        transformer_adapter_bank=None,
+        adapter_path_task_ids=None,
+        layer_index=None,
+    ):
         if visual_prompts is not None:
             visual_prompts = visual_prompts.permute(1, 0, 2)
             q = k = v = torch.cat([visual_prompts, x], dim=0)
@@ -293,7 +300,22 @@ class ResidualAttentionBlock_visual(nn.Module):
             v = x
             x = x + self.attention(self.ln_1(q),self.ln_1(k),self.ln_1(v))
         
-        x = x + self.mlp(self.ln_2(x))
+        normalized = self.ln_2(x)
+        mlp_delta = self.mlp(normalized)
+        if transformer_adapter_bank is None:
+            x = x + mlp_delta
+        else:
+            if adapter_path_task_ids is None or layer_index is None:
+                raise ValueError(
+                    "Transformer Adapter routing requires path task ids and "
+                    "the current layer index"
+                )
+            adapter_delta = transformer_adapter_bank.delta_for_layer(
+                int(layer_index),
+                normalized,
+                adapter_path_task_ids,
+            )
+            x = x + mlp_delta + adapter_delta.to(dtype=x.dtype)
         return x
     
 class ResidualAttentionBlock(nn.Module):
@@ -339,12 +361,27 @@ class Transformer_visual(nn.Module):
             ResidualAttentionBlock_visual(width, heads, attn_mask) for _ in range(layers)
         ])
 
-    def forward(self, x: torch.Tensor, visual_prompts=None, prompt_layers=None):
+    def forward(
+        self,
+        x: torch.Tensor,
+        visual_prompts=None,
+        prompt_layers=None,
+        transformer_adapter_bank=None,
+        adapter_path_task_ids=None,
+    ):
+        prompt_layers = () if prompt_layers is None else prompt_layers
         for i, block in enumerate(self.resblocks):
             if i in prompt_layers:
-                x = block(x, visual_prompts=visual_prompts)
+                layer_prompts = visual_prompts
             else:
-                x = block(x, visual_prompts=None)
+                layer_prompts = None
+            x = block(
+                x,
+                visual_prompts=layer_prompts,
+                transformer_adapter_bank=transformer_adapter_bank,
+                adapter_path_task_ids=adapter_path_task_ids,
+                layer_index=i,
+            )
         return x
 
 class VisionTransformer_backup(nn.Module):
@@ -404,7 +441,13 @@ class VisionTransformer(nn.Module):
         self.ln_post = LayerNorm(width)
         self.proj = nn.Parameter(scale * torch.randn(width, output_dim))
 
-    def forward(self, x: torch.Tensor, visual_prompts: torch.Tensor):
+    def forward(
+        self,
+        x: torch.Tensor,
+        visual_prompts: torch.Tensor = None,
+        transformer_adapter_bank=None,
+        adapter_path_task_ids=None,
+    ):
 
         x = self.conv1(x)
         x = x.reshape(x.shape[0], x.shape[1], -1)
@@ -419,7 +462,13 @@ class VisionTransformer(nn.Module):
         prompt_layers = [7, 8, 9, 10, 11]
 
         x = x.permute(1, 0, 2)
-        x = self.transformer(x,visual_prompts,prompt_layers)
+        x = self.transformer(
+            x,
+            visual_prompts,
+            prompt_layers,
+            transformer_adapter_bank=transformer_adapter_bank,
+            adapter_path_task_ids=adapter_path_task_ids,
+        )
         x = x.permute(1, 0, 2)
         x = self.ln_post(x)
 

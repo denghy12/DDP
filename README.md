@@ -412,3 +412,12 @@ JSON/CSV/HTML report to
 The fixed-last ASL/BAL comparison that preserves the same deterministic routing
 and Feature Difference inference path is documented in
 `docs/ddp_task_adapter_bank_asl_bal.md`.
+
+## Transformer-block Task Adapter Bank
+
+The `codex/emotic-ddp-transformer-adapter-bank` experiment keeps the original
+BCE-trained DDP checkpoints frozen and trains a class-routed bank of parallel
+ViT-MLP Adapters with ASL. The locked first experiment uses blocks 4--12,
+`768→128→768`, Adam `4e-4`, cosine scheduling, effective batch 64, 20 epochs,
+fixed-last checkpoints, and a fixed test threshold of 0.5. See
+`docs/ddp_transformer_adapter_bank.md` for the protocol and server commands.

@@ -252,6 +252,7 @@ class DDP(nn.Module):
         self.feature_adapter = None
         self.feature_adapter_correction = "linear_residual"
         self.feature_adapter_bank = None
+        self.transformer_adapter_bank = None
 
     def encode_prompt_free_image(
         self,
@@ -346,6 +347,11 @@ class DDP(nn.Module):
 
     def enable_task_adapter_bank(self, adapter_bank):
         """Attach a frozen class-routed Bank to the prompted CLS route."""
+        if getattr(self, "transformer_adapter_bank", None) is not None:
+            raise RuntimeError(
+                "Disable the Transformer Adapter Bank before enabling the "
+                "CLS Feature-Difference Bank"
+            )
         if self.feature_adapter is not None:
             raise RuntimeError(
                 "Disable the single feature_adapter before enabling an Adapter Bank"
@@ -364,6 +370,33 @@ class DDP(nn.Module):
 
     def disable_task_adapter_bank(self):
         self.feature_adapter_bank = None
+
+    def enable_transformer_adapter_bank(self, adapter_bank, freeze=True):
+        """Attach a class-routed Adapter Bank inside visual ViT blocks."""
+        if self.feature_adapter is not None or self.feature_adapter_bank is not None:
+            raise RuntimeError(
+                "Transformer and final-feature Adapters cannot be active together"
+            )
+        if getattr(adapter_bank, "routing_mode", None) != "class_introduction_task":
+            raise ValueError(
+                "DDP only accepts deterministic class-introduction task routing"
+            )
+        if getattr(adapter_bank, "adapter_location", None) != "parallel_to_vit_mlp":
+            raise ValueError("Unsupported Transformer Adapter location")
+        if int(getattr(adapter_bank, "hidden_dim", -1)) != self.width:
+            raise ValueError(
+                f"Transformer Adapter width must be {self.width}, got "
+                f"{getattr(adapter_bank, 'hidden_dim', None)}"
+            )
+        self.transformer_adapter_bank = adapter_bank
+        if freeze:
+            self.transformer_adapter_bank.eval()
+            for parameter in self.transformer_adapter_bank.parameters():
+                parameter.requires_grad_(False)
+        return self.transformer_adapter_bank
+
+    def disable_transformer_adapter_bank(self):
+        self.transformer_adapter_bank = None
 
     def _text_features(self, cls_id, inference):
         if inference:
@@ -412,8 +445,25 @@ class DDP(nn.Module):
             -1, 2 * K, -1, -1, -1
         ).reshape(2 * K * B, *image.shape[1:])
 
+        transformer_adapter_bank = getattr(
+            self, "transformer_adapter_bank", None
+        )
+        adapter_path_task_ids = None
+        if transformer_adapter_bank is not None:
+            from emotic_transformer_adapter_bank import (
+                path_task_ids_for_classes,
+            )
+
+            adapter_path_task_ids = path_task_ids_for_classes(
+                list(cls_id_range),
+                B,
+                image_expand.device,
+            )
         token_features = self.image_encoder(
-            image_expand.type(self.dtype), visual_prompts_all
+            image_expand.type(self.dtype),
+            visual_prompts_all,
+            transformer_adapter_bank=transformer_adapter_bank,
+            adapter_path_task_ids=adapter_path_task_ids,
         )
         token_features = token_features.permute(0, 2, 1)
         token_features = token_features / token_features.norm(
