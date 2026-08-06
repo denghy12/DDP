@@ -13,6 +13,11 @@ RUN_ROOT="${RUN_ROOT:?Set RUN_ROOT}"
 PYTHON="${PYTHON:-/opt/conda/envs/ddp/bin/python}"
 DATA_ROOT="${DATA_ROOT:-/mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC}"
 CLIP_MODEL_PATH="${CLIP_MODEL_PATH:-${ROOT}/pretrained/clip/ViT-B-16.pt}"
+DATA_WORKERS="${DATA_WORKERS:-0}"
+if ! [[ "${DATA_WORKERS}" =~ ^[0-9]+$ ]]; then
+  echo "DATA_WORKERS must be a non-negative integer" >&2
+  exit 2
+fi
 
 case "${PROTOCOL_KEY}" in
   b10c4)
@@ -72,7 +77,7 @@ PYTHONUNBUFFERED=1 \
     --configuration-locked \
     --train-batch-size 128 \
     --eval-batch-size 4 \
-    --workers 4 \
+    --workers "${DATA_WORKERS}" \
     --device cuda
 
 "${PYTHON}" -m benchmarks.emotic_mlcil.runner \

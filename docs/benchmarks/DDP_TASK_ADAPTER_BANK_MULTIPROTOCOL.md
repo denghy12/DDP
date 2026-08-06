@@ -68,6 +68,12 @@ GPU_LIST="0 1 2 3 4 5" bash \
   scripts/emotic-mlcil/launch_task_adapter_bank_b10c4_b4c2_tmux.sh
 ```
 
+The six-way launcher defaults to `DATA_WORKERS=0`.  GPU-level parallelism is
+already provided by the six independent jobs, while multiprocessing data
+workers can exhaust the server or tmux file-descriptor limit across repeated
+incremental evaluation loaders.  A positive value can still be requested
+explicitly for a server with a sufficiently high descriptor limit.
+
 The launcher reuses the server-only DDP checkpoints stored under the completed
 B10-C4 and B4-C2 12-baseline run roots. It writes a new run below
 `/mnt/haoyuan/workspace/emotic_benchmark_runs/task_adapter_bank_multiprotocol_v0.1/`.
