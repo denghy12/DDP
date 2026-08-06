@@ -1,4 +1,4 @@
-"""Task-routed Adapter Bank utilities for EMOTIC B5-C3.
+"""Protocol-driven task-routed Adapter Bank utilities for EMOTIC.
 
 Every class is routed to the Adapter trained when that class was introduced.
 The routing is class based, not sample based, so one multi-label image may use
@@ -35,34 +35,93 @@ TASK_CLASS_RANGES: Tuple[Tuple[int, int], ...] = (
 TASK_SEEN_CLASSES: Tuple[int, ...] = tuple(high for _, high in TASK_CLASS_RANGES)
 BANK_SCHEMA_VERSION = 1
 CHECKPOINT_SCHEMA_VERSION = 1
+TaskClassRanges = Tuple[Tuple[int, int], ...]
 
 
-def task_class_range(task_id: int) -> Tuple[int, int]:
+def normalize_task_class_ranges(
+    task_class_ranges: Sequence[Sequence[int]],
+) -> TaskClassRanges:
+    """Validate contiguous protocol-order task ranges."""
+
+    normalized = tuple(
+        (int(bounds[0]), int(bounds[1])) for bounds in task_class_ranges
+    )
+    if not normalized:
+        raise ValueError("task_class_ranges must contain at least one task")
+    expected_low = 0
+    for task_id, (low, high) in enumerate(normalized):
+        if low != expected_low or high <= low:
+            raise ValueError(
+                "Task ranges must be non-empty and contiguous from class 0; "
+                f"task {task_id} is {(low, high)}, expected low={expected_low}"
+            )
+        expected_low = high
+    return normalized
+
+
+def task_ranges_from_sizes(task_sizes: Sequence[int]) -> TaskClassRanges:
+    ranges = []
+    low = 0
+    for size in task_sizes:
+        size = int(size)
+        if size <= 0:
+            raise ValueError("Every task size must be positive")
+        ranges.append((low, low + size))
+        low += size
+    return normalize_task_class_ranges(ranges)
+
+
+def task_class_range(
+    task_id: int,
+    task_class_ranges: Sequence[Sequence[int]] = TASK_CLASS_RANGES,
+) -> Tuple[int, int]:
+    ranges = normalize_task_class_ranges(task_class_ranges)
     task_id = int(task_id)
-    if not 0 <= task_id < len(TASK_CLASS_RANGES):
-        raise ValueError(f"task_id must be in [0, 7], got {task_id}")
-    return TASK_CLASS_RANGES[task_id]
+    if not 0 <= task_id < len(ranges):
+        raise ValueError(
+            f"task_id must be in [0, {len(ranges) - 1}], got {task_id}"
+        )
+    return ranges[task_id]
 
 
-def task_class_indices(task_id: int) -> torch.Tensor:
-    low, high = task_class_range(task_id)
+def task_class_indices(
+    task_id: int,
+    task_class_ranges: Sequence[Sequence[int]] = TASK_CLASS_RANGES,
+) -> torch.Tensor:
+    low, high = task_class_range(task_id, task_class_ranges)
     return torch.arange(low, high, dtype=torch.long)
 
 
-def class_task_id(class_id: int) -> int:
+def class_task_id(
+    class_id: int,
+    task_class_ranges: Sequence[Sequence[int]] = TASK_CLASS_RANGES,
+) -> int:
+    ranges = normalize_task_class_ranges(task_class_ranges)
     class_id = int(class_id)
-    if not 0 <= class_id < TASK_CLASS_RANGES[-1][1]:
-        raise ValueError(f"class_id must be in [0, 25], got {class_id}")
-    if class_id < 5:
-        return 0
-    return 1 + (class_id - 5) // 3
+    if not 0 <= class_id < ranges[-1][1]:
+        raise ValueError(
+            f"class_id must be in [0, {ranges[-1][1] - 1}], got {class_id}"
+        )
+    for task_id, (low, high) in enumerate(ranges):
+        if low <= class_id < high:
+            return task_id
+    raise RuntimeError("Validated task ranges did not contain class_id")
 
 
-def class_to_task_map(seen_classes: int = 26) -> Tuple[int, ...]:
-    seen_classes = int(seen_classes)
-    if not 1 <= seen_classes <= 26:
-        raise ValueError(f"seen_classes must be in [1, 26], got {seen_classes}")
-    return tuple(class_task_id(class_id) for class_id in range(seen_classes))
+def class_to_task_map(
+    seen_classes: Optional[int] = None,
+    task_class_ranges: Sequence[Sequence[int]] = TASK_CLASS_RANGES,
+) -> Tuple[int, ...]:
+    ranges = normalize_task_class_ranges(task_class_ranges)
+    total_classes = ranges[-1][1]
+    seen_classes = total_classes if seen_classes is None else int(seen_classes)
+    if not 1 <= seen_classes <= total_classes:
+        raise ValueError(
+            f"seen_classes must be in [1, {total_classes}], got {seen_classes}"
+        )
+    return tuple(
+        class_task_id(class_id, ranges) for class_id in range(seen_classes)
+    )
 
 
 def file_sha256(path: Union[str, Path]) -> str:
@@ -79,6 +138,7 @@ def prepare_task_training_subset(
     training_mode: str,
     seed: int,
     shots_per_class: int = 16,
+    task_class_ranges: Sequence[Sequence[int]] = TASK_CLASS_RANGES,
 ):
     """Select one task's samples and construct a strict partial-label mask.
 
@@ -90,11 +150,14 @@ def prepare_task_training_subset(
     Old and future classes are always masked.
     """
 
-    if labels.ndim != 2 or labels.shape[1] != 26:
+    ranges = normalize_task_class_ranges(task_class_ranges)
+    total_classes = ranges[-1][1]
+    if labels.ndim != 2 or labels.shape[1] != total_classes:
         raise ValueError(
-            "labels must have shape [samples, 26], got " f"{tuple(labels.shape)}"
+            f"labels must have shape [samples, {total_classes}], got "
+            f"{tuple(labels.shape)}"
         )
-    active = task_class_indices(task_id)
+    active = task_class_indices(task_id, ranges)
     if training_mode == "full":
         selected = torch.nonzero(
             labels[:, active].sum(dim=1).gt(0), as_tuple=False
@@ -116,7 +179,7 @@ def prepare_task_training_subset(
     selected_labels = labels[selected]
     supervision_mask = torch.zeros_like(selected_labels, dtype=torch.bool)
     supervision_mask[:, active] = source_mask[:, active]
-    low, high = task_class_range(task_id)
+    low, high = task_class_range(task_id, ranges)
     old_positive_count = int(selected_labels[:, :low].sum().item()) if low else 0
     future_positive_count = (
         int(selected_labels[:, high:].sum().item()) if high < labels.shape[1] else 0
@@ -126,6 +189,7 @@ def prepare_task_training_subset(
         "mode": "full_data" if training_mode == "full" else "fewshot",
         "task_id": int(task_id),
         "class_range": [low, high],
+        "task_class_ranges": [list(bounds) for bounds in ranges],
         "shots_per_class": None if training_mode == "full" else int(shots_per_class),
         "seed": int(seed),
         "unique_training_samples": int(selected.numel()),
@@ -152,10 +216,16 @@ def validate_task_adapter_checkpoint(
     training_mode: Optional[str] = None,
     seed: Optional[int] = None,
     classnames: Optional[Sequence[str]] = None,
+    task_class_ranges: Optional[Sequence[Sequence[int]]] = None,
 ) -> Mapping:
     metadata = _checkpoint_task_metadata(checkpoint)
+    ranges = normalize_task_class_ranges(
+        task_class_ranges
+        if task_class_ranges is not None
+        else metadata.get("task_class_ranges", TASK_CLASS_RANGES)
+    )
     checkpoint_task = int(metadata["task_id"])
-    expected_range = list(task_class_range(checkpoint_task))
+    expected_range = list(task_class_range(checkpoint_task, ranges))
     if list(metadata.get("class_range", [])) != expected_range:
         raise ValueError(
             f"Task {checkpoint_task} checkpoint has invalid class_range "
@@ -190,6 +260,7 @@ class TaskRoutedAdapterBank(nn.Module):
         self,
         adapters: Mapping[int, nn.Module],
         inference_alpha: float = 0.03,
+        task_class_ranges: Sequence[Sequence[int]] = TASK_CLASS_RANGES,
     ):
         super().__init__()
         if inference_alpha < 0:
@@ -205,6 +276,9 @@ class TaskRoutedAdapterBank(nn.Module):
         self.adapters = nn.ModuleDict(
             {str(task_id): adapters[task_id] for task_id in task_ids}
         )
+        self.task_class_ranges = normalize_task_class_ranges(task_class_ranges)
+        if task_ids[-1] >= len(self.task_class_ranges):
+            raise ValueError("Adapter bank contains a task outside the protocol")
         self.inference_alpha = float(inference_alpha)
         for adapter in self.adapters.values():
             if hasattr(adapter, "residual_scale"):
@@ -244,7 +318,9 @@ class TaskRoutedAdapterBank(nn.Module):
                 "text_features must match [2K, dim]; got "
                 f"{tuple(text_features.shape)}"
             )
-        required_max_task = class_task_id(seen_classes - 1)
+        required_max_task = class_task_id(
+            seen_classes - 1, self.task_class_ranges
+        )
         if self.max_task < required_max_task:
             raise ValueError(
                 f"Seen classes require task {required_max_task}, but bank only "
@@ -257,7 +333,7 @@ class TaskRoutedAdapterBank(nn.Module):
             dtype=torch.float32,
         )
         for task_id in range(required_max_task + 1):
-            low, task_high = task_class_range(task_id)
+            low, task_high = task_class_range(task_id, self.task_class_ranges)
             high = min(task_high, seen_classes)
             if low >= high:
                 continue
@@ -316,6 +392,9 @@ class TaskRoutedAdapterBank(nn.Module):
         available = sorted(int(key) for key in manifest.get("adapters", {}))
         if not available:
             raise ValueError("Adapter Bank manifest contains no Adapters")
+        ranges = normalize_task_class_ranges(
+            manifest.get("task_class_ranges", TASK_CLASS_RANGES)
+        )
         resolved_max = available[-1] if max_task is None else int(max_task)
         expected = list(range(resolved_max + 1))
         if not all(task_id in available for task_id in expected):
@@ -338,6 +417,7 @@ class TaskRoutedAdapterBank(nn.Module):
                 training_mode=manifest["training_mode"],
                 seed=manifest["seed"],
                 classnames=manifest_classnames,
+                task_class_ranges=ranges,
             )
             checkpoint_args = checkpoint["args"]
             adapter = SharedResidualFeatureAdapter(
@@ -350,6 +430,7 @@ class TaskRoutedAdapterBank(nn.Module):
         return cls(
             adapters,
             inference_alpha=float(manifest["inference_alpha"]),
+            task_class_ranges=ranges,
         ).to(device)
 
 
@@ -359,10 +440,13 @@ def build_bank_manifest(
     seed: int,
     classnames: Sequence[str],
     inference_alpha: float = 0.03,
+    task_class_ranges: Sequence[Sequence[int]] = TASK_CLASS_RANGES,
+    protocol_id: str = "emotic_b5c3_v0.1",
 ) -> dict:
     bank_dir = Path(bank_dir)
+    ranges = normalize_task_class_ranges(task_class_ranges)
     adapters = {}
-    for task_id in range(len(TASK_CLASS_RANGES)):
+    for task_id in range(len(ranges)):
         checkpoint_path = bank_dir / f"task{task_id}" / "best_adapter.pth"
         if not checkpoint_path.is_file():
             raise FileNotFoundError(checkpoint_path)
@@ -373,10 +457,11 @@ def build_bank_manifest(
             training_mode=training_mode,
             seed=seed,
             classnames=classnames,
+            task_class_ranges=ranges,
         )
         adapters[str(task_id)] = {
             "task_id": task_id,
-            "class_range": list(task_class_range(task_id)),
+            "class_range": list(task_class_range(task_id, ranges)),
             "checkpoint": str(checkpoint_path.relative_to(bank_dir)),
             "sha256": file_sha256(checkpoint_path),
             "best_epoch": checkpoint.get("epoch"),
@@ -385,7 +470,8 @@ def build_bank_manifest(
         }
     return {
         "schema_version": BANK_SCHEMA_VERSION,
-        "name": "EMOTIC B5-C3 task-routed Adapter Bank",
+        "name": f"{protocol_id} task-routed Adapter Bank",
+        "protocol_id": str(protocol_id),
         "training_mode": training_mode,
         "seed": int(seed),
         "inference_formula": "feature_difference",
@@ -395,6 +481,7 @@ def build_bank_manifest(
         "task_specific_alpha": False,
         "test_used_for_selection": False,
         "classnames": list(classnames),
-        "class_to_task": list(class_to_task_map()),
+        "task_class_ranges": [list(bounds) for bounds in ranges],
+        "class_to_task": list(class_to_task_map(None, ranges)),
         "adapters": adapters,
     }

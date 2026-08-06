@@ -33,6 +33,7 @@ from .methods.replay import (
     ERBenchmarkMethod,
     PRSBenchmarkMethod,
 )
+from .methods.task_adapter_bank import DDPTaskAdapterBankMethod
 from .protocol import BenchmarkProtocol
 from .protocol import load_protocol
 from .types import (
@@ -800,6 +801,7 @@ def _parse_args() -> argparse.Namespace:
             "er",
             "prs",
             "derpp",
+            "task_adapter_bank",
         ),
         default="ddp",
     )
@@ -958,6 +960,7 @@ def main() -> None:
         "er": ERBenchmarkMethod,
         "prs": PRSBenchmarkMethod,
         "derpp": DERPPBenchmarkMethod,
+        "task_adapter_bank": DDPTaskAdapterBankMethod,
     }
     method_class = method_classes[args.method]
     artifacts = ArtifactStore(
@@ -993,6 +996,12 @@ def main() -> None:
     if not args.data_root:
         raise ValueError("--data-root is required for benchmark execution")
     train_transform, eval_transform = _legacy_emotic_transforms()
+    if args.method == "task_adapter_bank":
+        # The strongest B5-C3 Task Bank precomputed one deterministic global
+        # CLIP feature per person.  DDP checkpoints are frozen here, so no DDP
+        # training augmentation is needed; reuse the registered eval crop for
+        # auxiliary train-feature extraction as well.
+        train_transform = eval_transform
     data_module = EMOTICMLCILDataModule(
         protocol,
         data_root=args.data_root,
@@ -1000,20 +1009,30 @@ def main() -> None:
         eval_transform=eval_transform,
         input_mode=args.input_mode,
     )
-    if args.method == "ddp":
+    if args.method in {"ddp", "task_adapter_bank"}:
         if not args.checkpoint_dir:
-            raise ValueError("--checkpoint-dir is required for DDP evaluation")
+            raise ValueError(
+                "--checkpoint-dir is required for DDP-based evaluation"
+            )
         checkpoint_dir = Path(args.checkpoint_dir)
         checkpoint_paths = {
             task_id: checkpoint_dir / f"task{task_id}.pth"
             for task_id in range(protocol.num_tasks)
         }
-        method = DDPBenchmarkMethod(
-            protocol,
-            checkpoint_paths=checkpoint_paths,
-            clip_model_path=args.clip_model_path,
-            device=args.device,
-        )
+        if args.method == "ddp":
+            method = DDPBenchmarkMethod(
+                protocol,
+                checkpoint_paths=checkpoint_paths,
+                clip_model_path=args.clip_model_path,
+                device=args.device,
+            )
+        else:
+            method = DDPTaskAdapterBankMethod(
+                protocol,
+                checkpoint_paths=checkpoint_paths,
+                clip_model_path=args.clip_model_path,
+                device=args.device,
+            )
     elif args.method == "agcn":
         method = AGCNBenchmarkMethod(
             protocol,

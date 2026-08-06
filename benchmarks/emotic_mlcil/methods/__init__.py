@@ -13,6 +13,7 @@ from .l3a import L3ABenchmarkMethod
 from .original_ddp import OriginalDDPBenchmarkMethod
 from .agcn import AGCNBenchmarkMethod
 from .replay import DERPPBenchmarkMethod, ERBenchmarkMethod, PRSBenchmarkMethod
+from .task_adapter_bank import DDPTaskAdapterBankMethod
 
 __all__ = [
     "DDPBenchmarkMethod",
@@ -28,4 +29,5 @@ __all__ = [
     "ERBenchmarkMethod",
     "PRSBenchmarkMethod",
     "DERPPBenchmarkMethod",
+    "DDPTaskAdapterBankMethod",
 ]

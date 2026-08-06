@@ -15,6 +15,11 @@ map. Result directories keep their original `output/emotic_*` paths for
 backward compatibility; run `python tools/organize_emotic_artifacts.py` to
 regenerate the branch-oriented index at `output/by_branch/`.
 
+The strongest full-data Task Adapter Bank also supports the frozen Track-A
+B10-C4 and B4-C2 contracts without hard-coded B5-C3 routing. See
+`docs/benchmarks/DDP_TASK_ADAPTER_BANK_MULTIPROTOCOL.md` for the locked method,
+server launcher, and result locations.
+
 # Setup
 
 To set up the environment and install the necessary dependencies, follow the steps below:
