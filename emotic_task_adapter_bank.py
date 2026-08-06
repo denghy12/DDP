@@ -354,7 +354,15 @@ class TaskRoutedAdapterBank(nn.Module):
                 mode="linear_residual",
                 logit_scale=float(logit_scale),
             )
-            correction[:, path_indices] = task_correction
+            # ``feature_logit_correction`` runs inside DDP's inference
+            # autocast context.  CUDA autocast may therefore return fp16 even
+            # though its operands are promoted to fp32 explicitly.  Keep the
+            # assembled correction tensor in the stable fp32 dtype used by the
+            # original DDP path logits before indexed assignment.
+            correction[:, path_indices] = task_correction.to(
+                device=correction.device,
+                dtype=correction.dtype,
+            )
         return correction
 
     def logits_from_features(

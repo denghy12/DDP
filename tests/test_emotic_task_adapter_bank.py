@@ -160,6 +160,23 @@ class TaskRoutingTest(unittest.TestCase):
         self.assertTrue(torch.allclose(correction[0, task0], torch.full((20,), 100.0)))
         self.assertTrue(torch.allclose(correction[0, task1], torch.full((8,), 200.0)))
 
+    def test_autocast_correction_is_assembled_as_float32(self):
+        bank = TaskRoutedAdapterBank(
+            {0: ConstantResidualAdapter(1.0)}, inference_alpha=0.5
+        )
+        features = torch.zeros(1, 10, 2)
+        text = torch.ones(10, 2)
+        with torch.autocast(device_type="cpu", dtype=torch.bfloat16):
+            correction = bank.feature_difference_correction(
+                features,
+                text,
+                seen_classes=5,
+            )
+        self.assertEqual(correction.dtype, torch.float32)
+        self.assertTrue(
+            torch.allclose(correction, torch.full((1, 10), 100.0))
+        )
+
 
 class CheckpointProtocolTest(unittest.TestCase):
     def test_checkpoint_metadata_validation(self):
