@@ -122,3 +122,52 @@ After all jobs and aggregation succeed, download only:
 The package contains all 36 canonical bundles, 432 task score files, aggregate
 JSON/Markdown, scheduler events, manifests, and logs. The universal download
 standard excludes every `.pth` checkpoint.
+
+## Registered formal result
+
+The configuration-locked held-out run
+`b4c2_12baseline_2slot_seed012_20260805_225429` completed all 36 method/seed
+jobs from clean execution commit
+`a6d6937c29387a060db58279f8891c7d89e57ac5`. Every run manifest reports the
+held-out test split, is eligible for the main table, and confirms that no test
+label was used for selection. All B5-C3 method settings were transferred
+without B4-C2 test tuning. Metrics below are the mean and sample standard
+deviation over seeds 0--2.
+
+The formal preflight completed 160 Core/baseline tests with `3` expected skips
+and no failures, plus all 17 selected legacy regressions, before any worker was
+launched.
+
+| Rank by Final mAP | Method | Final mAP | Average mAP | Forgetting |
+|---:|---|---:|---:|---:|
+| 1 | MULTI-LANE | `29.6138 ± 0.3312` | `36.9964 ± 0.2495` | `4.5700 ± 0.0332` |
+| 2 | Original-DDP-Tau2 | `28.8407 ± 0.2206` | `36.5643 ± 0.1600` | `4.5890 ± 0.0271` |
+| 3 | L3A | `28.1712 ± 0.8848` | `34.6612 ± 0.6743` | `5.1364 ± 0.1357` |
+| 4 | PRS | `21.3131 ± 1.7795` | `26.7668 ± 1.5171` | `7.1815 ± 0.7979` |
+
+The scheduler used eight physical GPUs, two slots per GPU, a `20000 MiB`
+per-card reservation budget, and compatibility-aware dynamic backfill. It
+completed all 36 jobs in `10940.886` seconds (about `3.039` hours), with zero
+failed jobs, zero OOMs, and zero retries. The registered run therefore needed
+no scheduling-isolation recovery and no configuration change.
+
+Guarded AMP/optimizer skip counters are preserved in the machine-readable
+snapshot. Nonzero totals were CSC `3`, L3A `25` (Task-0 gradient stage only),
+Original-DDP-Tau2 `104`, ER `5`, PRS `4`, DER++ `11`, and KRT `258`;
+AGCN and MULTI-LANE recorded zero. Fine-Tuning, LwF, and EWC use GradScaler
+but their train-log schema does not serialize a skip counter, so the frozen
+audit records those values as unavailable rather than zero. No log contains a
+fatal OOM, traceback, or NaN marker, and every job produced all 12 finite task
+metrics and canonical score shards.
+
+The checkpoint-free archive contains 36 bundles, 432 canonical score files,
+and 763 outer-manifest files. Its SHA-256 is
+`76d1b799e7d8e02b3ed02f4f922de530713fa2f41695902ac4e78645bcb60d4a`.
+The outer checksum, all 763 outer file entries, and all 648 file entries in the
+36 nested sync manifests passed independent verification; no `.pth` is
+present. Exact metrics, per-seed values, twelve-point task curves, scheduler
+provenance, and skip counters are registered in
+[`results/b4c2_12baseline_seed012_formal_v0.1.json`](results/b4c2_12baseline_seed012_formal_v0.1.json).
+
+B4-C2 Track A v0.1 is frozen. Its held-out results must not be used to alter
+method hyperparameters, replay policy, threshold, or training schedule.

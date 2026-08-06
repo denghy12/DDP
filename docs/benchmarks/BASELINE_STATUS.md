@@ -56,10 +56,29 @@ DER++ with ER or PRS. Exact provenance is registered in
 
 ## B4-C2 12-baseline sweep
 
-The alphabetic `4/2×11` Track-A protocol, standard/DER++ replay contracts,
-36-job aggregator, checkpoint-free packager, and eight-GPU launcher are ready.
-Execution has not started and no B4-C2 result is registered yet. The launcher
-uses two slots per GPU with a `20000 MiB` reservation budget, at least 4 GiB
-physical headroom, dynamic compatible-job backfill, and explicit DER++/ER and
-DER++/PRS colocation bans. All method hyperparameters remain frozen from
-B5-C3; B4-C2 test results may not be used for tuning.
+The alphabetic `4/2×11` Track-A sweep is complete and frozen. All 36
+configuration-locked held-out jobs used clean execution commit `a6d6937`, and
+all B5-C3 method settings were transferred without B4-C2 test tuning.
+
+| Method | Memory | Final mAP | Final cF1 | Final oF1 | Average mAP | Forgetting |
+|---|---:|---:|---:|---:|---:|---:|
+| Sequential Fine-Tuning | 0 | `17.3944 ± 0.3478` | `18.6734 ± 1.4050` | `39.2391 ± 4.4034` | `22.9647 ± 0.2898` | `7.3407 ± 0.1851` |
+| LwF | 0 | `18.6523 ± 1.0089` | `20.3862 ± 1.0172` | `41.7534 ± 0.3414` | `28.2534 ± 0.4331` | `9.1537 ± 1.6335` |
+| EWC | 0 | `18.8864 ± 0.8088` | `20.8699 ± 1.2215` | `36.6987 ± 2.7680` | `23.9816 ± 0.8331` | `8.0386 ± 0.2877` |
+| AGCN | 0 | `17.6287 ± 0.4451` | `18.8326 ± 0.8703` | `41.8586 ± 0.7981` | `22.4077 ± 0.1672` | `4.0702 ± 0.4354` |
+| CSC | 0 | `18.9426 ± 0.5343` | `1.6627 ± 0.0904` | `4.5267 ± 0.0606` | `28.9537 ± 0.4094` | `9.3452 ± 0.6972` |
+| MULTI-LANE | 0 | `29.6138 ± 0.3312` | `32.2398 ± 0.2768` | `43.6160 ± 0.1542` | `36.9964 ± 0.2495` | `4.5700 ± 0.0332` |
+| L3A | 0 | `28.1712 ± 0.8848` | `26.4271 ± 0.1197` | `34.8778 ± 0.1589` | `34.6612 ± 0.6743` | `5.1364 ± 0.1357` |
+| Original-DDP-Tau2 | 0 | `28.8407 ± 0.2206` | `31.2376 ± 0.8115` | `43.6105 ± 0.3228` | `36.5643 ± 0.1600` | `4.5890 ± 0.0271` |
+| ER | 20/class | `20.4667 ± 0.6565` | `25.8210 ± 0.7372` | `40.7400 ± 1.2673` | `26.9883 ± 0.7721` | `7.3874 ± 0.8354` |
+| PRS | 20/class | `21.3131 ± 1.7795` | `23.1521 ± 1.9443` | `29.3394 ± 3.0275` | `26.7668 ± 1.5171` | `7.1815 ± 0.7979` |
+| DER++ | 20/class | `21.1769 ± 0.7703` | `22.8064 ± 0.4189` | `42.2186 ± 0.3127` | `28.8529 ± 1.4733` | `8.4807 ± 1.8222` |
+| KRT | 20/class | `19.2759 ± 1.5791` | `23.9648 ± 0.8485` | `36.4998 ± 0.6436` | `29.0254 ± 1.9861` | `9.3672 ± 0.7587` |
+
+The memory-guarded dual-slot scheduler completed all 36 jobs in about `3.039`
+hours with no OOM, failed job, or retry. The archive SHA-256 is
+`76d1b799e7d8e02b3ed02f4f922de530713fa2f41695902ac4e78645bcb60d4a`;
+it contains 36 bundles and 432 canonical task-score files with no `.pth`.
+Guarded AMP/optimizer skip counters and independent outer/nested manifest
+verification are registered in
+[`results/b4c2_12baseline_seed012_formal_v0.1.json`](results/b4c2_12baseline_seed012_formal_v0.1.json).

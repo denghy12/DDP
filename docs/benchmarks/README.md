@@ -83,6 +83,7 @@ remain a reserved extension point.
 - [Machine-readable Track-A summary data](results/track_a_baseline_summary_v0.1.json)
 - [EMOTIC B10-C4 Track-A baseline summary table](results/B10C4_TRACK_A_BASELINE_SUMMARY_V0.1.md)
 - [Registered B10-C4 12-baseline three-seed result](results/b10c4_12baseline_seed012_formal_v0.1.json)
+- [Registered B4-C2 12-baseline three-seed result](results/b4c2_12baseline_seed012_formal_v0.1.json)
 - [Machine-readable protocol guide](../../configs/emotic_mlcil/README.md)
 
 ## Current phase
@@ -107,6 +108,18 @@ SHA-256 is `7d905ece7a7c8838c33edd80b15507956c1d7c1dd1998e694153cd086eb9e205`.
 Two initial OOMs were isolated scheduling failures for ER seed 0 and PRS seed
 0 while sharing a GPU with DER++ seed 1; both retries used unchanged code and
 configuration. The registered result is frozen without B10-C4 test tuning.
+
+The separate B4-C2 Track-A sweep is complete and frozen as well. It evaluated
+the same 12 registered baselines over the alphabetic `4/2×11` split with seeds
+0--2 and unchanged frozen B5-C3 hyperparameters. All 36 configuration-locked
+held-out jobs used clean commit `a6d6937`, completed under the memory-guarded
+eight-GPU dual-slot scheduler in about `3.039` hours, and are eligible for the
+main table. MULTI-LANE ranks first in Final mAP (`29.6138 ± 0.3312`) and
+Average mAP (`36.9964 ± 0.2495`), followed by Original-DDP-Tau2 and L3A. No
+job OOMed or required a retry. The checkpoint-free archive SHA-256 is
+`76d1b799e7d8e02b3ed02f4f922de530713fa2f41695902ac4e78645bcb60d4a`.
+All outer and nested manifest hashes passed independent verification. The
+result must not be tuned from B4-C2 held-out behavior.
 
 The baseline branch removes the earlier benchmark-added residual Adapter.
 Fine-Tuning and LwF have completed three-seed execution. EWC coefficient

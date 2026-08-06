@@ -1,0 +1,2040 @@
+{
+  "snapshot_schema_version": 1,
+  "snapshot_type": "formal_benchmark_result",
+  "status": "frozen",
+  "benchmark": {
+    "protocol_id": "emotic_b4c2_v0.1",
+    "track": "A",
+    "class_order_policy": "alphabetical_same_26_class_order_as_b5c3_and_b10c4",
+    "class_order": [
+      "Affection",
+      "Anger",
+      "Annoyance",
+      "Anticipation",
+      "Aversion",
+      "Confidence",
+      "Disapproval",
+      "Disconnection",
+      "Disquietment",
+      "Doubt/Confusion",
+      "Embarrassment",
+      "Engagement",
+      "Esteem",
+      "Excitement",
+      "Fatigue",
+      "Fear",
+      "Happiness",
+      "Pain",
+      "Peace",
+      "Pleasure",
+      "Sadness",
+      "Sensitivity",
+      "Suffering",
+      "Surprise",
+      "Sympathy",
+      "Yearning"
+    ],
+    "tasks": [
+      [
+        "Affection",
+        "Anger",
+        "Annoyance",
+        "Anticipation"
+      ],
+      [
+        "Aversion",
+        "Confidence"
+      ],
+      [
+        "Disapproval",
+        "Disconnection"
+      ],
+      [
+        "Disquietment",
+        "Doubt/Confusion"
+      ],
+      [
+        "Embarrassment",
+        "Engagement"
+      ],
+      [
+        "Esteem",
+        "Excitement"
+      ],
+      [
+        "Fatigue",
+        "Fear"
+      ],
+      [
+        "Happiness",
+        "Pain"
+      ],
+      [
+        "Peace",
+        "Pleasure"
+      ],
+      [
+        "Sadness",
+        "Sensitivity"
+      ],
+      [
+        "Suffering",
+        "Surprise"
+      ],
+      [
+        "Sympathy",
+        "Yearning"
+      ]
+    ],
+    "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+    "task_sizes": [
+      4,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "seen_class_counts": [
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      22,
+      24,
+      26
+    ],
+    "threshold_policy": {
+      "kind": "fixed_global",
+      "value": 0.5
+    },
+    "primary_metric": "final_mAP"
+  },
+  "execution": {
+    "run_id": "b4c2_12baseline_2slot_seed012_20260805_225429",
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "reporting_split": "test",
+    "configuration_locked": true,
+    "configuration_policy": "reuse_frozen_b5c3_hyperparameters_without_b4c2_test_tuning",
+    "git_commit": "a6d6937c29387a060db58279f8891c7d89e57ac5",
+    "git_dirty": false,
+    "source_tree_hash": "ecd4ea1cd47c27a8572b98c2b4dab179a939db8889af46c32574bf0cd9fd8953",
+    "protocol_hash_by_seed": {
+      "0": "2277235c72f9b25a55deedb7e966cfb6543f23a03cbc025ad4825e61644f1bfb",
+      "1": "fdcc6dc12c9817c675e73952620c7ae377e9cc3c069089e6058e9331a0429f9f",
+      "2": "304af1e1992eedb6780b247e134d28ebd3bb83a796181f56c3ae66d91e49dafc"
+    },
+    "bundle_count": 36
+  },
+  "preflight_audit": {
+    "execution_git_commit": "a6d6937c29387a060db58279f8891c7d89e57ac5",
+    "core_and_baseline_tests": {
+      "ran": 160,
+      "successful": 157,
+      "skipped": 3,
+      "failed": 0,
+      "status": "OK"
+    },
+    "selected_legacy_regressions": {
+      "ran": 17,
+      "successful": 17,
+      "skipped": 0,
+      "failed": 0,
+      "status": "OK"
+    },
+    "protocol_task_sizes_verified": true,
+    "replay_capacities_verified": [
+      80,
+      120,
+      160,
+      200,
+      240,
+      280,
+      320,
+      360,
+      400,
+      440,
+      480,
+      520
+    ]
+  },
+  "integrity": {
+    "archive": "b4c2_12baseline_2slot_seed012_20260805_225429.tar.gz",
+    "archive_sha256": "76d1b799e7d8e02b3ed02f4f922de530713fa2f41695902ac4e78645bcb60d4a",
+    "archive_size_bytes": 73780322,
+    "outer_checksum_verified": true,
+    "download_manifest_schema_version": 1,
+    "download_manifest_created_at_utc": "2026-08-05T17:57:06.351033+00:00",
+    "manifest_file_count_excluding_manifest": 763,
+    "manifest_total_bytes_excluding_manifest": 455671037,
+    "canonical_score_file_count": 432,
+    "canonical_scores_included": true,
+    "contains_pth": false,
+    "excluded_patterns": [
+      "*.pth"
+    ],
+    "run_manifest_audit": {
+      "count": 36,
+      "all_git_clean": true,
+      "all_configuration_locked": true,
+      "all_eligible_for_main_table": true,
+      "all_reporting_split_test": true,
+      "any_test_labels_used_for_selection": false,
+      "any_prediction_reuse": false
+    },
+    "outer_manifest_verified_file_count": 763,
+    "outer_manifest_sha256_and_size_errors": 0,
+    "nested_sync_manifest_count": 36,
+    "nested_sync_manifest_verified_file_count": 648,
+    "nested_sync_manifest_sha256_and_size_errors": 0,
+    "independently_verified_on": "2026-08-06"
+  },
+  "scheduler_audit": {
+    "scheduling": "memory_guarded_longest_processing_time_first_dynamic_backfill",
+    "physical_gpus": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "slots_per_gpu": 2,
+    "maximum_concurrent_training_processes": 16,
+    "gpu_memory_budget_mib": 20000,
+    "job_count": 36,
+    "jobs_started": 36,
+    "jobs_completed": 36,
+    "jobs_failed": 0,
+    "wall_seconds": 10940.886,
+    "wall_hours": 3.039,
+    "explicit_incompatible_colocations": [
+      [
+        "derpp",
+        "er"
+      ],
+      [
+        "derpp",
+        "prs"
+      ]
+    ],
+    "oom_failures": [],
+    "retries": [],
+    "algorithm_or_hyperparameters_changed": false
+  },
+  "training_stability": {
+    "counter_definition": "sum_of_serialized_nonnegative_amp_overflow_skips_or_skipped_optimizer_steps_across_train_log_records",
+    "skipped_updates_by_method_and_seed": {
+      "finetune": null,
+      "lwf": null,
+      "ewc": null,
+      "agcn": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "total": 0
+      },
+      "csc": {
+        "0": 1,
+        "1": 2,
+        "2": 0,
+        "total": 3
+      },
+      "multi_lane": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "total": 0
+      },
+      "l3a": {
+        "0": 9,
+        "1": 8,
+        "2": 8,
+        "total": 25
+      },
+      "original_ddp": {
+        "0": 33,
+        "1": 36,
+        "2": 35,
+        "total": 104
+      },
+      "er": {
+        "0": 1,
+        "1": 0,
+        "2": 4,
+        "total": 5
+      },
+      "prs": {
+        "0": 1,
+        "1": 1,
+        "2": 2,
+        "total": 4
+      },
+      "derpp": {
+        "0": 7,
+        "1": 1,
+        "2": 3,
+        "total": 11
+      },
+      "krt": {
+        "0": 90,
+        "1": 84,
+        "2": 84,
+        "total": 258
+      }
+    },
+    "counter_not_serialized_by_methods": [
+      "finetune",
+      "lwf",
+      "ewc"
+    ],
+    "observed_skip_rate_percent_where_attempt_counter_is_serialized": {
+      "agcn": 0.0,
+      "csc": 0.0099,
+      "derpp": 0.0461,
+      "er": 0.0249,
+      "krt": 0.4064,
+      "l3a": 10.0402,
+      "multi_lane": 0.0,
+      "original_ddp": 0.0433,
+      "prs": 0.0179
+    },
+    "notes": [
+      "Fine-Tuning, LwF, and EWC use GradScaler but their registered train-log schema does not serialize skipped-update counters, so their values are unavailable rather than zero.",
+      "L3A guarded skips are confined to Task-0 gradient training before the analytic stages.",
+      "No training log contains a fatal CUDA OOM, traceback, or NaN marker.",
+      "All 36 jobs produced complete finite metrics and twelve canonical score shards."
+    ]
+  },
+  "aggregation": "mean_and_sample_standard_deviation",
+  "methods": [
+    {
+      "method_key": "finetune",
+      "display_name": "Sequential Fine-Tuning",
+      "memory_display": "0",
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 17.021343311850355,
+          "final_cF1": 17.05183448225222,
+          "final_oF1": 35.39107745179151,
+          "average_mAP": 22.994301093700866,
+          "forgetting": 7.341084768498696,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 11286
+        },
+        {
+          "seed": 1,
+          "final_mAP": 17.452202587168696,
+          "final_cF1": 19.52872225217765,
+          "final_oF1": 38.28494057469535,
+          "average_mAP": 22.661242283459597,
+          "forgetting": 7.155419202556053,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 11286
+        },
+        {
+          "seed": 2,
+          "final_mAP": 17.70977917502791,
+          "final_cF1": 19.4395346946747,
+          "final_oF1": 44.041415560288186,
+          "average_mAP": 23.23852338413927,
+          "forgetting": 7.525698300550315,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 11286
+        }
+      ],
+      "aggregate": {
+        "final_mAP": {
+          "mean": 17.394441691348987,
+          "std": 0.3478336171816607
+        },
+        "final_cF1": {
+          "mean": 18.673363809701524,
+          "std": 1.4049934608164463
+        },
+        "final_oF1": {
+          "mean": 39.23914452892502,
+          "std": 4.403403937583755
+        },
+        "average_mAP": {
+          "mean": 22.964688920433243,
+          "std": 0.289777549000449
+        },
+        "forgetting": {
+          "mean": 7.340734090535022,
+          "std": 0.18513979808279107
+        },
+        "replay_memory_samples": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "replay_memory_bytes": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "parameter_growth": {
+          "mean": 11286.0,
+          "std": 0.0
+        }
+      },
+      "per_task_mAP": [
+        {
+          "task": 0,
+          "mean": 46.91411517611211,
+          "std": 3.4610280545898453
+        },
+        {
+          "task": 1,
+          "mean": 25.556638305693696,
+          "std": 0.7111017550507143
+        },
+        {
+          "task": 2,
+          "mean": 22.243289181741414,
+          "std": 1.9000089010485846
+        },
+        {
+          "task": 3,
+          "mean": 19.797444824328252,
+          "std": 0.37775600398504405
+        },
+        {
+          "task": 4,
+          "mean": 21.09847565273274,
+          "std": 0.08063079778672576
+        },
+        {
+          "task": 5,
+          "mean": 22.728098771303245,
+          "std": 0.11371636841283528
+        },
+        {
+          "task": 6,
+          "mean": 20.286821517456275,
+          "std": 0.2910870296148153
+        },
+        {
+          "task": 7,
+          "mean": 20.55912826718489,
+          "std": 0.10733378939875882
+        },
+        {
+          "task": 8,
+          "mean": 20.772102798691463,
+          "std": 0.11855933902952416
+        },
+        {
+          "task": 9,
+          "mean": 19.54722341565569,
+          "std": 0.5058524548294091
+        },
+        {
+          "task": 10,
+          "mean": 18.67848744295018,
+          "std": 0.43234529346599654
+        },
+        {
+          "task": 11,
+          "mean": 17.394441691348987,
+          "std": 0.3478336171816607
+        }
+      ]
+    },
+    {
+      "method_key": "lwf",
+      "display_name": "LwF",
+      "memory_display": "0",
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 17.558888488873052,
+          "final_cF1": 21.56025070036113,
+          "final_oF1": 41.36404996277607,
+          "average_mAP": 28.521637227122415,
+          "forgetting": 11.034680661578344,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 11286
+        },
+        {
+          "seed": 1,
+          "final_mAP": 18.850674732255484,
+          "final_cF1": 19.770089062227335,
+          "final_oF1": 42.001623168595955,
+          "average_mAP": 27.753704935138853,
+          "forgetting": 8.091581859812317,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 11286
+        },
+        {
+          "seed": 2,
+          "final_mAP": 19.547263954821194,
+          "final_cF1": 19.828249559696147,
+          "final_oF1": 41.894572997621374,
+          "average_mAP": 28.484855349930015,
+          "forgetting": 8.334818644987772,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 11286
+        }
+      ],
+      "aggregate": {
+        "final_mAP": {
+          "mean": 18.652275725316578,
+          "std": 1.0089256032343916
+        },
+        "final_cF1": {
+          "mean": 20.386196440761537,
+          "std": 1.017176589501261
+        },
+        "final_oF1": {
+          "mean": 41.753415376331134,
+          "std": 0.34142203170138286
+        },
+        "average_mAP": {
+          "mean": 28.25339917073043,
+          "std": 0.43313851529855396
+        },
+        "forgetting": {
+          "mean": 9.153693722126144,
+          "std": 1.633516125787541
+        },
+        "replay_memory_samples": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "replay_memory_bytes": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "parameter_growth": {
+          "mean": 11286.0,
+          "std": 0.0
+        }
+      },
+      "per_task_mAP": [
+        {
+          "task": 0,
+          "mean": 46.91411517611211,
+          "std": 3.4610280545898453
+        },
+        {
+          "task": 1,
+          "mean": 37.90649392016123,
+          "std": 0.9480772683964768
+        },
+        {
+          "task": 2,
+          "mean": 31.705597217958147,
+          "std": 0.6616760192758309
+        },
+        {
+          "task": 3,
+          "mean": 27.77201786712029,
+          "std": 0.74995116069619
+        },
+        {
+          "task": 4,
+          "mean": 28.426282335011578,
+          "std": 0.7621767305120309
+        },
+        {
+          "task": 5,
+          "mean": 27.963757834780765,
+          "std": 0.5666039444513866
+        },
+        {
+          "task": 6,
+          "mean": 26.65329207528482,
+          "std": 0.461238265803597
+        },
+        {
+          "task": 7,
+          "mean": 26.09668921925909,
+          "std": 0.3635147134284985
+        },
+        {
+          "task": 8,
+          "mean": 24.170308871791704,
+          "std": 0.1991653144634254
+        },
+        {
+          "task": 9,
+          "mean": 22.23139349257402,
+          "std": 1.028321967643987
+        },
+        {
+          "task": 10,
+          "mean": 20.54856631339486,
+          "std": 0.8775046678467692
+        },
+        {
+          "task": 11,
+          "mean": 18.652275725316578,
+          "std": 1.0089256032343916
+        }
+      ]
+    },
+    {
+      "method_key": "ewc",
+      "display_name": "EWC",
+      "memory_display": "0",
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 19.47955569663454,
+          "final_cF1": 21.409741369331794,
+          "final_oF1": 34.86970490884195,
+          "average_mAP": 24.070923087045674,
+          "forgetting": 7.926751875926691,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 11286
+        },
+        {
+          "seed": 1,
+          "final_mAP": 17.965131554232105,
+          "final_cF1": 21.72859512291258,
+          "final_oF1": 39.88323019396034,
+          "average_mAP": 23.107513835487854,
+          "forgetting": 8.365422175449742,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 11286
+        },
+        {
+          "seed": 2,
+          "final_mAP": 19.21464904453121,
+          "final_cF1": 19.471509394566006,
+          "final_oF1": 35.34308236917405,
+          "average_mAP": 24.766472492841654,
+          "forgetting": 7.823590551866128,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 11286
+        }
+      ],
+      "aggregate": {
+        "final_mAP": {
+          "mean": 18.886445431799284,
+          "std": 0.8088005497837858
+        },
+        "final_cF1": {
+          "mean": 20.869948628936793,
+          "std": 1.221532295198864
+        },
+        "final_oF1": {
+          "mean": 36.69867249065878,
+          "std": 2.76804576899129
+        },
+        "average_mAP": {
+          "mean": 23.981636471791727,
+          "std": 0.8330756456948616
+        },
+        "forgetting": {
+          "mean": 8.038588201080854,
+          "std": 0.28770801135318536
+        },
+        "replay_memory_samples": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "replay_memory_bytes": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "parameter_growth": {
+          "mean": 11286.0,
+          "std": 0.0
+        }
+      },
+      "per_task_mAP": [
+        {
+          "task": 0,
+          "mean": 46.91411517611211,
+          "std": 3.4610280545898453
+        },
+        {
+          "task": 1,
+          "mean": 29.55195107821728,
+          "std": 5.149147370162765
+        },
+        {
+          "task": 2,
+          "mean": 25.291533716118806,
+          "std": 2.0731562084051314
+        },
+        {
+          "task": 3,
+          "mean": 19.9352303000726,
+          "std": 0.34658672685130393
+        },
+        {
+          "task": 4,
+          "mean": 21.340838596648652,
+          "std": 0.3293024646055396
+        },
+        {
+          "task": 5,
+          "mean": 22.446147914537494,
+          "std": 0.36067673005266254
+        },
+        {
+          "task": 6,
+          "mean": 20.685403908502714,
+          "std": 0.30617990992196914
+        },
+        {
+          "task": 7,
+          "mean": 20.43924887722089,
+          "std": 0.2715473588233297
+        },
+        {
+          "task": 8,
+          "mean": 21.100170556018597,
+          "std": 0.129670832941751
+        },
+        {
+          "task": 9,
+          "mean": 21.927751850582784,
+          "std": 0.7545225849396597
+        },
+        {
+          "task": 10,
+          "mean": 19.26080025566952,
+          "std": 0.8442463738516794
+        },
+        {
+          "task": 11,
+          "mean": 18.886445431799284,
+          "std": 0.8088005497837858
+        }
+      ]
+    },
+    {
+      "method_key": "agcn",
+      "display_name": "AGCN",
+      "memory_display": "0",
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 17.347961515677717,
+          "final_cF1": 18.050229659963865,
+          "final_oF1": 40.998685939553226,
+          "average_mAP": 22.399136246019967,
+          "forgetting": 4.1550238347097865,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 0
+        },
+        {
+          "seed": 1,
+          "final_mAP": 18.141836520064672,
+          "final_cF1": 18.677608581836612,
+          "final_oF1": 42.57555847568988,
+          "average_mAP": 22.245003024977986,
+          "forgetting": 3.5986198696850358,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 0
+        },
+        {
+          "seed": 2,
+          "final_mAP": 17.396216959094446,
+          "final_cF1": 19.770089062227335,
+          "final_oF1": 42.001623168595955,
+          "average_mAP": 22.578995273596593,
+          "forgetting": 4.45701405531421,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 0
+        }
+      ],
+      "aggregate": {
+        "final_mAP": {
+          "mean": 17.62867166494561,
+          "std": 0.44506827942672
+        },
+        "final_cF1": {
+          "mean": 18.832642434675936,
+          "std": 0.8703480410348319
+        },
+        "final_oF1": {
+          "mean": 41.85862252794635,
+          "std": 0.798103148863077
+        },
+        "average_mAP": {
+          "mean": 22.40771151486485,
+          "std": 0.16716117061432006
+        },
+        "forgetting": {
+          "mean": 4.070219253236344,
+          "std": 0.4354354226055313
+        },
+        "replay_memory_samples": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "replay_memory_bytes": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "parameter_growth": {
+          "mean": 0.0,
+          "std": 0.0
+        }
+      },
+      "per_task_mAP": [
+        {
+          "task": 0,
+          "mean": 30.97571729688288,
+          "std": 0.7791436617039487
+        },
+        {
+          "task": 1,
+          "mean": 27.314293259699014,
+          "std": 0.17945801081340806
+        },
+        {
+          "task": 2,
+          "mean": 21.817520442235256,
+          "std": 0.3265706842687986
+        },
+        {
+          "task": 3,
+          "mean": 20.752663192876806,
+          "std": 0.48369291598371666
+        },
+        {
+          "task": 4,
+          "mean": 22.83388088062881,
+          "std": 0.29828897463890347
+        },
+        {
+          "task": 5,
+          "mean": 24.458015688434116,
+          "std": 0.33441360253680064
+        },
+        {
+          "task": 6,
+          "mean": 21.510250170089908,
+          "std": 0.28668383742622233
+        },
+        {
+          "task": 7,
+          "mean": 21.634091330157297,
+          "std": 0.12445038747363124
+        },
+        {
+          "task": 8,
+          "mean": 21.036529766591013,
+          "std": 0.8039078544524513
+        },
+        {
+          "task": 9,
+          "mean": 20.16350773218365,
+          "std": 0.1336335966678074
+        },
+        {
+          "task": 10,
+          "mean": 18.76739675365384,
+          "std": 0.23800675365322374
+        },
+        {
+          "task": 11,
+          "mean": 17.62867166494561,
+          "std": 0.44506827942672
+        }
+      ]
+    },
+    {
+      "method_key": "csc",
+      "display_name": "CSC",
+      "memory_display": "0",
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 19.128793114414528,
+          "final_cF1": 1.6277618147258646,
+          "final_oF1": 4.596422402435811,
+          "average_mAP": 29.246942181777303,
+          "forgetting": 9.033207384840901,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 80212
+        },
+        {
+          "seed": 1,
+          "final_mAP": 18.34009958015487,
+          "final_cF1": 1.5950208365719811,
+          "final_oF1": 4.486839780957428,
+          "average_mAP": 28.48593692097077,
+          "forgetting": 10.143979623190376,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 80212
+        },
+        {
+          "seed": 2,
+          "final_mAP": 19.3587907832299,
+          "final_cF1": 1.7654411645729005,
+          "final_oF1": 4.49669360764144,
+          "average_mAP": 29.128311939409727,
+          "forgetting": 8.858469811274835,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 80212
+        }
+      ],
+      "aggregate": {
+        "final_mAP": {
+          "mean": 18.942561159266432,
+          "std": 0.5342702477626132
+        },
+        "final_cF1": {
+          "mean": 1.6627412719569155,
+          "std": 0.09043474924009806
+        },
+        "final_oF1": {
+          "mean": 4.526651930344893,
+          "std": 0.060623539627126924
+        },
+        "average_mAP": {
+          "mean": 28.95373034738593,
+          "std": 0.40944022878678793
+        },
+        "forgetting": {
+          "mean": 9.345218939768705,
+          "std": 0.6972426241554162
+        },
+        "replay_memory_samples": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "replay_memory_bytes": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "parameter_growth": {
+          "mean": 80212.0,
+          "std": 0.0
+        }
+      },
+      "per_task_mAP": [
+        {
+          "task": 0,
+          "mean": 52.67677784922627,
+          "std": 0.6058349010709768
+        },
+        {
+          "task": 1,
+          "mean": 42.78663477860807,
+          "std": 0.16829940918791475
+        },
+        {
+          "task": 2,
+          "mean": 32.931479847217155,
+          "std": 0.7243329099398691
+        },
+        {
+          "task": 3,
+          "mean": 28.971435202041643,
+          "std": 0.8476681365375754
+        },
+        {
+          "task": 4,
+          "mean": 29.009131702144394,
+          "std": 0.6856708274022844
+        },
+        {
+          "task": 5,
+          "mean": 29.28286476895016,
+          "std": 0.36946160574451536
+        },
+        {
+          "task": 6,
+          "mean": 24.574486330055702,
+          "std": 0.9411158000711399
+        },
+        {
+          "task": 7,
+          "mean": 24.333709503377897,
+          "std": 0.8474418101398808
+        },
+        {
+          "task": 8,
+          "mean": 23.129774398524056,
+          "std": 0.6020415277129607
+        },
+        {
+          "task": 9,
+          "mean": 20.967068288080878,
+          "std": 0.6018541598535191
+        },
+        {
+          "task": 10,
+          "mean": 19.838840341138567,
+          "std": 0.38196843366148864
+        },
+        {
+          "task": 11,
+          "mean": 18.942561159266432,
+          "std": 0.5342702477626132
+        }
+      ]
+    },
+    {
+      "method_key": "multi_lane",
+      "display_name": "MULTI-LANE",
+      "memory_display": "0",
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 29.75616308614104,
+          "final_cF1": 32.20434264546744,
+          "final_oF1": 43.51189153145143,
+          "average_mAP": 37.13047684704009,
+          "forgetting": 4.554811094195056,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 0
+        },
+        {
+          "seed": 1,
+          "final_mAP": 29.235171269605587,
+          "final_cF1": 31.982355080875134,
+          "final_oF1": 43.54307582769669,
+          "average_mAP": 36.70854208128907,
+          "forgetting": 4.547011392106864,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 0
+        },
+        {
+          "seed": 2,
+          "final_mAP": 29.849995433782805,
+          "final_cF1": 32.53256601380602,
+          "final_oF1": 43.793134155572375,
+          "average_mAP": 37.150204588456965,
+          "forgetting": 4.608075546827425,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 0
+        }
+      ],
+      "aggregate": {
+        "final_mAP": {
+          "mean": 29.613776596509812,
+          "std": 0.3312214101415877
+        },
+        "final_cF1": {
+          "mean": 32.239754580049535,
+          "std": 0.2768095401396115
+        },
+        "final_oF1": {
+          "mean": 43.61603383824016,
+          "std": 0.1541638961704551
+        },
+        "average_mAP": {
+          "mean": 36.99640783892871,
+          "std": 0.24949412169715782
+        },
+        "forgetting": {
+          "mean": 4.569966011043115,
+          "std": 0.03323343762594877
+        },
+        "replay_memory_samples": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "replay_memory_bytes": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "parameter_growth": {
+          "mean": 0.0,
+          "std": 0.0
+        }
+      },
+      "per_task_mAP": [
+        {
+          "task": 0,
+          "mean": 61.18157707923763,
+          "std": 0.5202634693326569
+        },
+        {
+          "task": 1,
+          "mean": 49.66720036243622,
+          "std": 0.36742945445669845
+        },
+        {
+          "task": 2,
+          "mean": 39.86417933609933,
+          "std": 0.22973380184956232
+        },
+        {
+          "task": 3,
+          "mean": 34.82013143120536,
+          "std": 0.19769743266677547
+        },
+        {
+          "task": 4,
+          "mean": 34.77085999741625,
+          "std": 0.11134045811135815
+        },
+        {
+          "task": 5,
+          "mean": 35.59878742839787,
+          "std": 0.15631476458027999
+        },
+        {
+          "task": 6,
+          "mean": 31.8186609092977,
+          "std": 0.1264643879528269
+        },
+        {
+          "task": 7,
+          "mean": 32.2582196387759,
+          "std": 0.21829948241789948
+        },
+        {
+          "task": 8,
+          "mean": 31.835952297335908,
+          "std": 0.150376611613493
+        },
+        {
+          "task": 9,
+          "mean": 31.30538632999007,
+          "std": 0.32193983181853375
+        },
+        {
+          "task": 10,
+          "mean": 31.22216266044248,
+          "std": 0.3647302945635454
+        },
+        {
+          "task": 11,
+          "mean": 29.613776596509812,
+          "std": 0.3312214101415877
+        }
+      ]
+    },
+    {
+      "method_key": "l3a",
+      "display_name": "L3A",
+      "memory_display": "0",
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 29.175900849079706,
+          "final_cF1": 26.556998138872878,
+          "final_oF1": 35.039703230107776,
+          "average_mAP": 35.37902390118489,
+          "forgetting": 5.065961326324735,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 90112
+        },
+        {
+          "seed": 1,
+          "final_mAP": 27.8297686128555,
+          "final_cF1": 26.402921654801347,
+          "final_oF1": 34.871594537672394,
+          "average_mAP": 34.563298640801754,
+          "forgetting": 5.292843704937686,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 90112
+        },
+        {
+          "seed": 2,
+          "final_mAP": 27.50800953061223,
+          "final_cF1": 26.321273101865742,
+          "final_oF1": 34.72217401867213,
+          "average_mAP": 34.04113272866238,
+          "forgetting": 5.050402559796614,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 90112
+        }
+      ],
+      "aggregate": {
+        "final_mAP": {
+          "mean": 28.171226330849144,
+          "std": 0.884822237761837
+        },
+        "final_cF1": {
+          "mean": 26.427064298513322,
+          "std": 0.11970264701357444
+        },
+        "final_oF1": {
+          "mean": 34.877823928817435,
+          "std": 0.15885623693851159
+        },
+        "average_mAP": {
+          "mean": 34.66115175688301,
+          "std": 0.6742919409451061
+        },
+        "forgetting": {
+          "mean": 5.136402530353012,
+          "std": 0.13570519383223204
+        },
+        "replay_memory_samples": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "replay_memory_bytes": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "parameter_growth": {
+          "mean": 90112.0,
+          "std": 0.0
+        }
+      },
+      "per_task_mAP": [
+        {
+          "task": 0,
+          "mean": 55.13023256731257,
+          "std": 0.4658081451439108
+        },
+        {
+          "task": 1,
+          "mean": 43.60620353502178,
+          "std": 0.8475274663055683
+        },
+        {
+          "task": 2,
+          "mean": 36.91585528894665,
+          "std": 0.6911158440120672
+        },
+        {
+          "task": 3,
+          "mean": 32.348366946476666,
+          "std": 0.5035467960881393
+        },
+        {
+          "task": 4,
+          "mean": 32.415564560700886,
+          "std": 0.4546862607624265
+        },
+        {
+          "task": 5,
+          "mean": 33.27805029617235,
+          "std": 0.5754035558135937
+        },
+        {
+          "task": 6,
+          "mean": 30.130057879018633,
+          "std": 0.6775658757651046
+        },
+        {
+          "task": 7,
+          "mean": 31.458433189781438,
+          "std": 0.9073852107424226
+        },
+        {
+          "task": 8,
+          "mean": 31.895503668474053,
+          "std": 0.8198210883036213
+        },
+        {
+          "task": 9,
+          "mean": 30.923714006824337,
+          "std": 0.8350249021933401
+        },
+        {
+          "task": 10,
+          "mean": 29.66061281301764,
+          "std": 1.0750735987558233
+        },
+        {
+          "task": 11,
+          "mean": 28.171226330849144,
+          "std": 0.884822237761837
+        }
+      ]
+    },
+    {
+      "method_key": "original_ddp",
+      "display_name": "Original-DDP-Tau2",
+      "memory_display": "0",
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 28.586106586605624,
+          "final_cF1": 30.349975936788333,
+          "final_oF1": 43.612883149214255,
+          "average_mAP": 36.61152616111089,
+          "forgetting": 4.558653776641405,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 0
+        },
+        {
+          "seed": 1,
+          "final_mAP": 28.972796173911476,
+          "final_cF1": 31.42120130772974,
+          "final_oF1": 43.28647004216578,
+          "average_mAP": 36.38597411833347,
+          "forgetting": 4.610662243568133,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 0
+        },
+        {
+          "seed": 2,
+          "final_mAP": 28.963247673467507,
+          "final_cF1": 31.94161159523305,
+          "final_oF1": 43.93206613429311,
+          "average_mAP": 36.69529899754825,
+          "forgetting": 4.59769895899253,
+          "replay_memory_samples": 0,
+          "replay_memory_bytes": 0,
+          "parameter_growth": 0
+        }
+      ],
+      "aggregate": {
+        "final_mAP": {
+          "mean": 28.840716811328203,
+          "std": 0.2205506027313087
+        },
+        "final_cF1": {
+          "mean": 31.23759627991704,
+          "std": 0.8115473627501739
+        },
+        "final_oF1": {
+          "mean": 43.61047310855771,
+          "std": 0.32280479358970765
+        },
+        "average_mAP": {
+          "mean": 36.5642664256642,
+          "std": 0.15998619368925918
+        },
+        "forgetting": {
+          "mean": 4.589004993067356,
+          "std": 0.027072291012180897
+        },
+        "replay_memory_samples": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "replay_memory_bytes": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "parameter_growth": {
+          "mean": 0.0,
+          "std": 0.0
+        }
+      },
+      "per_task_mAP": [
+        {
+          "task": 0,
+          "mean": 60.12366573622412,
+          "std": 0.741717075281034
+        },
+        {
+          "task": 1,
+          "mean": 49.11794688111256,
+          "std": 0.33747920542593507
+        },
+        {
+          "task": 2,
+          "mean": 39.1258707935196,
+          "std": 0.3643116272437595
+        },
+        {
+          "task": 3,
+          "mean": 34.265932517576616,
+          "std": 0.24731238330331076
+        },
+        {
+          "task": 4,
+          "mean": 34.329156802190774,
+          "std": 0.14572177041833828
+        },
+        {
+          "task": 5,
+          "mean": 35.26688836687705,
+          "std": 0.08127303930822032
+        },
+        {
+          "task": 6,
+          "mean": 31.73064882160739,
+          "std": 0.09445028121004014
+        },
+        {
+          "task": 7,
+          "mean": 32.52117252304435,
+          "std": 0.13203648169698184
+        },
+        {
+          "task": 8,
+          "mean": 32.0527691419724,
+          "std": 0.10246139160871619
+        },
+        {
+          "task": 9,
+          "mean": 30.936302790132643,
+          "std": 0.06496896245201936
+        },
+        {
+          "task": 10,
+          "mean": 30.460125922384726,
+          "std": 0.21879300312006214
+        },
+        {
+          "task": 11,
+          "mean": 28.840716811328203,
+          "std": 0.2205506027313087
+        }
+      ]
+    },
+    {
+      "method_key": "er",
+      "display_name": "ER",
+      "memory_display": "20/class",
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 20.73215937521673,
+          "final_cF1": 26.669338391579345,
+          "final_oF1": 39.31179931179931,
+          "average_mAP": 26.765368991370156,
+          "forgetting": 6.855345878560599,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313206216,
+          "parameter_growth": 11286
+        },
+        {
+          "seed": 1,
+          "final_mAP": 19.719032609206685,
+          "final_cF1": 25.33640109419182,
+          "final_oF1": 41.17813281165091,
+          "average_mAP": 26.352173622212067,
+          "forgetting": 6.956657585461879,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313206222,
+          "parameter_growth": 11286
+        },
+        {
+          "seed": 2,
+          "final_mAP": 20.948758810578546,
+          "final_cF1": 25.45717768647281,
+          "final_oF1": 41.730043284292556,
+          "average_mAP": 27.847386359886745,
+          "forgetting": 8.350216321838815,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313206249,
+          "parameter_growth": 11286
+        }
+      ],
+      "aggregate": {
+        "final_mAP": {
+          "mean": 20.466650265000656,
+          "std": 0.6564510250513106
+        },
+        "final_cF1": {
+          "mean": 25.820972390747993,
+          "std": 0.7371841017247245
+        },
+        "final_oF1": {
+          "mean": 40.739991802580924,
+          "std": 1.267261470848311
+        },
+        "average_mAP": {
+          "mean": 26.988309657822988,
+          "std": 0.7721348252054014
+        },
+        "forgetting": {
+          "mean": 7.387406595287097,
+          "std": 0.8353549800209232
+        },
+        "replay_memory_samples": {
+          "mean": 520.0,
+          "std": 0.0
+        },
+        "replay_memory_bytes": {
+          "mean": 313206229.0,
+          "std": 17.578395831246947
+        },
+        "parameter_growth": {
+          "mean": 11286.0,
+          "std": 0.0
+        }
+      },
+      "per_task_mAP": [
+        {
+          "task": 0,
+          "mean": 46.91411517611211,
+          "std": 3.4610280545898453
+        },
+        {
+          "task": 1,
+          "mean": 35.485105680380215,
+          "std": 2.014004658627315
+        },
+        {
+          "task": 2,
+          "mean": 31.335074667881813,
+          "std": 0.9539974208934681
+        },
+        {
+          "task": 3,
+          "mean": 27.737678413313045,
+          "std": 1.662127778652402
+        },
+        {
+          "task": 4,
+          "mean": 23.35473362262722,
+          "std": 0.9108396116099546
+        },
+        {
+          "task": 5,
+          "mean": 23.7789905016088,
+          "std": 1.388208163419828
+        },
+        {
+          "task": 6,
+          "mean": 24.261530615387475,
+          "std": 1.198817461993911
+        },
+        {
+          "task": 7,
+          "mean": 22.52733153155658,
+          "std": 0.8984782535220985
+        },
+        {
+          "task": 8,
+          "mean": 23.172637738069998,
+          "std": 0.46200355812361543
+        },
+        {
+          "task": 9,
+          "mean": 22.725945844191482,
+          "std": 0.49606726425893904
+        },
+        {
+          "task": 10,
+          "mean": 22.099921837746514,
+          "std": 0.5257668731879888
+        },
+        {
+          "task": 11,
+          "mean": 20.466650265000656,
+          "std": 0.6564510250513106
+        }
+      ]
+    },
+    {
+      "method_key": "prs",
+      "display_name": "PRS",
+      "memory_display": "20/class",
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 20.998281131710883,
+          "final_cF1": 23.56222846278861,
+          "final_oF1": 32.0083753428087,
+          "average_mAP": 27.299608736118902,
+          "forgetting": 8.086510272062892,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313206039,
+          "parameter_growth": 11286
+        },
+        {
+          "seed": 1,
+          "final_mAP": 19.711982853150488,
+          "final_cF1": 21.035426293534144,
+          "final_oF1": 26.049595940211944,
+          "average_mAP": 25.055162140650037,
+          "forgetting": 6.878454059435005,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313206180,
+          "parameter_growth": 11286
+        },
+        {
+          "seed": 2,
+          "final_mAP": 23.22898764841331,
+          "final_cF1": 24.858535197438737,
+          "final_oF1": 29.96026520399867,
+          "average_mAP": 27.945565986207807,
+          "forgetting": 6.579538940934325,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313206056,
+          "parameter_growth": 11286
+        }
+      ],
+      "aggregate": {
+        "final_mAP": {
+          "mean": 21.313083877758228,
+          "std": 1.7795101177471935
+        },
+        "final_cF1": {
+          "mean": 23.152063317920497,
+          "std": 1.9442780169839793
+        },
+        "final_oF1": {
+          "mean": 29.33941216233977,
+          "std": 3.027516617081674
+        },
+        "average_mAP": {
+          "mean": 26.76677895432558,
+          "std": 1.5170824894771626
+        },
+        "forgetting": {
+          "mean": 7.18150109081074,
+          "std": 0.7978839361900238
+        },
+        "replay_memory_samples": {
+          "mean": 520.0,
+          "std": 0.0
+        },
+        "replay_memory_bytes": {
+          "mean": 313206091.6666667,
+          "std": 76.96969100453329
+        },
+        "parameter_growth": {
+          "mean": 11286.0,
+          "std": 0.0
+        }
+      },
+      "per_task_mAP": [
+        {
+          "task": 0,
+          "mean": 46.91411517611211,
+          "std": 3.4610280545898453
+        },
+        {
+          "task": 1,
+          "mean": 36.219219247935634,
+          "std": 3.8911499912542693
+        },
+        {
+          "task": 2,
+          "mean": 29.40530382155981,
+          "std": 3.070550374484008
+        },
+        {
+          "task": 3,
+          "mean": 26.292746252499473,
+          "std": 0.7416284558400597
+        },
+        {
+          "task": 4,
+          "mean": 25.11221471375976,
+          "std": 1.652388248740322
+        },
+        {
+          "task": 5,
+          "mean": 24.569463362959727,
+          "std": 0.8594293717724051
+        },
+        {
+          "task": 6,
+          "mean": 23.636293976098564,
+          "std": 1.1806222361415364
+        },
+        {
+          "task": 7,
+          "mean": 22.424031764569552,
+          "std": 1.7082467406346948
+        },
+        {
+          "task": 8,
+          "mean": 22.38047797441638,
+          "std": 0.7819150394719022
+        },
+        {
+          "task": 9,
+          "mean": 21.73904314882324,
+          "std": 1.7045914289050632
+        },
+        {
+          "task": 10,
+          "mean": 21.195354135414483,
+          "std": 1.1838604446580323
+        },
+        {
+          "task": 11,
+          "mean": 21.313083877758228,
+          "std": 1.7795101177471935
+        }
+      ]
+    },
+    {
+      "method_key": "derpp",
+      "display_name": "DER++",
+      "memory_display": "20/class",
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 21.772574723686734,
+          "final_cF1": 22.85275334126683,
+          "final_oF1": 42.15205971799834,
+          "average_mAP": 30.216218135595785,
+          "forgetting": 9.11276750563827,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313273871,
+          "parameter_growth": 11286
+        },
+        {
+          "seed": 1,
+          "final_mAP": 20.307016247705096,
+          "final_cF1": 23.200246100744128,
+          "final_oF1": 41.944540428472706,
+          "average_mAP": 29.05264053196579,
+          "forgetting": 9.90268727686185,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313273692,
+          "parameter_growth": 11286
+        },
+        {
+          "seed": 2,
+          "final_mAP": 21.451138123100357,
+          "final_cF1": 22.36622523093062,
+          "final_oF1": 42.55921845028327,
+          "average_mAP": 27.289947146024883,
+          "forgetting": 6.426621588106978,
+          "replay_memory_samples": 520,
+          "replay_memory_bytes": 313273822,
+          "parameter_growth": 11286
+        }
+      ],
+      "aggregate": {
+        "final_mAP": {
+          "mean": 21.176909698164064,
+          "std": 0.7703027543847197
+        },
+        "final_cF1": {
+          "mean": 22.80640822431386,
+          "std": 0.41893747173075624
+        },
+        "final_oF1": {
+          "mean": 42.2186061989181,
+          "std": 0.3126956878761518
+        },
+        "average_mAP": {
+          "mean": 28.852935271195484,
+          "std": 1.473321797668645
+        },
+        "forgetting": {
+          "mean": 8.4806921235357,
+          "std": 1.8221958277391053
+        },
+        "replay_memory_samples": {
+          "mean": 520.0,
+          "std": 0.0
+        },
+        "replay_memory_bytes": {
+          "mean": 313273795.0,
+          "std": 92.50405396521819
+        },
+        "parameter_growth": {
+          "mean": 11286.0,
+          "std": 0.0
+        }
+      },
+      "per_task_mAP": [
+        {
+          "task": 0,
+          "mean": 52.2756148447623,
+          "std": 2.4950351347584854
+        },
+        {
+          "task": 1,
+          "mean": 38.03404910978813,
+          "std": 2.8654109589179826
+        },
+        {
+          "task": 2,
+          "mean": 32.60955447875895,
+          "std": 3.540713281537251
+        },
+        {
+          "task": 3,
+          "mean": 28.24755720039039,
+          "std": 3.958625187626644
+        },
+        {
+          "task": 4,
+          "mean": 27.495349799490914,
+          "std": 1.439168261528226
+        },
+        {
+          "task": 5,
+          "mean": 26.4808958428084,
+          "std": 0.9972024962645369
+        },
+        {
+          "task": 6,
+          "mean": 24.554035081613613,
+          "std": 0.6377179735450065
+        },
+        {
+          "task": 7,
+          "mean": 24.478853089042282,
+          "std": 0.7569410276609814
+        },
+        {
+          "task": 8,
+          "mean": 24.524750270955867,
+          "std": 0.9620931257378238
+        },
+        {
+          "task": 9,
+          "mean": 23.601055970942443,
+          "std": 0.955016693139969
+        },
+        {
+          "task": 10,
+          "mean": 22.756597867628482,
+          "std": 1.600356230304788
+        },
+        {
+          "task": 11,
+          "mean": 21.176909698164064,
+          "std": 0.7703027543847197
+        }
+      ]
+    },
+    {
+      "method_key": "krt",
+      "display_name": "KRT",
+      "memory_display": "20/class",
+      "per_seed": [
+        {
+          "seed": 0,
+          "final_mAP": 18.554891604301343,
+          "final_cF1": 24.345069369050048,
+          "final_oF1": 36.22689440786175,
+          "average_mAP": 27.915260680552247,
+          "forgetting": 9.177562689347424,
+          "replay_memory_samples": 517,
+          "replay_memory_bytes": 311377427,
+          "parameter_growth": 21142
+        },
+        {
+          "seed": 1,
+          "final_mAP": 18.185865176757346,
+          "final_cF1": 22.992657806772907,
+          "final_oF1": 36.03751993896942,
+          "average_mAP": 27.842519761058753,
+          "forgetting": 10.20274093166151,
+          "replay_memory_samples": 518,
+          "replay_memory_bytes": 311979001,
+          "parameter_growth": 21142
+        },
+        {
+          "seed": 2,
+          "final_mAP": 21.086801254463424,
+          "final_cF1": 24.556719327631075,
+          "final_oF1": 37.234907394316416,
+          "average_mAP": 31.31839056281626,
+          "forgetting": 8.721305785525416,
+          "replay_memory_samples": 519,
+          "replay_memory_bytes": 312581810,
+          "parameter_growth": 21142
+        }
+      ],
+      "aggregate": {
+        "final_mAP": {
+          "mean": 19.27585267850737,
+          "std": 1.5791441304150846
+        },
+        "final_cF1": {
+          "mean": 23.964815501151342,
+          "std": 0.8485380741582756
+        },
+        "final_oF1": {
+          "mean": 36.49977391371586,
+          "std": 0.6436471067999746
+        },
+        "average_mAP": {
+          "mean": 29.025390334809085,
+          "std": 1.9861294883700047
+        },
+        "forgetting": {
+          "mean": 9.36720313551145,
+          "std": 0.7587062324561363
+        },
+        "replay_memory_samples": {
+          "mean": 518.0,
+          "std": 1.0
+        },
+        "replay_memory_bytes": {
+          "mean": 311979412.6666667,
+          "std": 602191.6055329344
+        },
+        "parameter_growth": {
+          "mean": 21142.0,
+          "std": 0.0
+        }
+      },
+      "per_task_mAP": [
+        {
+          "task": 0,
+          "mean": 57.17049142775266,
+          "std": 0.5512655217860802
+        },
+        {
+          "task": 1,
+          "mean": 45.9459634049845,
+          "std": 1.1223959002339177
+        },
+        {
+          "task": 2,
+          "mean": 36.07253698712348,
+          "std": 2.9749919071525874
+        },
+        {
+          "task": 3,
+          "mean": 25.223103387667432,
+          "std": 6.910177213826999
+        },
+        {
+          "task": 4,
+          "mean": 24.87789534215096,
+          "std": 3.253204141307449
+        },
+        {
+          "task": 5,
+          "mean": 26.839849282884728,
+          "std": 2.3954216352004463
+        },
+        {
+          "task": 6,
+          "mean": 23.95151583806241,
+          "std": 1.9462297698213653
+        },
+        {
+          "task": 7,
+          "mean": 23.61070908345128,
+          "std": 1.7800935504908075
+        },
+        {
+          "task": 8,
+          "mean": 23.503337683480016,
+          "std": 1.8699619100687865
+        },
+        {
+          "task": 9,
+          "mean": 21.55796202363126,
+          "std": 1.7325764318164751
+        },
+        {
+          "task": 10,
+          "mean": 20.275466878012946,
+          "std": 1.7216770208067371
+        },
+        {
+          "task": 11,
+          "mean": 19.27585267850737,
+          "std": 1.5791441304150846
+        }
+      ]
+    }
+  ],
+  "ranking": {
+    "final_mAP": [
+      "MULTI-LANE",
+      "Original-DDP-Tau2",
+      "L3A",
+      "PRS",
+      "DER++",
+      "ER",
+      "KRT",
+      "CSC",
+      "EWC",
+      "LwF",
+      "AGCN",
+      "Sequential Fine-Tuning"
+    ],
+    "final_cF1": [
+      "MULTI-LANE",
+      "Original-DDP-Tau2",
+      "L3A",
+      "ER",
+      "KRT",
+      "PRS",
+      "DER++",
+      "EWC",
+      "LwF",
+      "AGCN",
+      "Sequential Fine-Tuning",
+      "CSC"
+    ],
+    "final_oF1": [
+      "MULTI-LANE",
+      "Original-DDP-Tau2",
+      "DER++",
+      "AGCN",
+      "LwF",
+      "ER",
+      "Sequential Fine-Tuning",
+      "EWC",
+      "KRT",
+      "L3A",
+      "PRS",
+      "CSC"
+    ],
+    "average_mAP": [
+      "MULTI-LANE",
+      "Original-DDP-Tau2",
+      "L3A",
+      "KRT",
+      "CSC",
+      "DER++",
+      "LwF",
+      "ER",
+      "PRS",
+      "EWC",
+      "Sequential Fine-Tuning",
+      "AGCN"
+    ],
+    "forgetting": [
+      "AGCN",
+      "MULTI-LANE",
+      "Original-DDP-Tau2",
+      "L3A",
+      "PRS",
+      "Sequential Fine-Tuning",
+      "ER",
+      "EWC",
+      "DER++",
+      "LwF",
+      "CSC",
+      "KRT"
+    ]
+  },
+  "interpretation_notes": [
+    "MULTI-LANE ranks first in final and average mAP; Original-DDP-Tau2 ranks second and is the most seed-stable leading method.",
+    "PRS and DER++ differ by only 0.1362 final-mAP points, which is smaller than their seed variability.",
+    "CSC retains threshold-free mAP but has a persistent fixed-0.5 confidence-calibration failure.",
+    "AGCN has the lowest forgetting but also a low Task-0 and final mAP, so forgetting must not be interpreted alone.",
+    "Average mAP and forgetting are protocol-trajectory metrics and are not directly exchangeable across B4-C2, B5-C3, and B10-C4."
+  ]
+}
