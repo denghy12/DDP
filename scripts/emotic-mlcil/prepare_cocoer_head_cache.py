@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 COMMIT = "dac8fc139e61b87f1bf0b27c581798df2a5a9d38"
+BUFFALO_L_TREE_SHA256 = "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
 
 
 def main():
@@ -42,8 +43,8 @@ def main():
     ):
         raise ValueError("CocoER detector identity differs from the frozen interface")
     model_sha = str(detector.get("model_tree_sha256", "")).lower()
-    if len(model_sha) != 64 or any(value not in "0123456789abcdef" for value in model_sha):
-        raise ValueError("CocoER detector model-tree SHA-256 is malformed")
+    if model_sha != BUFFALO_L_TREE_SHA256:
+        raise ValueError("CocoER detector model-tree SHA-256 differs")
     entries = raw.get("entries")
     if not isinstance(entries, dict) or not entries:
         raise ValueError("Detection JSON must contain a non-empty mapping")

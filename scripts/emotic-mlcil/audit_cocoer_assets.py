@@ -18,6 +18,7 @@ if str(ROOT) not in sys.path:
 COMMIT = "dac8fc139e61b87f1bf0b27c581798df2a5a9d38"
 CLIP_RN50_SHA256 = "afeb0e10f9e5a86da6080e35cf09123aca3b358a0c3e3b6c78a7b63bc04b6762"
 RESNET_URL = "https://download.pytorch.org/models/resnet50-0676ba61.pth"
+BUFFALO_L_TREE_SHA256 = "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
 
 
 def _sha(path: Path) -> str:
@@ -105,8 +106,7 @@ def main() -> None:
         raise ValueError("CocoER head-cache detector differs")
     model_tree_sha = str(detector.get("model_tree_sha256", "")).lower()
     if (
-        len(model_tree_sha) != 64
-        or any(value not in "0123456789abcdef" for value in model_tree_sha)
+        model_tree_sha != BUFFALO_L_TREE_SHA256
         or cache.get("detector_model_tree_sha256") != model_tree_sha
     ):
         raise ValueError("CocoER detector model-tree SHA-256 differs")

@@ -17,6 +17,8 @@ PREPARE = ROOT / "scripts" / "emotic-mlcil" / "prepare_cocoer_head_cache.py"
 GENERATE = ROOT / "scripts" / "emotic-mlcil" / "generate_cocoer_head_detections.py"
 ASSET_AUDIT = ROOT / "scripts" / "emotic-mlcil" / "audit_cocoer_assets.py"
 NATIVE_ASSETS = ROOT / "scripts" / "emotic-mlcil" / "prepare_cocoer_native_assets.py"
+INSIGHTFACE_ASSETS = ROOT / "scripts" / "emotic-mlcil" / "prepare_cocoer_insightface_assets.py"
+BUFFALO_L_TREE_SHA256 = "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
 
 
 class CocoERFTReferenceAuditTest(unittest.TestCase):
@@ -27,6 +29,7 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
             (GENERATE, "--insightface-root"),
             (ASSET_AUDIT, "--head-cache"),
             (NATIVE_ASSETS, "--resnet50-source"),
+            (INSIGHTFACE_ASSETS, "--output-root"),
         ):
             with tempfile.TemporaryDirectory() as temporary:
                 result = subprocess.run(
@@ -71,7 +74,7 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
                     "library": "insightface",
                     "version": "0.7.3",
                     "model": "buffalo_l",
-                    "model_tree_sha256": "a" * 64,
+                    "model_tree_sha256": BUFFALO_L_TREE_SHA256,
                     "det_size": [640, 640],
                 },
                 "entries": {"emotic:test:a.jpg:person=0": [1, 2, 10, 12]},
@@ -87,7 +90,9 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
             payload = json.loads(output.read_text(encoding="utf-8"))
             self.assertEqual(payload["upstream_commit"], MODULE.COMMIT)
             self.assertEqual(len(payload["entries"]), 1)
-            self.assertEqual(payload["detector_model_tree_sha256"], "a" * 64)
+            self.assertEqual(
+                payload["detector_model_tree_sha256"], BUFFALO_L_TREE_SHA256
+            )
 
     def test_partial_head_detections_cannot_be_frozen(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -102,7 +107,7 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
                     "library": "insightface",
                     "version": "0.7.3",
                     "model": "buffalo_l",
-                    "model_tree_sha256": "a" * 64,
+                    "model_tree_sha256": BUFFALO_L_TREE_SHA256,
                     "det_size": [640, 640],
                 },
                 "entries": {"emotic:test:a.jpg:person=0": [1, 2, 10, 12]},

@@ -79,6 +79,7 @@ def compare(upstream_root: Path, port_root: Optional[Path] = None):
         repository / "benchmarks/emotic_mlcil/methods/cocoer_ft/model.py",
         repository / "benchmarks/emotic_mlcil/methods/cocoer_ft/method.py",
         repository / "scripts/emotic-mlcil/prepare_cocoer_native_assets.py",
+        repository / "scripts/emotic-mlcil/prepare_cocoer_insightface_assets.py",
         repository / "scripts/emotic-mlcil/generate_cocoer_head_detections.py",
         repository / "scripts/emotic-mlcil/prepare_cocoer_head_cache.py",
         repository / "scripts/emotic-mlcil/audit_cocoer_assets.py",

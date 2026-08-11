@@ -975,8 +975,7 @@ def _cocoer_transforms(head_cache_path: str):
         raise ValueError("CocoER head-box detector identity differs")
     model_sha = str(detector.get("model_tree_sha256", "")).lower()
     if (
-        len(model_sha) != 64
-        or any(value not in "0123456789abcdef" for value in model_sha)
+        model_sha != "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
         or payload.get("detector_model_tree_sha256") != model_sha
     ):
         raise ValueError("CocoER head-box detector hash differs")

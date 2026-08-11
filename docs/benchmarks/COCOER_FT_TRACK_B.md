@@ -104,6 +104,20 @@ The released inference path does specify InsightFace `0.7.3`, `buffalo_l`,
 640×640 detection and its face/person x-containment rule. The benchmark freezes
 that executable rule rather than inventing a top-of-body fallback.
 
+The fixed detector pack is InsightFace v0.7 `buffalo_l` from its official
+GitHub release. Its archive is exactly `288621354` bytes with SHA-256
+`80ffe37d...b0ca2f`; the extracted five-file model tree is
+`50fa1383...9d9d3d`. InsightFace model weights are restricted to
+non-commercial research use. Prepare the uploaded archive outside the Git
+repository with:
+
+```bash
+/opt/conda/envs/ddp/bin/python \
+  scripts/emotic-mlcil/prepare_cocoer_insightface_assets.py \
+  --archive /mnt/haoyuan/workspace/baseline_sources/cocoer_assets/buffalo_l.zip \
+  --output-root /mnt/haoyuan/workspace/baseline_sources/cocoer_insightface
+```
+
 Generate detections first:
 
 ```bash

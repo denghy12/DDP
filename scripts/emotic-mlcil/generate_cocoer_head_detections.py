@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 UPSTREAM_COMMIT = "dac8fc139e61b87f1bf0b27c581798df2a5a9d38"
+BUFFALO_L_TREE_SHA256 = "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
 
 
 def _tree_sha256(root: Path) -> str:
@@ -86,6 +87,10 @@ def main() -> None:
     insightface_root = args.insightface_root.expanduser().resolve()
     model_tree = insightface_root / "models" / "buffalo_l"
     model_tree_hash = _tree_sha256(model_tree)
+    if model_tree_hash != BUFFALO_L_TREE_SHA256:
+        raise ValueError(
+            "InsightFace buffalo_l model tree differs from the fixed v0.7 asset"
+        )
     providers = (
         ["CUDAExecutionProvider", "CPUExecutionProvider"]
         if args.device == "cuda"
