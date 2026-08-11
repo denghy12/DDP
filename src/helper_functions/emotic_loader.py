@@ -1,4 +1,5 @@
 import os
+import random
 from dataclasses import dataclass
 from typing import Any
 
@@ -16,6 +17,68 @@ class BodyContextTransforms:
     body: Any
     context_size: int = 224
     body_size: int = 128
+
+
+@dataclass(frozen=True)
+class BENetViewsTransform:
+    """Package BENet full/person/context views and target geometry.
+
+    Channels 0:3 are the full scene, 3:6 the target-person crop, 6:9 the
+    target-masked context, channel 9 the target-box mask, and channel 10 the
+    valid-image mask.  Geometry is transported without exposing labels.
+    """
+
+    train: bool
+    size: int = 512
+    flip_probability: float = 0.5
+
+    @staticmethod
+    def _clamp_bbox(bbox, width, height):
+        values = np.asarray(bbox, dtype=np.float32).ravel()
+        if values.size < 4 or not np.isfinite(values[:4]).all():
+            raise ValueError("BENet requires a finite target-person bbox")
+        x1, y1, x2, y2 = values[:4]
+        x1, x2 = sorted((max(0.0, min(float(width), float(x1))), max(0.0, min(float(width), float(x2)))))
+        y1, y2 = sorted((max(0.0, min(float(height), float(y1))), max(0.0, min(float(height), float(y2)))))
+        if x2 <= x1 or y2 <= y1:
+            raise ValueError("BENet target-person bbox has zero area")
+        return x1, y1, x2, y2
+
+    def __call__(self, image, bbox):
+        import torchvision.transforms.functional as functional
+
+        width, height = image.size
+        x1, y1, x2, y2 = self._clamp_bbox(bbox, width, height)
+        if self.train and random.random() < self.flip_probability:
+            image = functional.hflip(image)
+            x1, x2 = width - x2, width - x1
+
+        person = image.crop((int(np.floor(x1)), int(np.floor(y1)), int(np.ceil(x2)), int(np.ceil(y2))))
+        context = image.copy()
+        # Official MaskAllSubjects removes the person from the context branch.
+        context_array = np.asarray(context).copy()
+        context_array[int(np.floor(y1)):int(np.ceil(y2)), int(np.floor(x1)):int(np.ceil(x2))] = 0
+        context = Image.fromarray(context_array)
+
+        def normalized(value):
+            value = functional.resize(value, [self.size, self.size])
+            value = functional.to_tensor(value)
+            return functional.normalize(value, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+
+        scene_tensor = normalized(image)
+        person_tensor = normalized(person)
+        context_tensor = normalized(context)
+        sx1 = max(0, min(self.size - 1, int(np.floor(x1 * self.size / width))))
+        sy1 = max(0, min(self.size - 1, int(np.floor(y1 * self.size / height))))
+        sx2 = max(sx1 + 1, min(self.size, int(np.ceil(x2 * self.size / width))))
+        sy2 = max(sy1 + 1, min(self.size, int(np.ceil(y2 * self.size / height))))
+        box_mask = torch.zeros((self.size, self.size), dtype=torch.float32)
+        box_mask[sy1:sy2, sx1:sx2] = 1.0
+        valid = torch.ones_like(box_mask)
+        return torch.cat(
+            (scene_tensor, person_tensor, context_tensor, box_mask[None], valid[None]),
+            dim=0,
+        )
 
 
 class EMOTIC(torch.utils.data.Dataset):
@@ -39,10 +102,10 @@ class EMOTIC(torch.utils.data.Dataset):
         self.input_mode = input_mode
         self.included_cats = list(included) if included is not None else []
 
-        if input_mode not in ("full", "person_crop", "body_context"):
+        if input_mode not in ("full", "person_crop", "body_context", "benet_views"):
             raise ValueError(
                 f"Invalid EMOTIC input_mode '{input_mode}'. "
-                "Expected 'full', 'person_crop', or 'body_context'."
+                "Expected 'full', 'person_crop', 'body_context', or 'benet_views'."
             )
 
         annotation_path = os.path.join(self.path, "CVPR17_Annotations.mat")
@@ -113,7 +176,11 @@ class EMOTIC(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         image = Image.open(self.file_paths[idx]).convert("RGB")
-        if self.input_mode == "body_context":
+        if self.input_mode == "benet_views":
+            if not isinstance(self.transform, BENetViewsTransform):
+                raise RuntimeError("BENet views require BENetViewsTransform")
+            image = self.transform(image, self.body_bboxes[idx])
+        elif self.input_mode == "body_context":
             body = self._crop_person(image, self.body_bboxes[idx])
             if self.transform is None:
                 raise RuntimeError("EMOTIC requires an image transform")

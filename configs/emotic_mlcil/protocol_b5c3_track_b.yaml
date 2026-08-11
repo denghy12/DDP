@@ -79,4 +79,14 @@ checkpoint_selection:
 track: B
 seed: 0
 output_schema_version: 1
-method_options: {}
+method_options:
+  benet_ft:
+    epochs: 25
+    early_stopping_patience: 5
+    learning_rate: 0.001
+    weight_decay: 0.0001
+    heatmap_loss_weight: 1.0
+    size_loss_weight: 0.1
+    gradient_clip_norm: 10.0
+    amp: true
+    tf32: false

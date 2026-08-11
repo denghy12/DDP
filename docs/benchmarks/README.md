@@ -58,6 +58,7 @@ remain a reserved extension point.
 - [ER control and PRS Track-A porting contract](ER_PRS_TRACK_A.md)
 - [DER++ source audit and Track-A porting contract](DERPP_TRACK_A.md)
 - [EMOT-Net native-backbone sequential FT Track-B contract](EMOT_NET_FT_TRACK_B.md)
+- [BENet native-backbone sequential FT Track-B contract](BENET_FT_TRACK_B.md)
 - [Universal checkpoint-free download standard](DOWNLOAD_STANDARD.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
