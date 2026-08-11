@@ -30,7 +30,7 @@ tmux has-session -t "${SESSION}" 2>/dev/null && { echo "tmux session already exi
   echo "Download the checkpoint linked by the fixed upstream README; do not substitute OpenAI CLIP." >&2
   exit 2
 }
-[[ -s "${UPSTREAM_ROOT}/SOURCE_SNAPSHOT.json" ]] || { echo "Missing fixed EmotionCLIP source: ${UPSTREAM_ROOT}" >&2; exit 2; }
+[[ -s "${UPSTREAM_ROOT}/src/models/base.py" ]] || { echo "Missing fixed EmotionCLIP source: ${UPSTREAM_ROOT}" >&2; exit 2; }
 if [[ "${REQUIRE_CLEAN}" == "1" && -n "$(git status --porcelain)" ]]; then
   echo "EmotionCLIP-FT validation requires a clean Git worktree" >&2
   exit 2

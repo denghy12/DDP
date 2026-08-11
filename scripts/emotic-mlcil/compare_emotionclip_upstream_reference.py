@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -48,11 +49,26 @@ def main() -> None:
         observed[relative] = sha256(path)
         if observed[relative] != expected:
             raise ValueError(f"EmotionCLIP source differs: {relative}")
-    snapshot = json.loads(
-        (args.upstream_root / "SOURCE_SNAPSHOT.json").read_text(encoding="utf-8")
-    )
-    if snapshot.get("commit") != UPSTREAM_COMMIT:
-        raise ValueError("EmotionCLIP snapshot commit differs")
+    observed_git_commit = None
+    snapshot_path = args.upstream_root / "SOURCE_SNAPSHOT.json"
+    if (args.upstream_root / ".git").exists():
+        observed_git_commit = subprocess.run(
+            ("git", "rev-parse", "HEAD"),
+            cwd=args.upstream_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        if observed_git_commit != UPSTREAM_COMMIT:
+            raise ValueError("EmotionCLIP Git checkout differs from fixed commit")
+    elif snapshot_path.is_file():
+        snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        if snapshot.get("commit") != UPSTREAM_COMMIT:
+            raise ValueError("EmotionCLIP snapshot commit differs")
+    else:
+        raise FileNotFoundError(
+            "EmotionCLIP source requires either fixed .git metadata or SOURCE_SNAPSHOT.json"
+        )
 
     spec = importlib.util.spec_from_file_location(
         "fixed_emotionclip_base", args.upstream_root / "src/models/base.py"
@@ -86,6 +102,7 @@ def main() -> None:
             "repository": "https://github.com/Xeaver/EmotionCLIP",
             "commit": UPSTREAM_COMMIT,
             "snapshot_tree_sha256": UPSTREAM_TREE_SHA256,
+            "observed_git_commit": observed_git_commit,
             "verified_file_sha256": observed,
             "source_copied_into_repository": False,
         },
