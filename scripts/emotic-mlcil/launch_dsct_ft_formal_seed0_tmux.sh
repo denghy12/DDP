@@ -43,6 +43,22 @@ mkdir -p "${PREFLIGHT_DIR}" "${LOG_DIR}"
 set +e
 (
   set -e
+  "${PYTHON}" - <<'PY'
+import json
+import sys
+
+import IPython
+import MultiScaleDeformableAttention as msda
+import torch
+
+print(json.dumps({
+    "python": sys.version.split()[0],
+    "torch": torch.__version__,
+    "torch_cuda": torch.version.cuda,
+    "ipython": IPython.__version__,
+    "ms_deform_attn_extension": msda.__file__,
+}, indent=2))
+PY
   "${PYTHON}" -m unittest discover -s tests/emotic_mlcil -t .
   "${PYTHON}" -m unittest tests.test_emotic_task_adapter_bank tests.test_ddp_internal_adapter tests.test_ddp_prompt_free_auxiliary
   "${PYTHON}" "${SCRIPT_DIR}/compare_dsct_upstream_reference.py" --upstream-root "${SOURCE_ROOT}" --output "${ORACLE_JSON}"
