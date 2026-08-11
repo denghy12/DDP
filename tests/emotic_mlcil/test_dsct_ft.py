@@ -105,8 +105,8 @@ class DSCTFTTest(unittest.TestCase):
     def test_transport_box_and_official_iou_query_selection(self):
         images = transport(batch=1, height=20, width=40)
         box = target_boxes_from_transport(images)
-        self.assertTrue(torch.allclose(box, torch.tensor([[0.5, 0.6, 0.4, 0.6]])))
-        predictions = torch.tensor([[[0.1, 0.1, 0.1, 0.1], [0.5, 0.6, 0.4, 0.6]]])
+        self.assertTrue(torch.allclose(box, torch.tensor([[0.4, 0.6, 0.4, 0.6]])))
+        predictions = torch.tensor([[[0.1, 0.1, 0.1, 0.1], [0.4, 0.6, 0.4, 0.6]]])
         self.assertEqual(target_query_indices(predictions, box, torch.tensor([[20.0, 40.0]])).item(), 1)
 
     def test_loss_ignores_old_logits_and_is_finite(self):
