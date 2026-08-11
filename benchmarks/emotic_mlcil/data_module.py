@@ -57,7 +57,10 @@ class _ProtocolDatasetView(Dataset):
 
     def __getitem__(self, item: int) -> Dict[str, Any]:
         source_index = self.indices[item]
-        image, full_target = self._source[source_index]
+        source_row = self._source[source_index]
+        if not isinstance(source_row, (tuple, list)) or len(source_row) not in (2, 3):
+            raise TypeError("EMOTIC source rows must contain image/target and optional geometry")
+        image, full_target = source_row[:2]
         target = full_target[list(self.class_indices)].float()
         row = {
             "image": image,
@@ -72,6 +75,8 @@ class _ProtocolDatasetView(Dataset):
             visible_mask[list(self.class_indices)] = True
             row["targets_current"] = target
             row["visible_mask"] = visible_mask
+        if len(source_row) == 3:
+            row["geometry"] = source_row[2]
         return row
 
 
@@ -93,11 +98,21 @@ class MethodDataLoader:
 def _collate_train(rows: Sequence[Dict[str, Any]]) -> TrainBatch:
     if not rows:
         raise ValueError("Cannot collate an empty training batch")
+    geometry_rows = [row.get("geometry") for row in rows]
+    if any(value is None for value in geometry_rows) and not all(
+        value is None for value in geometry_rows
+    ):
+        raise RuntimeError("Training geometry is only present for part of a batch")
     return TrainBatch(
         images=torch.stack([row["image"] for row in rows]),
         sample_ids=[str(row["sample_id"]) for row in rows],
         targets_current=torch.stack([row["targets_current"] for row in rows]),
         visible_mask=torch.stack([row["visible_mask"] for row in rows]),
+        geometry=(
+            None
+            if geometry_rows[0] is None
+            else torch.stack(geometry_rows)
+        ),
     )
 
 
@@ -108,12 +123,22 @@ def _collate_evaluation(rows: Sequence[Dict[str, Any]]) -> EvaluationBatch:
     split_hashes = {row["split_hash"] for row in rows}
     if len(class_hashes) != 1 or len(split_hashes) != 1:
         raise RuntimeError("Evaluation batch metadata is internally inconsistent")
+    geometry_rows = [row.get("geometry") for row in rows]
+    if any(value is None for value in geometry_rows) and not all(
+        value is None for value in geometry_rows
+    ):
+        raise RuntimeError("Evaluation geometry is only present for part of a batch")
     return EvaluationBatch(
         images=torch.stack([row["image"] for row in rows]),
         sample_ids=[str(row["sample_id"]) for row in rows],
         targets_seen=torch.stack([row["targets_seen"] for row in rows]),
         class_order_hash=next(iter(class_hashes)),
         split_hash=next(iter(split_hashes)),
+        geometry=(
+            None
+            if geometry_rows[0] is None
+            else torch.stack(geometry_rows)
+        ),
     )
 
 

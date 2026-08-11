@@ -36,8 +36,8 @@ work.
   required by its audited upstream implementation. Backbone differences must be
   reported and Track A and Track B numbers must not be mixed in one ranking.
 
-The first registered method, legacy DDP, belongs to Track A. Track B adapters
-remain a reserved extension point.
+The first registered method, legacy DDP, belongs to Track A. Native static
+EMOTIC conversions such as EMOT-Net-FT and CocoER-FT belong to Track B.
 
 ## Documentation
 
@@ -58,6 +58,7 @@ remain a reserved extension point.
 - [ER control and PRS Track-A porting contract](ER_PRS_TRACK_A.md)
 - [DER++ source audit and Track-A porting contract](DERPP_TRACK_A.md)
 - [EMOT-Net native-backbone sequential FT Track-B contract](EMOT_NET_FT_TRACK_B.md)
+- [CocoER native-backbone sequential FT Track-B contract](COCOER_FT_TRACK_B.md)
 - [Universal checkpoint-free download standard](DOWNLOAD_STANDARD.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
@@ -143,6 +144,16 @@ expanding-head sequential fine-tuning. The Git repository does not bundle its
 Torch7 assets; seed-0 validation remains gated on hash-verifying and converting
 the separately distributed official Dropbox ZIP. CLIP and random fallback are
 explicitly rejected.
+
+CocoER-FT development is active on `codex/emotic-baseline-cocoer-ft`. It is a
+second Track-B static-to-incremental lower bound and deliberately retains the
+official method's three ImageNet ResNet-50 towers plus native frozen OpenAI
+CLIP RN50 vocabulary-informed image branch; it does not use the Track-A CLIP
+ViT-B/16. The conversion adds only current-label expanding heads and protocol
+visibility. Full-26-class CocoER GWT/VI weights are rejected as future-label
+leakage. Seed-0 validation remains gated on a complete sample-ID-aligned head
+box cache, explicit generic initialization files, and CUDA memory smoke. See
+`COCOER_FT_TRACK_B.md`.
 
 Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It
 retains the collected original DDP

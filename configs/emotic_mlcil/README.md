@@ -7,7 +7,8 @@ configuration content and never infers a protocol from the filename.
 boundaries, split roles, visibility firewall, metrics, and fixed threshold but
 declares Track B for methods that retain an audited original backbone. Track-A
 and Track-B outputs have distinct protocol IDs/hashes and must not be merged
-into one ranking. Native-backbone `EMOT-Net-FT` uses this configuration.
+into one ranking. Native-backbone `EMOT-Net-FT` and `CocoER-FT` use this
+configuration.
 
 `protocol_b10c4.yaml` is the registered five-task extension over the identical
 alphabetical 26-class order. Task sizes are `10/4/4/4/4`, seen-class counts are

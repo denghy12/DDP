@@ -29,6 +29,7 @@ from .methods.l3a import L3ABenchmarkMethod
 from .methods.original_ddp import OriginalDDPBenchmarkMethod
 from .methods.agcn import AGCNBenchmarkMethod
 from .methods.emot_net_ft import EMOTNetFTBenchmarkMethod
+from .methods.cocoer_ft import CocoERFTBenchmarkMethod
 from .methods.replay import (
     DERPPBenchmarkMethod,
     ERBenchmarkMethod,
@@ -44,7 +45,7 @@ from .types import (
     TaskContext,
     TaskMetrics,
 )
-from src.helper_functions.emotic_loader import BodyContextTransforms
+from src.helper_functions.emotic_loader import BodyContextTransforms, CocoERTransforms
 
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
@@ -803,6 +804,7 @@ def _parse_args() -> argparse.Namespace:
             "prs",
             "derpp",
             "emot_net_ft",
+            "cocoer_ft",
         ),
         default="ddp",
     )
@@ -823,6 +825,18 @@ def _parse_args() -> argparse.Namespace:
             "Audited PyTorch conversion of the official EMOT-Net Places "
             "context and AlexNet body release initialization"
         ),
+    )
+    parser.add_argument(
+        "--cocoer-resnet50-init",
+        help="Torchvision ImageNet ResNet-50 state used by CocoER's three native towers",
+    )
+    parser.add_argument(
+        "--cocoer-clip-rn50",
+        help="Official OpenAI CLIP RN50 checkpoint used by CocoER's VI branch",
+    )
+    parser.add_argument(
+        "--cocoer-head-cache",
+        help="Audited sample-ID to head-box JSON required by CocoER",
     )
     parser.add_argument("--output-root", default="./output")
     parser.add_argument("--reporting-split", default="val")
@@ -857,7 +871,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--input-mode",
-        choices=("full", "person_crop", "body_context"),
+        choices=("full", "person_crop", "body_context", "cocoer_multilevel"),
         default="full",
     )
     execution = parser.add_mutually_exclusive_group()
@@ -937,6 +951,53 @@ def _emot_net_transforms():
     return transform, transform
 
 
+def _cocoer_transforms(head_cache_path: str):
+    """Released three-view ImageNet normalization and audited face geometry."""
+
+    import torchvision.transforms as transforms
+
+    path = Path(head_cache_path).expanduser().resolve()
+    if not path.is_file():
+        raise FileNotFoundError(path)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping) or int(payload.get("schema_version", -1)) != 1:
+        raise ValueError("Unsupported CocoER head-box cache schema")
+    if payload.get("upstream_commit") != "dac8fc139e61b87f1bf0b27c581798df2a5a9d38":
+        raise ValueError("CocoER head-box cache provenance differs")
+    entries = payload.get("entries")
+    if not isinstance(entries, Mapping) or not entries:
+        raise ValueError("CocoER head-box cache contains no entries")
+    boxes = {}
+    for sample_id, coordinates in entries.items():
+        if not isinstance(sample_id, str) or not isinstance(coordinates, list) or len(coordinates) != 4:
+            raise ValueError("Malformed CocoER head-box cache entry")
+        values = tuple(float(value) for value in coordinates)
+        if not all(math.isfinite(value) for value in values):
+            raise ValueError("Non-finite CocoER head box")
+        boxes[sample_id] = values
+    def native(train: bool):
+        operations = []
+        if train:
+            operations.append(
+                transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4)
+            )
+        operations.extend(
+        [
+            transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BILINEAR),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=(0.485, 0.456, 0.406),
+                std=(0.229, 0.224, 0.225),
+            ),
+        ]
+        )
+        return transforms.Compose(operations)
+    return (
+        CocoERTransforms(native(True), boxes, train=True),
+        CocoERTransforms(native(False), boxes, train=False),
+    )
+
+
 def main() -> None:
     args = _parse_args()
     protocol = load_protocol(args.protocol)
@@ -996,6 +1057,7 @@ def main() -> None:
         "prs": PRSBenchmarkMethod,
         "derpp": DERPPBenchmarkMethod,
         "emot_net_ft": EMOTNetFTBenchmarkMethod,
+        "cocoer_ft": CocoERFTBenchmarkMethod,
     }
     method_class = method_classes[args.method]
     artifacts = ArtifactStore(
@@ -1036,6 +1098,19 @@ def main() -> None:
         if not args.emot_net_native_init:
             raise ValueError("EMOT-Net-FT requires --emot-net-native-init")
         train_transform, eval_transform = _emot_net_transforms()
+    elif args.method == "cocoer_ft":
+        if args.input_mode != "cocoer_multilevel":
+            raise ValueError("CocoER-FT requires --input-mode cocoer_multilevel")
+        missing = [
+            name for name, value in (
+                ("--cocoer-resnet50-init", args.cocoer_resnet50_init),
+                ("--cocoer-clip-rn50", args.cocoer_clip_rn50),
+                ("--cocoer-head-cache", args.cocoer_head_cache),
+            ) if not value
+        ]
+        if missing:
+            raise ValueError("CocoER-FT requires " + ", ".join(missing))
+        train_transform, eval_transform = _cocoer_transforms(args.cocoer_head_cache)
     else:
         train_transform, eval_transform = _legacy_emotic_transforms()
     data_module = EMOTICMLCILDataModule(
@@ -1077,6 +1152,14 @@ def main() -> None:
         method = EMOTNetFTBenchmarkMethod(
             protocol,
             native_initialization_path=args.emot_net_native_init,
+            device=args.device,
+        )
+    elif args.method == "cocoer_ft":
+        method = CocoERFTBenchmarkMethod(
+            protocol,
+            resnet50_initialization_path=args.cocoer_resnet50_init,
+            clip_rn50_path=args.cocoer_clip_rn50,
+            head_box_cache_path=args.cocoer_head_cache,
             device=args.device,
         )
     else:

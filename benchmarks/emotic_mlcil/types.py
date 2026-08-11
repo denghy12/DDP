@@ -54,6 +54,7 @@ class TrainBatch:
     sample_ids: List[str]
     targets_current: torch.Tensor
     visible_mask: torch.Tensor
+    geometry: Optional[torch.Tensor] = None
 
 
 @dataclass
@@ -65,6 +66,7 @@ class EvaluationBatch:
     targets_seen: torch.Tensor
     class_order_hash: str
     split_hash: str
+    geometry: Optional[torch.Tensor] = None
 
 
 @dataclass
