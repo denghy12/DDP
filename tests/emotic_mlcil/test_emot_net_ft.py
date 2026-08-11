@@ -7,6 +7,7 @@ from torch import nn
 from PIL import Image
 
 from benchmarks.emotic_mlcil.methods.emot_net_ft import (
+    EMOTNetBodyEncoder,
     EMOTNetFTBenchmarkMethod,
     EMOTNetFTModel,
     class_weights_from_current_targets,
@@ -22,6 +23,7 @@ from src.helper_functions.emotic_loader import BodyContextTransforms, EMOTIC
 class TinyEncoder(nn.Module):
     def __init__(self, width):
         super().__init__()
+        self.output_dim = width
         self.projection = nn.Linear(3, width)
 
     def forward(self, images):
@@ -68,7 +70,7 @@ class EMOTNetFTTest(unittest.TestCase):
         torch.manual_seed(5)
         model = EMOTNetFTModel(
             context_encoder=TinyEncoder(640),
-            body_encoder=TinyEncoder(128),
+            body_encoder=TinyEncoder(256),
             fusion_dim=8,
             dropout=0.0,
         )
@@ -106,6 +108,25 @@ class EMOTNetFTTest(unittest.TestCase):
         self.assertFalse(config["benchmark_added_adapter"])
         self.assertFalse(config["clip_visual_encoder_used"])
         self.assertFalse(config["clip_text_encoder_used"])
+        self.assertEqual(config["epochs"], 21)
+        self.assertAlmostEqual(config["discrete_loss_weight"], 1.0 / 6.0)
+        self.assertEqual(config["native_body_variant"], "official_dropbox_alexnet")
+        self.assertEqual(
+            config["class_weight_scope"], "current mini-batch visible labels only"
+        )
+
+    def test_official_release_alexnet_body_shape_and_groups(self):
+        body = EMOTNetBodyEncoder().eval()
+        with torch.no_grad():
+            output = body(torch.zeros(1, 3, 128, 128))
+        self.assertEqual(tuple(output.shape), (1, 256))
+        convolutions = [
+            module for module in body.modules() if isinstance(module, nn.Conv2d)
+        ]
+        self.assertEqual([module.groups for module in convolutions], [1, 2, 1, 2, 2])
+        pools = [module for module in body.modules() if isinstance(module, nn.MaxPool2d)]
+        self.assertEqual(len(pools), 2)
+        self.assertTrue(all(module.ceil_mode for module in pools))
 
     def test_source_weight_and_loss_formulas(self):
         targets = torch.tensor(

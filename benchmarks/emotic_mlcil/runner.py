@@ -821,7 +821,7 @@ def _parse_args() -> argparse.Namespace:
         "--emot-net-native-init",
         help=(
             "Audited PyTorch conversion of the official EMOT-Net Places "
-            "context and DecomposeMe body initialization"
+            "context and AlexNet body release initialization"
         ),
     )
     parser.add_argument("--output-root", default="./output")

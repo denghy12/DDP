@@ -25,6 +25,23 @@ EXPECTED_SHA256 = {
     "src/single_image_inference.lua": "e3de39410d5508bc2b57256862b4ff927141500c331952e3d4ad376c5d1f1f6f",
     "src/train_test.lua": "96491273d052cac615ed83f3d70be2252ab18a4257971872b1ffc19bd601a0ca",
 }
+RELEASE_ARCHIVE_SHA256 = (
+    "ce6096c1af5a3e91badbc06752e2dbbd04fc63f67f24acc95d76a68e1f7e339b"
+)
+RELEASE_ASSET_SHA256 = {
+    "model_myVDavg_640_Places.t7": (
+        "bbf8a09edb1a17338f8004b78cf2e83f3cccc3a7f0bf7c3705368b482cab1e7c"
+    ),
+    "alexnet_features.t7": (
+        "0abdbce4910f4c242433d614287448d110a81e7d26562ab291364762cf2dae87"
+    ),
+}
+RELEASE_SOURCE_SHA256 = {
+    "Steps_for_training.md": "0d21ce72cddfba3db1593a0ba58e78754b1d1492c1b906a0f9b69dc203004bce",
+    "codes/OptsEmotionModel.lua": "52be6bf4c07c0f81d3e0917bf039c827eaec46d5bfe5c9ad887c87526cf57526",
+    "codes/CreateEmotionModel.lua": "66355d632210f04058ace7a08a112e5443823bd7a1902bf48ef858d53be28ccb",
+    "codes/trainTest_BI.lua": "a4982bc8826a5c72070ba2223c92245062a5bc44ac4007c56408cd164886ef2c",
+}
 
 
 def _sha(path: Path) -> str:
@@ -76,18 +93,19 @@ def compare(upstream_root: Path, port_root: Optional[Path] = None) -> Dict[str, 
     main_source = (root / "src/main.lua").read_text(encoding="utf-8")
     inference_source = (root / "src/single_image_inference.lua").read_text(encoding="utf-8")
     required = {
-        "native_context_default": "model_myVDavg_640_Places.t7" in options,
-        "native_body_default": "myVD_ImgNet_66_old.t7" in options,
+        "git_native_context_default": "model_myVDavg_640_Places.t7" in options,
+        "git_native_body_default_decomposeme": "myVD_ImgNet_66_old.t7" in options,
+        "git_alexnet_body_supported": "createBodyModel_pretrained_alexnet" in create_model,
         "body_context_parallel": "parallel:add(imageModel)" in create_model and "parallel:add(bodyModel)" in create_model,
-        "fusion_768_to_256": "nn.Linear(768 -> 256)" in structure,
+        "git_published_fusion_768_to_256": "nn.Linear(768 -> 256)" in structure,
         "dropout_half": "nn.Dropout(0.500000)" in structure,
         "sigmoid_output": "model:add(nn.Sigmoid())" in create_model,
         "weighted_mse": "nn.weightMSE(gClass_weights,true)" in create_model,
-        "joint_discrete_weight_half": "cmd:option('-Wdisc',            1/2" in options,
+        "git_joint_discrete_weight_half": "cmd:option('-Wdisc',            1/2" in options,
         "published_structure_fusion_bn_relu": "nn.BatchNormalization (2D) (256)" in structure and "nn.ReLU" in structure,
         "executable_bi_fusion_bn_relu_commented": "--class:add(nn.BatchNormalization(DROP_FIRST_CLASS,1e-3))" in create_model and "--class:add(nn.ReLU(true))" in create_model,
         "weight_formula": "1 / (torch.log(nF + normHist[1][i]))" in functions,
-        "epochs_14": bool(re.search(r"-nEpochs'\s*,\s*14", options)),
+        "git_epochs_14": bool(re.search(r"-nEpochs'\s*,\s*14", options)),
         "lr_drop_7": bool(re.search(r"-nItersLR'\s*,\s*7", options)),
         "batch_52": "-batchSize',    26*2" in options,
         "body_128_main_comment": "IMGSizes.BODY_SIZE = 224 --default is 128" in main_source,
@@ -109,9 +127,10 @@ def compare(upstream_root: Path, port_root: Optional[Path] = None) -> Dict[str, 
     port_files = (
         repository / "benchmarks/emotic_mlcil/methods/emot_net_ft/model.py",
         repository / "benchmarks/emotic_mlcil/methods/emot_net_ft/method.py",
+        repository / "scripts/emotic-mlcil/prepare_emot_net_native_initialization.py",
     )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "method": "EMOT-Net-FT",
         "upstream": {
             "repository": REPOSITORY,
@@ -121,7 +140,22 @@ def compare(upstream_root: Path, port_root: Optional[Path] = None) -> Dict[str, 
             "verified_file_sha256": observed,
             "pretrained_assets_bundled_in_git": False,
             "registered_native_context_asset": "model_myVDavg_640_Places.t7",
-            "registered_native_body_asset": "myVD_ImgNet_66_old.t7",
+            "git_default_native_body_asset": "myVD_ImgNet_66_old.t7",
+            "registered_release_native_body_asset": "alexnet_features.t7",
+        },
+        "official_release": {
+            "archive_name": "emotic_pami_git.zip",
+            "archive_sha256": RELEASE_ARCHIVE_SHA256,
+            "verified_source_member_sha256": RELEASE_SOURCE_SHA256,
+            "verified_asset_sha256": RELEASE_ASSET_SHA256,
+            "context_variant": "Places factorized CNN, 640-D",
+            "body_variant": "AlexNet, 256-D",
+            "fusion_input_dim": 896,
+            "epochs": 21,
+            "batch_size": 52,
+            "discrete_loss_weight": 1.0 / 6.0,
+            "class_weight_scope": "mini_batch",
+            "git_release_default_difference_recorded": True,
         },
         "source_contract": required,
         "operator_equivalence": {
@@ -137,7 +171,9 @@ def compare(upstream_root: Path, port_root: Optional[Path] = None) -> Dict[str, 
             "replay": False,
             "adapter": False,
             "clip_used": False,
-            "port_file_sha256": {path.name: _sha(path) for path in port_files},
+            "port_file_sha256": {
+                str(path.relative_to(repository)): _sha(path) for path in port_files
+            },
         },
     }
 

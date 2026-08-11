@@ -6,7 +6,10 @@
 plain class-incremental lower bound. The immutable reference is the official
 [`rkosti/emotic`](https://github.com/rkosti/emotic) repository at commit
 `69c3a5106aed08121cd12f6a5b359c745136931e` under MIT. The reference remains
-outside this repository in `baseline_sources/emot_net_release_69c3a51/`.
+outside this repository in `baseline_sources/emot_net_release_69c3a51/`. Native
+weights and the matching executable variant come from the official Dropbox
+`emotic_pami_git.zip` release, fixed at SHA-256
+`ce6096c1af5a3e91badbc06752e2dbbd04fc63f67f24acc95d76a68e1f7e339b`.
 
 This run is **Track B**, not Track A. It retains EMOT-Net's native visual
 architecture and therefore must not be ranked in the unified-CLIP Track-A
@@ -20,8 +23,8 @@ The conversion name is `EMOT-Net-FT-v0.1`:
 
 - input is the full scene plus the annotated person crop;
 - the native context branch is the official 640-D Places-style factorized CNN;
-- the native body branch is the official 128-D DecomposeMe-style factorized CNN;
-- their 768-D concatenation feeds the official 256-D fusion layer, BatchNorm,
+- the native body branch is the official release's 256-D grouped AlexNet CNN;
+- their 896-D concatenation feeds the official 256-D fusion layer, BatchNorm,
   ReLU, and dropout `0.5`;
 - the static 26-class categorical layer is replaced by protocol-ordered,
   expanding linear task heads;
@@ -32,10 +35,11 @@ The conversion name is `EMOT-Net-FT-v0.1`:
   visual tower, or CLIP text feature is added;
 - continuous valence/arousal/dominance prediction is omitted because this
   MLCIL contract evaluates only the 26 categorical labels; the source joint
-  objective's categorical coefficient `Wdisc=0.5` is retained.
+  objective's categorical coefficient `Wdisc=1/6` is retained.
 
-The categorical source class weight is recomputed at every task from only the
-visible current-label tensor:
+The release sets `reWeight=1`, so the categorical source class weight is
+recomputed for every training mini-batch from only its visible current-label
+tensor:
 
 ```text
 w_c = 0.0001                          when positive_count_c < 1
@@ -54,12 +58,13 @@ difference; it does not claim byte-for-byte reproduction of the static sampler.
 
 ## Native initialization gate
 
-The official Git repository does not bundle its default pretrained files. Its
-training instructions download them separately, and `opts.lua` registers:
+The official Git repository does not bundle pretrained files. Its instructions
+link the official Dropbox package. That package contains a matching source
+variant whose defaults and assets are:
 
 ```text
 context: model_myVDavg_640_Places.t7
-body:    myVD_ImgNet_66_old.t7
+body:    alexnet_features.t7
 ```
 
 The benchmark requires an audited deterministic PyTorch conversion at:
@@ -73,26 +78,41 @@ provenance. The runner records its SHA-256. Missing or mismatched initialization
 is a hard error: there is no silent CLIP substitution or random fallback. The
 initialization stays server-side and is excluded from result downloads.
 
-After downloading the two official files, convert them once (the converter
-requires the pure-Python `torchfile` reader):
+Convert the official ZIP directly once (the converter requires the pure-Python
+`torchfile` reader):
 
 ```bash
 /opt/conda/envs/ddp/bin/python scripts/emotic-mlcil/prepare_emot_net_native_initialization.py \
-  --context-t7 /mnt/haoyuan/workspace/baseline_sources/emot_net_pretrained/model_myVDavg_640_Places.t7 \
-  --body-t7 /mnt/haoyuan/workspace/baseline_sources/emot_net_pretrained/myVD_ImgNet_66_old.t7 \
+  --release-archive /mnt/haoyuan/workspace/baseline_sources/emot_net_pretrained/emotic_pami_git_official.zip \
   --output pretrained/emot_net/emot_net_native_init_v0.1.pth
 
 sha256sum pretrained/emot_net/emot_net_native_init_v0.1.pth
 ```
 
-The converter locates one exact conv/BatchNorm tower by its complete layer
-shape signature and refuses ambiguous or structurally different `.t7` files.
+The converter verifies the complete ZIP SHA, four release-source member hashes,
+and both asset hashes before loading anything. It then locates the context and
+body towers by their complete layer-shape signatures and selects saved
+DataParallel replica 0 exactly as the upstream `features:get(1)` path does.
+All matching-replica hashes and the selected index are recorded; structurally
+different content is refused. The registered asset hashes are:
+
+```text
+model_myVDavg_640_Places.t7  bbf8a09edb1a17338f8004b78cf2e83f3cccc3a7f0bf7c3705368b482cab1e7c
+alexnet_features.t7          0abdbce4910f4c242433d614287448d110a81e7d26562ab291364762cf2dae87
+```
+
+The fixed Git commit defaults to a DecomposeMe body, but its linked Dropbox no
+longer distributes `myVD_ImgNet_66_old.t7`. Silently mixing that unavailable
+default with another checkpoint is forbidden. The registered benchmark instead
+uses the internally consistent, executable official Dropbox release variant:
+Places context + bundled AlexNet body. This difference is explicit provenance,
+not a benchmark-added backbone substitution.
 
 ## Source hyperparameters retained for validation
 
 | Setting | Registered value | Source relation |
 |---|---:|---|
-| epochs | 14 | `opts.lua` default |
+| epochs | 21 | Dropbox release `OptsEmotionModel.lua` default |
 | train batch | 52 | `26*2` default |
 | optimizer | SGD | source default |
 | learning rate | 0.01 | source default |
@@ -101,9 +121,10 @@ shape signature and refuses ambiguous or structurally different `.t7` files.
 | weight decay | 5e-4 | source default |
 | dropout | 0.5 | source default |
 | class norm factor | 1.2 | source default |
-| categorical loss coefficient | 0.5 | source joint `Wdisc` default |
+| categorical loss coefficient | 1/6 | Dropbox release joint `Wdisc` default |
+| class reweighting | each training mini-batch | Dropbox release `reWeight=1` |
 | augmentation | none | source default `dataAugment=0` |
-| input size | context 224×224; body 128×128 | published structure and inference path |
+| input size | context 224×224; body 128×128 | Dropbox release `common_variables.lua` |
 | normalization | mean `(0.4709,0.4409,0.4062)`, std `(0.2817,0.2741,0.2810)` | `GetImagePatches` |
 | F1 threshold | 0.5 | benchmark-wide fixed policy |
 
@@ -111,26 +132,19 @@ These are validation-stage registered settings, not a held-out result freeze.
 After seed-0 validation, a separate commit must freeze the reviewed setting
 before any test access.
 
-The fixed repository contains one documented discrepancy: the published
-`emotic_cnn_model_structure.txt` has fusion BatchNorm+ReLU, while those two
-lines are commented in `CreateEmotionModel_BI`. This port follows the official
-published model-structure artifact and records the discrepancy in the source
-oracle rather than concealing it.
-
-It also contains a body-size inconsistency: `vars.lua` assigns 224, whereas
-the published body tower's final `3×3/stride-16` pooling, `main.lua` comment,
-and `single_image_inference.lua` correspond to 128. The registered port uses
-128 so the published body tower ends in the stated 128-D descriptor. The body
-tensor is zero-padded only while crossing the benchmark's tensor batch
-boundary and is cropped back before the first body convolution.
+The release source explicitly uses body size 128 and applies fusion
+BatchNorm+ReLU. The body tensor is zero-padded only while crossing the
+benchmark's tensor batch boundary and is cropped back before the first body
+convolution.
 
 ## Verification and launch
 
-The source audit checks fixed file hashes, native model names, dual-stream
-fusion, 768→256 width, dropout, sigmoid, weighted MSE, schedule, and numerical
-class-weight/loss formulas. Unit tests cover registration, Track-B enforcement,
-body/context shape, label firewall, lifecycle, checkpointing, parameter growth,
-and zero replay.
+The source audit checks the fixed Git hashes, registered release ZIP/source and
+asset hashes, dual-stream fusion, 896→256 width, grouped AlexNet body, dropout,
+sigmoid, weighted MSE, schedule, and numerical class-weight/loss formulas. Unit
+tests cover registration, Track-B enforcement, body/context shape, label
+firewall, lifecycle, checkpointing, parameter growth, deterministic Torch7
+replica-0 handling, and zero replay.
 
 After preparing the initialization on the server:
 

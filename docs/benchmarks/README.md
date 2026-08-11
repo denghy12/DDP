@@ -137,11 +137,12 @@ until the local modifications and upstream baseline are separately audited.
 EMOT-Net-FT development is active on
 `codex/emotic-baseline-emot-net-ft`. At the user's direction it does not use
 the unified CLIP tower. It is therefore Track B, with the official
-Places-context and DecomposeMe-body architecture, full-scene plus person-crop
-input, source weighted sigmoid-MSE, and current-label-only expanding-head
-sequential fine-tuning. The official Git repository does not bundle its two
-default Torch7 pretrained assets, so seed-0 validation remains gated on an
-audited conversion bundle; CLIP and random fallback are explicitly rejected.
+Places-context and official-release AlexNet-body architecture, full-scene plus
+person-crop input, source weighted sigmoid-MSE, and current-label-only
+expanding-head sequential fine-tuning. The Git repository does not bundle its
+Torch7 assets; seed-0 validation remains gated on hash-verifying and converting
+the separately distributed official Dropbox ZIP. CLIP and random fallback are
+explicitly rejected.
 
 Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It
 retains the collected original DDP

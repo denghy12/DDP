@@ -1,4 +1,4 @@
-"""PyTorch port of the native EMOT-Net body/context architecture."""
+"""PyTorch port of the native EMOT-Net release body/context architecture."""
 
 from __future__ import annotations
 
@@ -24,17 +24,17 @@ def _factorized(
         nn.Conv2d(
             in_channels,
             middle_channels,
-            kernel_size=(kernel, 1),
-            stride=(stride, 1),
-            padding=(padding, 0),
+            kernel_size=(1, kernel),
+            stride=(1, stride),
+            padding=(0, padding),
         ),
         nn.ReLU(inplace=True),
         nn.Conv2d(
             middle_channels,
             out_channels,
-            kernel_size=(1, kernel),
-            stride=(1, stride),
-            padding=(0, padding),
+            kernel_size=(kernel, 1),
+            stride=(stride, 1),
+            padding=(padding, 0),
         ),
     ]
     if batch_norm_after:
@@ -63,32 +63,36 @@ class EMOTNetContextEncoder(nn.Sequential):
 
 
 class EMOTNetBodyEncoder(nn.Sequential):
-    """Official DecomposeMe-style body branch, ending in 128 dimensions."""
+    """AlexNet body branch bundled in the official EMOT-Net release."""
 
-    output_dim = 128
+    output_dim = 256
 
     def __init__(self) -> None:
-        layers = []
-        layers.extend(_factorized(3, 32, 64, 3, 2))
-        layers.extend(
-            (
-                nn.Conv2d(64, 128, (3, 1), (2, 1), (1, 0)),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(128, 128, (1, 3), (1, 2), (0, 1)),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm2d(128),
-            )
+        super().__init__(
+            nn.Conv2d(3, 96, kernel_size=11, stride=4, padding=5),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1, ceil_mode=True),
+            nn.LocalResponseNorm(size=5, alpha=1.0e-4, beta=0.75, k=1.0),
+            nn.Conv2d(96, 256, kernel_size=5, padding=2, groups=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1, ceil_mode=True),
+            nn.LocalResponseNorm(size=5, alpha=1.0e-4, beta=0.75, k=1.0),
+            nn.Conv2d(256, 384, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(384, 384, kernel_size=3, padding=1, groups=2),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(384, 256, kernel_size=3, padding=1, groups=2),
+            nn.ReLU(inplace=True),
+            nn.AvgPool2d(kernel_size=3, stride=16),
+            nn.Flatten(1),
         )
-        layers.extend(_factorized(128, 128, 128, 3, 2))
-        layers.extend((nn.AvgPool2d(kernel_size=3, stride=16), nn.Flatten(1)))
-        super().__init__(*layers)
 
 
 class EMOTNetFTModel(nn.Module):
     """Native dual-stream EMOT-Net with protocol-ordered expanding heads."""
 
     context_dim = 640
-    body_dim = 128
+    body_dim = 256
 
     def __init__(
         self,
@@ -208,26 +212,75 @@ class EMOTNetFTModel(nn.Module):
     def load_native_initialization(self, payload: Mapping[str, object]) -> None:
         """Load a separately audited conversion of the two official `.t7` towers."""
 
-        if int(payload.get("schema_version", -1)) != 1:
+        if int(payload.get("schema_version", -1)) != 2:
             raise ValueError("Unsupported EMOT-Net initialization schema")
         if payload.get("upstream_commit") != "69c3a5106aed08121cd12f6a5b359c745136931e":
             raise ValueError("EMOT-Net initialization has different upstream provenance")
         if payload.get("upstream_repository") != "https://github.com/rkosti/emotic":
             raise ValueError("EMOT-Net initialization repository differs")
         assets = payload.get("source_assets")
-        required_assets = {
-            "model_myVDavg_640_Places.t7",
-            "myVD_ImgNet_66_old.t7",
+        expected_assets = {
+            "model_myVDavg_640_Places.t7": (
+                "bbf8a09edb1a17338f8004b78cf2e83f3cccc3a7f0bf7c3705368b482cab1e7c"
+            ),
+            "alexnet_features.t7": (
+                "0abdbce4910f4c242433d614287448d110a81e7d26562ab291364762cf2dae87"
+            ),
         }
-        if not isinstance(assets, Mapping) or set(assets) != required_assets:
-            raise ValueError("EMOT-Net initialization source asset manifest differs")
-        if not all(
-            isinstance(value, str)
-            and len(value) == 64
-            and all(character in "0123456789abcdef" for character in value)
-            for value in assets.values()
+        if not isinstance(assets, Mapping) or dict(assets) != expected_assets:
+            raise ValueError("EMOT-Net initialization source assets differ")
+        if (
+            payload.get("release_archive_sha256")
+            != "ce6096c1af5a3e91badbc06752e2dbbd04fc63f67f24acc95d76a68e1f7e339b"
         ):
-            raise ValueError("EMOT-Net initialization source SHA-256 is invalid")
+            raise ValueError("EMOT-Net release archive provenance differs")
+        if payload.get("native_body_variant") != "official_dropbox_alexnet":
+            raise ValueError("EMOT-Net native body variant differs")
+        expected_release_sources = {
+            "Steps_for_training.md": (
+                "0d21ce72cddfba3db1593a0ba58e78754b1d1492c1b906a0f9b69dc203004bce"
+            ),
+            "codes/OptsEmotionModel.lua": (
+                "52be6bf4c07c0f81d3e0917bf039c827eaec46d5bfe5c9ad887c87526cf57526"
+            ),
+            "codes/CreateEmotionModel.lua": (
+                "66355d632210f04058ace7a08a112e5443823bd7a1902bf48ef858d53be28ccb"
+            ),
+            "codes/trainTest_BI.lua": (
+                "a4982bc8826a5c72070ba2223c92245062a5bc44ac4007c56408cd164886ef2c"
+            ),
+        }
+        release_sources = payload.get("release_verified_file_sha256")
+        if (
+            not isinstance(release_sources, Mapping)
+            or dict(release_sources) != expected_release_sources
+        ):
+            raise ValueError("EMOT-Net release source provenance differs")
+        tower_selection = payload.get("tower_selection")
+        if not isinstance(tower_selection, Mapping):
+            raise ValueError("EMOT-Net tower selection provenance is missing")
+        for name in ("context_encoder", "body_encoder"):
+            selection = tower_selection.get(name)
+            if (
+                not isinstance(selection, Mapping)
+                or int(selection.get("matching_tower_count", 0)) < 1
+                or selection.get("selected_tower_index") != 0
+                or selection.get("selection_rule")
+                != "first_saved_replica_matching_upstream_features_get_1"
+            ):
+                raise ValueError(f"EMOT-Net {name} selection provenance differs")
+            tower_hashes = selection.get("tower_sha256")
+            if (
+                not isinstance(tower_hashes, list)
+                or len(tower_hashes) != int(selection["matching_tower_count"])
+                or any(
+                    not isinstance(value, str)
+                    or len(value) != 64
+                    or any(character not in "0123456789abcdef" for character in value)
+                    for value in tower_hashes
+                )
+            ):
+                raise ValueError(f"EMOT-Net {name} tower hashes differ")
         for name, module in (
             ("context_encoder", self.context_encoder),
             ("body_encoder", self.body_encoder),

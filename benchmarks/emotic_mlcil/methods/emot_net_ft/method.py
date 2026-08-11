@@ -34,8 +34,8 @@ UPSTREAM_COMMIT = "69c3a5106aed08121cd12f6a5b359c745136931e"
 @dataclass(frozen=True)
 class EMOTNetFTOptions:
     fusion_dim: int = 256
-    epochs: int = 14
-    early_stopping_patience: int = 14
+    epochs: int = 21
+    early_stopping_patience: int = 21
     learning_rate: float = 0.01
     lr_drop_epoch: int = 7
     lr_drop_gamma: float = 0.1
@@ -43,7 +43,7 @@ class EMOTNetFTOptions:
     weight_decay: float = 5.0e-4
     dropout: float = 0.5
     norm_factor: float = 1.2
-    discrete_loss_weight: float = 0.5
+    discrete_loss_weight: float = 1.0 / 6.0
     gradient_clip_norm: float = 10.0
     amp: bool = False
     tf32: bool = False
@@ -149,7 +149,7 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
 
     method_name = "EMOT-Net-FT"
     method_family = "Static EMOTIC model / Sequential Fine-Tuning"
-    backbone = "Native EMOT-Net Places-context + DecomposeMe-body CNN"
+    backbone = "Native EMOT-Net Places-context + AlexNet-body CNN"
     supported_tracks = ("B",)
     upstream_repository = "https://github.com/rkosti/emotic"
     upstream_commit = UPSTREAM_COMMIT
@@ -190,7 +190,7 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
             if self.native_initialization_path is None:
                 raise FileNotFoundError(
                     "EMOT-Net-FT requires an audited PyTorch conversion of the official "
-                    "Places/DecomposeMe initialization; CLIP and silent scratch fallback are forbidden"
+                    "Dropbox Places/AlexNet initialization; CLIP and silent scratch fallback are forbidden"
                 )
             initialization = Path(self.native_initialization_path)
             if not initialization.is_file():
@@ -247,22 +247,6 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
         self.training_history = []
         self.current_class_weights = None
 
-    def _collect_current_class_weights(
-        self,
-        loader: Iterable[TrainBatch],
-    ) -> torch.Tensor:
-        if self.task_context is None:
-            raise RuntimeError("begin_task must precede class-weight estimation")
-        targets = []
-        for raw_batch in loader:
-            batch = _validate_train_batch(raw_batch, self.task_context)
-            targets.append(batch.targets_current.detach().float().cpu())
-        if not targets:
-            raise ValueError("Training loader produced no samples")
-        return class_weights_from_current_targets(
-            torch.cat(targets, dim=0), self.options.norm_factor
-        )
-
     def _selection_map(self, loader: Iterable[TrainBatch]) -> float:
         if self.task_context is None:
             raise RuntimeError("begin_task must precede validation")
@@ -292,9 +276,6 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
     ) -> None:
         if self.task_context is None:
             raise RuntimeError("begin_task must precede training")
-        weights_cpu = self._collect_current_class_weights(train_loader)
-        self.current_class_weights = weights_cpu.clone()
-        weights = weights_cpu.to(self.device)
         optimizer = torch.optim.SGD(
             self.model.parameters(),
             lr=self.options.learning_rate,
@@ -319,6 +300,12 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
                 batch = _validate_train_batch(raw_batch, self.task_context)
                 images = batch.images.to(self.device, non_blocking=True).float()
                 targets = batch.targets_current.to(self.device, non_blocking=True).float()
+                weights_cpu = class_weights_from_current_targets(
+                    batch.targets_current.detach().float().cpu(),
+                    self.options.norm_factor,
+                )
+                self.current_class_weights = weights_cpu.clone()
+                weights = weights_cpu.to(self.device)
                 optimizer.zero_grad(set_to_none=True)
                 with self._autocast():
                     classification = weighted_sigmoid_mse(
@@ -421,7 +408,11 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
             "upstream_commit": self.upstream_commit,
             "upstream_license": self.upstream_license,
             "native_context_backbone": "model_myVDavg_640_Places.t7 architecture",
-            "native_body_backbone": "myVD_ImgNet_66_old.t7 DecomposeMe architecture",
+            "native_body_backbone": "alexnet_features.t7 official release architecture",
+            "native_release_archive_sha256": (
+                "ce6096c1af5a3e91badbc06752e2dbbd04fc63f67f24acc95d76a68e1f7e339b"
+            ),
+            "native_body_variant": "official_dropbox_alexnet",
             "native_initialization_path": self.native_initialization_path,
             "native_initialization_sha256": self.native_initialization_sha256,
             "native_source_asset_sha256": dict(self.native_source_asset_sha256),
@@ -437,6 +428,7 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
             "clip_visual_encoder_used": False,
             "clip_text_encoder_used": False,
             "loss": "source weighted sigmoid MSE over current classes only",
+            "class_weight_scope": "current mini-batch visible labels only",
             "selection_metric": "current_label_validation_mAP",
             "sampling": "uniform shuffled current-task samples",
             "source_static_class_sampling_used": False,
