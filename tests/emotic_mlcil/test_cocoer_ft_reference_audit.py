@@ -83,6 +83,22 @@ def _detection_payload(*, partial=False):
 
 
 class CocoERFTReferenceAuditTest(unittest.TestCase):
+    def test_runtime_entrypoints_restore_repository_root(self):
+        for script in (GENERATE, ASSET_AUDIT):
+            with self.subTest(script=script.name):
+                spec = importlib.util.spec_from_file_location(
+                    f"runtime_path_{script.stem}", script
+                )
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                original_path = list(sys.path)
+                try:
+                    sys.path[:] = [item for item in sys.path if item != str(ROOT)]
+                    module._ensure_repository_root()
+                    self.assertEqual(sys.path[0], str(ROOT))
+                finally:
+                    sys.path[:] = original_path
+
     def test_direct_entrypoints_resolve(self):
         for script, option in (
             (SCRIPT, "--upstream-root"),

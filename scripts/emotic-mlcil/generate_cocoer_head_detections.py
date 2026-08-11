@@ -37,6 +37,11 @@ UPSTREAM_COMMIT = "dac8fc139e61b87f1bf0b27c581798df2a5a9d38"
 BUFFALO_L_TREE_SHA256 = "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
 
 
+def _ensure_repository_root() -> None:
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+
+
 def _tree_sha256(root: Path) -> str:
     files = sorted(path for path in root.rglob("*") if path.is_file())
     if not files:
@@ -115,6 +120,10 @@ def main() -> None:
         raise ValueError("--max-samples must be positive")
     if args.faceanalysis_equivalence_samples <= 0:
         raise ValueError("--faceanalysis-equivalence-samples must be positive")
+
+    # Keep ``--help`` dependency-light, but make repository modules available
+    # for an actual preprocessing run launched through this script path.
+    _ensure_repository_root()
 
     # Import torch first so its CUDA/cuDNN libraries are visible to ORT.
     import torch

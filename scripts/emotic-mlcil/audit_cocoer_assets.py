@@ -8,6 +8,7 @@ import hashlib
 import importlib.util
 import json
 import math
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -35,6 +36,11 @@ RESNET_URL = "https://download.pytorch.org/models/resnet50-0676ba61.pth"
 BUFFALO_L_TREE_SHA256 = "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
 
 
+def _ensure_repository_root() -> None:
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+
+
 def _sha(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -60,6 +66,10 @@ def main() -> None:
     parser.add_argument("--head-cache", required=True, type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+
+    # Defer repository imports so the standalone ``--help`` audit stays usable
+    # even when the caller is outside a configured PyTorch environment.
+    _ensure_repository_root()
 
     import torch
     from PIL import Image
