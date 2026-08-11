@@ -58,6 +58,7 @@ remain a reserved extension point.
 - [ER control and PRS Track-A porting contract](ER_PRS_TRACK_A.md)
 - [DER++ source audit and Track-A porting contract](DERPP_TRACK_A.md)
 - [EMOT-Net native-backbone sequential FT Track-B contract](EMOT_NET_FT_TRACK_B.md)
+- [EmotionCLIP native-backbone sequential FT Track-B contract](EMOTIONCLIP_FT_TRACK_B.md)
 - [Universal checkpoint-free download standard](DOWNLOAD_STANDARD.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
@@ -152,6 +153,16 @@ deviation. Exact provenance is registered in the
 [`validation`](results/emot_net_ft_seed0_validation_v0.1.json) and
 [`formal`](results/emot_net_ft_seed0_formal_v0.1.json) snapshots. This Track-B
 result must not be placed in a unified Track-A ranking.
+
+EmotionCLIP-FT development is isolated on
+`codex/emotic-baseline-emotionclip-ft`. It is also Track B: the method retains
+the official subject-aware ViT-B/32, target-person bbox mask preprocessing and
+EmotionCLIP checkpoint, then applies the benchmark's explicit Method-FT
+conversion. It expands linear task heads and full-fine-tunes the visual model
+using current labels only, with no Adapter, replay, distillation, EWC or text
+encoder. The source's `32.91` static mAP is a frozen-feature linear-probe
+reference and must not be reported as an incremental result. Seed-0 validation
+remains pending until the official full checkpoint passes the server preflight.
 
 Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It
 retains the collected original DDP

@@ -29,6 +29,7 @@ from .methods.l3a import L3ABenchmarkMethod
 from .methods.original_ddp import OriginalDDPBenchmarkMethod
 from .methods.agcn import AGCNBenchmarkMethod
 from .methods.emot_net_ft import EMOTNetFTBenchmarkMethod
+from .methods.emotionclip_ft import EmotionCLIPFTBenchmarkMethod
 from .methods.replay import (
     DERPPBenchmarkMethod,
     ERBenchmarkMethod,
@@ -44,12 +45,15 @@ from .types import (
     TaskContext,
     TaskMetrics,
 )
-from src.helper_functions.emotic_loader import BodyContextTransforms
+from src.helper_functions.emotic_loader import (
+    BodyContextTransforms,
+    EmotionCLIPImageMaskTransform,
+)
 
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
 CORE_BASE_COMMIT = "00f399f13bc7552c254c8f6e6c095a8be4f56146"
-CORE_RUNTIME_VERSION = "0.10.0"
+CORE_RUNTIME_VERSION = "0.11.0"
 
 
 def _current_git_commit() -> str:
@@ -803,6 +807,7 @@ def _parse_args() -> argparse.Namespace:
             "prs",
             "derpp",
             "emot_net_ft",
+            "emotionclip_ft",
         ),
         default="ddp",
     )
@@ -823,6 +828,10 @@ def _parse_args() -> argparse.Namespace:
             "Audited PyTorch conversion of the official EMOT-Net Places "
             "context and AlexNet body release initialization"
         ),
+    )
+    parser.add_argument(
+        "--emotionclip-checkpoint",
+        help="Official full EmotionCLIP checkpoint containing model state",
     )
     parser.add_argument("--output-root", default="./output")
     parser.add_argument("--reporting-split", default="val")
@@ -857,7 +866,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--input-mode",
-        choices=("full", "person_crop", "body_context"),
+        choices=("full", "person_crop", "body_context", "image_bbox_mask"),
         default="full",
     )
     execution = parser.add_mutually_exclusive_group()
@@ -937,6 +946,13 @@ def _emot_net_transforms():
     return transform, transform
 
 
+def _emotionclip_transforms():
+    """Official EmotionCLIP EMOTIC resize/crop/normalization and bbox mask."""
+
+    transform = EmotionCLIPImageMaskTransform()
+    return transform, transform
+
+
 def main() -> None:
     args = _parse_args()
     protocol = load_protocol(args.protocol)
@@ -996,6 +1012,7 @@ def main() -> None:
         "prs": PRSBenchmarkMethod,
         "derpp": DERPPBenchmarkMethod,
         "emot_net_ft": EMOTNetFTBenchmarkMethod,
+        "emotionclip_ft": EmotionCLIPFTBenchmarkMethod,
     }
     method_class = method_classes[args.method]
     artifacts = ArtifactStore(
@@ -1036,6 +1053,12 @@ def main() -> None:
         if not args.emot_net_native_init:
             raise ValueError("EMOT-Net-FT requires --emot-net-native-init")
         train_transform, eval_transform = _emot_net_transforms()
+    elif args.method == "emotionclip_ft":
+        if args.input_mode != "image_bbox_mask":
+            raise ValueError("EmotionCLIP-FT requires --input-mode image_bbox_mask")
+        if not args.emotionclip_checkpoint:
+            raise ValueError("EmotionCLIP-FT requires --emotionclip-checkpoint")
+        train_transform, eval_transform = _emotionclip_transforms()
     else:
         train_transform, eval_transform = _legacy_emotic_transforms()
     data_module = EMOTICMLCILDataModule(
@@ -1077,6 +1100,12 @@ def main() -> None:
         method = EMOTNetFTBenchmarkMethod(
             protocol,
             native_initialization_path=args.emot_net_native_init,
+            device=args.device,
+        )
+    elif args.method == "emotionclip_ft":
+        method = EmotionCLIPFTBenchmarkMethod(
+            protocol,
+            checkpoint_path=args.emotionclip_checkpoint,
             device=args.device,
         )
     else:

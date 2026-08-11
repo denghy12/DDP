@@ -18,6 +18,49 @@ class BodyContextTransforms:
     body_size: int = 128
 
 
+@dataclass(frozen=True)
+class EmotionCLIPImageMaskTransform:
+    """Source-faithful EmotionCLIP scene transform plus subject mask."""
+
+    size: int = 224
+    mean: tuple = (0.485, 0.456, 0.406)
+    std: tuple = (0.229, 0.224, 0.225)
+
+    def __call__(self, image, bbox):
+        from torchvision.transforms import InterpolationMode
+        from torchvision.transforms import functional as functional
+
+        original_width, original_height = image.size
+        resized = functional.resize(
+            image,
+            size=self.size,
+            interpolation=InterpolationMode.BICUBIC,
+        )
+        resized_width, resized_height = resized.size
+        values = np.asarray(bbox, dtype=np.float32).ravel()
+        if values.size < 4 or not np.isfinite(values[:4]).all():
+            values = np.asarray((0, 0, original_width, original_height), dtype=np.float32)
+        scale = min(
+            original_width / float(resized_width),
+            original_height / float(resized_height),
+        )
+        x1 = max(int(np.floor(values[0] / scale)), 0)
+        y1 = max(int(np.floor(values[1] / scale)), 0)
+        x2 = min(int(np.ceil(values[2] / scale)), resized_width)
+        y2 = min(int(np.ceil(values[3] / scale)), resized_height)
+        mask = torch.zeros(resized_height, resized_width, dtype=torch.float32)
+        if x2 > x1 and y2 > y1:
+            mask[y1:y2, x1:x2] = 1.0
+        resized = functional.center_crop(resized, self.size)
+        mask = functional.center_crop(mask, self.size)
+        rgb = functional.normalize(
+            functional.to_tensor(resized),
+            mean=list(self.mean),
+            std=list(self.std),
+        ).float()
+        return torch.cat((rgb, mask.unsqueeze(0).float()), dim=0)
+
+
 class EMOTIC(torch.utils.data.Dataset):
     """EMOTIC loader matching multi-lane-main's train/(val+test) protocol."""
 
@@ -39,10 +82,10 @@ class EMOTIC(torch.utils.data.Dataset):
         self.input_mode = input_mode
         self.included_cats = list(included) if included is not None else []
 
-        if input_mode not in ("full", "person_crop", "body_context"):
+        if input_mode not in ("full", "person_crop", "body_context", "image_bbox_mask"):
             raise ValueError(
                 f"Invalid EMOTIC input_mode '{input_mode}'. "
-                "Expected 'full', 'person_crop', or 'body_context'."
+                "Expected 'full', 'person_crop', 'body_context', or 'image_bbox_mask'."
             )
 
         annotation_path = os.path.join(self.path, "CVPR17_Annotations.mat")
@@ -113,7 +156,13 @@ class EMOTIC(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         image = Image.open(self.file_paths[idx]).convert("RGB")
-        if self.input_mode == "body_context":
+        if self.input_mode == "image_bbox_mask":
+            if not isinstance(self.transform, EmotionCLIPImageMaskTransform):
+                raise RuntimeError(
+                    "image_bbox_mask requires EmotionCLIPImageMaskTransform"
+                )
+            image = self.transform(image, self.body_bboxes[idx])
+        elif self.input_mode == "body_context":
             body = self._crop_person(image, self.body_bboxes[idx])
             if self.transform is None:
                 raise RuntimeError("EMOTIC requires an image transform")
