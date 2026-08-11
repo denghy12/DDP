@@ -134,7 +134,7 @@ not an evaluation of the unmodified original DDP method. Its seed-0 result is
 retained as project evidence, while additional seeds are intentionally deferred
 until the local modifications and upstream baseline are separately audited.
 
-EMOT-Net-FT development is active on
+EMOT-Net-FT is complete and frozen on
 `codex/emotic-baseline-emot-net-ft`. At the user's direction it does not use
 the unified CLIP tower. It is therefore Track B, with the official
 Places-context and official-release AlexNet-body architecture, full-scene plus
@@ -142,12 +142,16 @@ person-crop input, source weighted sigmoid-MSE, and current-label-only
 expanding-head sequential fine-tuning. The separately distributed official
 Dropbox ZIP and both Torch7 assets have been hash-verified and converted into
 the registered native initialization; CLIP and random fallback are explicitly
-rejected. Seed-0 validation completed all eight tasks with Final mAP `27.3062`,
-Average mAP `33.5043`, Forgetting `5.9747`, and zero skipped updates. The
-configuration is now frozen. At the user's direction the formal scope is one
-configuration-locked held-out seed-0 run only, so no three-seed aggregate will
-be claimed. Exact validation provenance is registered in
-[`results/emot_net_ft_seed0_validation_v0.1.json`](results/emot_net_ft_seed0_validation_v0.1.json).
+rejected. Validation froze the configuration without a hyperparameter change.
+The one requested configuration-locked held-out seed-0 run then reached Final
+mAP `20.2518`, Average mAP `26.0717`, Forgetting `7.2697`, Final cF1 `20.4463`,
+and Final oF1 `43.7496`, with 12,012 applied updates and no skipped update. All
+5,368 final score IDs are unique `emotic:test:` IDs. Seeds 1--2 were
+intentionally not run, so these are single values rather than mean ± standard
+deviation. Exact provenance is registered in the
+[`validation`](results/emot_net_ft_seed0_validation_v0.1.json) and
+[`formal`](results/emot_net_ft_seed0_formal_v0.1.json) snapshots. This Track-B
+result must not be placed in a unified Track-A ranking.
 
 Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It
 retains the collected original DDP

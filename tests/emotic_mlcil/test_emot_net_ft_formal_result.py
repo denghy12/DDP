@@ -136,6 +136,31 @@ class EMOTNetFTFormalResultTest(unittest.TestCase):
         self.assertIn("EXPECTED_GIT_COMMIT", launcher)
         self.assertIn("EMOT_NET_FT_TRACK_B_V0_1", launcher)
 
+    def test_registered_formal_snapshot_is_single_seed_test_result(self):
+        path = (
+            ROOT
+            / "docs"
+            / "benchmarks"
+            / "results"
+            / "emot_net_ft_seed0_formal_v0.1.json"
+        )
+        payload = json.loads(path.read_text())
+        self.assertEqual(payload["protocol_id"], "emotic_b5c3_track_b_v0.1")
+        self.assertEqual(payload["track"], "B")
+        self.assertEqual(payload["reporting_scope"]["formal_seeds"], [0])
+        self.assertEqual(
+            payload["reporting_scope"]["aggregate_statistics"],
+            "not_applicable_single_seed",
+        )
+        self.assertTrue(payload["eligibility"]["eligible_for_main_table"])
+        self.assertEqual(payload["eligibility"]["reporting_split"], "test")
+        self.assertEqual(payload["training_stability"]["optimizer_updates"], 12012)
+        self.assertEqual(payload["test_score_audit"]["test_prefixed_ids"], 5368)
+        self.assertEqual(payload["test_score_audit"]["validation_prefixed_ids"], 0)
+        self.assertFalse(payload["artifacts"]["contains_pth"])
+        self.assertEqual(len(payload["per_task"]), 8)
+        self.assertEqual(len(payload["per_class_forgetting"]["rows"]), 26)
+
 
 if __name__ == "__main__":
     unittest.main()

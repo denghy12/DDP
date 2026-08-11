@@ -183,11 +183,11 @@ stored in
 [`results/emot_net_ft_seed0_validation_v0.1.json`](results/emot_net_ft_seed0_validation_v0.1.json).
 No hyperparameter was changed after reviewing validation.
 
-## Locked held-out scope
+## Locked held-out scope and entry point
 
-The formal scope is one seed only: seed 0. Seeds 1 and 2 will not be launched,
-and the final report must present a single value rather than a mean or standard
-deviation. The formal entry point requires a clean frozen commit, an explicit
+The formal scope is one seed only: seed 0. Seeds 1 and 2 were not launched,
+and the final report presents a single value rather than a mean or standard
+deviation. The reproducibility entry point requires a clean frozen commit, an explicit
 commit match, the confirmation string `EMOT_NET_FT_TRACK_B_V0_1`, at least
 4 GiB free GPU memory, and at least 8 GiB free output-filesystem space. It
 forces `reporting_split=test`, `configuration_locked=true`, train/eval batches
@@ -211,3 +211,40 @@ The worker validates the eight task artifacts and locked configuration before
 creating one checkpoint-free download archive. A formal result with a dirty
 tree, validation reporting, missing scores, changed source settings, or more
 than seed 0 is rejected.
+
+## Frozen formal result
+
+The requested one-seed formal run `emot_net_ft_formal_seed0_20260811_163003`
+completed from clean configuration-freeze commit
+`4e44cd135b73e4a61fb01baf86257b246e11eb29`. Its held-out result is:
+
+| Metric | Seed 0 test |
+|---|---:|
+| Final mAP | 20.2518 |
+| Average mAP | 26.0717 |
+| Forgetting | 7.2697 |
+| Final cF1 | 20.4463 |
+| Final oF1 | 43.7496 |
+
+Per-task mAP was `36.1286, 29.7385, 24.3067, 27.9606, 25.0059,
+23.3014, 21.8804, 20.2518`. The run completed 12,012 optimizer updates with no
+skip, NaN, OOM, traceback, or fallback. The training records are identical to
+the validation run, confirming that held-out behavior did not alter training.
+The largest class forgetting occurred for Anticipation (`45.8498`), Affection
+(`30.8843`), Annoyance (`14.8863`), and Confidence (`14.3318`), which is the
+intended behavior of this no-anti-forgetting sequential-FT lower bound.
+
+The final task contains 5,368 unique score rows of shape `5368×26`; every ID
+has the `emotic:test:` prefix and none has a validation prefix. The checkpoint-
+free archive contains all eight canonical score files, no `.pth`, and passed
+all nested manifest hashes. Its SHA-256 is:
+
+```text
+d3d717a56f2ff192e88b160c6b024ac34e2bb584d045b6955497442c72c8217d
+```
+
+Complete metrics, all 26 class-forgetting rows, configuration, source hashes,
+test-ID audit, and validation-to-test context are frozen in
+[`results/emot_net_ft_seed0_formal_v0.1.json`](results/emot_net_ft_seed0_formal_v0.1.json).
+No additional seed, rerun, threshold calibration, or post-test tuning is
+required. Paper tables must report the seed-0 values directly without `±`.
