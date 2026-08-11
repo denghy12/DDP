@@ -152,9 +152,14 @@ CLIP RN50 vocabulary-informed image branch; it does not use the Track-A CLIP
 ViT-B/16. The conversion adds only current-label expanding heads and protocol
 visibility. Full-26-class CocoER GWT/VI weights are rejected as future-label
 leakage. The initial server suite passed 185 Core/baseline tests (4 skips) and
-17 legacy regressions at `881b0e6`. Seed-0 validation remains gated on the
-strict InsightFace-derived sample-ID-aligned head-box cache, hash-gated generic
-initialization files, joint asset audit, and CUDA memory smoke. See
+17 legacy regressions at `881b0e6`. Because EMOTIC publishes no head boxes, the
+approved sample-preserving conversion now uses strict `buffalo_l` matches first
+and a componentwise-median relative box calibrated only on native-resolved
+training samples for the remainder. Labels and validation/test statistics are
+forbidden. The cache records actual ONNX providers, SCRFD/FaceAnalysis
+equivalence, native/fallback IDs and counts, geometry, and hashes. Seed-0
+validation remains gated on full CUDA cache generation, joint asset audit, and
+CUDA memory smoke. See
 `COCOER_FT_TRACK_B.md`.
 
 Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It

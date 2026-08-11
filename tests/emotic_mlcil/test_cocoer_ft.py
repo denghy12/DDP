@@ -13,6 +13,12 @@ from benchmarks.emotic_mlcil.methods.cocoer_ft import (
     dynamic_bce,
 )
 from benchmarks.emotic_mlcil.methods.cocoer_ft.method import _load_resnet_state
+from benchmarks.emotic_mlcil.methods.cocoer_ft.head_geometry import (
+    median_relative_geometry,
+    project_relative_geometry,
+    relative_geometry,
+    source_match,
+)
 from benchmarks.emotic_mlcil.protocol import BenchmarkProtocol
 from benchmarks.emotic_mlcil.registry import method_class, method_names
 from benchmarks.emotic_mlcil.types import EvaluationBatch, TrainBatch
@@ -83,6 +89,23 @@ def task_batch(protocol, task_id):
 
 
 class CocoERFTTest(unittest.TestCase):
+    def test_train_median_fallback_geometry_is_deterministic(self):
+        body = [10, 20, 110, 220]
+        first = [30, 30, 70, 90]
+        second = [40, 40, 80, 100]
+        rows = [
+            relative_geometry(body, first),
+            relative_geometry(body, second),
+        ]
+        median = median_relative_geometry(rows)
+        for observed, expected in zip(median, [0.25, 0.075, 0.65, 0.375]):
+            self.assertAlmostEqual(observed, expected, places=12)
+        self.assertEqual(
+            project_relative_geometry(200, 300, body, median),
+            [35, 35, 75, 95],
+        )
+        self.assertTrue(source_match(body, first))
+
     def make_method(self):
         return CocoERFTBenchmarkMethod(
             tiny_protocol(),

@@ -21,6 +21,67 @@ INSIGHTFACE_ASSETS = ROOT / "scripts" / "emotic-mlcil" / "prepare_cocoer_insight
 BUFFALO_L_TREE_SHA256 = "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
 
 
+def _detection_payload(*, partial=False):
+    return {
+        "schema_version": 2,
+        "upstream_commit": MODULE.COMMIT,
+        "partial": partial,
+        "processed_samples": 2,
+        "native_resolved_samples": 1,
+        "native_unresolved_samples": 1,
+        "fallback_samples": 1,
+        "unresolved_samples": 0,
+        "processed_by_split": {"train": 2},
+        "native_resolved_by_split": {"train": 1},
+        "native_unresolved_by_split": {"train": 1},
+        "fallback_by_split": {"train": 1},
+        "detector": {
+            "library": "insightface",
+            "version": "0.7.3",
+            "model": "buffalo_l",
+            "detector_file": "det_10g.onnx",
+            "model_tree_sha256": BUFFALO_L_TREE_SHA256,
+            "implementation": "insightface_scrfd_only",
+            "requested_device": "cuda",
+            "requested_providers": [
+                "CUDAExecutionProvider", "CPUExecutionProvider"
+            ],
+            "actual_providers": [
+                "CUDAExecutionProvider", "CPUExecutionProvider"
+            ],
+            "det_size": [640, 640],
+            "faceanalysis_equivalence": {
+                "samples": 2,
+                "integer_boxes_exact_match": True,
+                "max_abs_error_after_integer_clipping": 0.0,
+                "faceanalysis_detector_actual_providers": [
+                    "CUDAExecutionProvider", "CPUExecutionProvider"
+                ],
+            },
+        },
+        "conversion": {
+            "name": "buffalo_l_strict_then_train_median_v0.1",
+            "sample_preserving": True,
+            "native_source": "buffalo_l_strict",
+            "fallback_source": "train_median_relative_geometry",
+            "fallback_calibration_split": "train",
+            "fallback_uses_labels": False,
+            "fallback_uses_val_or_test_statistics": False,
+            "fallback_statistic": "componentwise_median",
+            "fallback_relative_to": "annotated_body_xyxy",
+            "fallback_rounding": "clip_to_image_then_round_half_up",
+            "train_native_calibration_samples": 1,
+            "median_relative_head_box": [0.2, 0.0, 0.8, 0.3],
+        },
+        "entries": {
+            "emotic:train:a.jpg:person=0": [2, 0, 8, 3],
+            "emotic:train:b.jpg:person=0": [2, 0, 8, 3],
+        },
+        "fallback_sample_ids": ["emotic:train:b.jpg:person=0"],
+        "unresolved": [],
+    }
+
+
 class CocoERFTReferenceAuditTest(unittest.TestCase):
     def test_direct_entrypoints_resolve(self):
         for script, option in (
@@ -66,20 +127,9 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
             directory = Path(temporary)
             source = directory / "detections.json"
             output = directory / "cache.json"
-            source.write_text(json.dumps({
-                "schema_version": 1,
-                "upstream_commit": MODULE.COMMIT,
-                "partial": False,
-                "detector": {
-                    "library": "insightface",
-                    "version": "0.7.3",
-                    "model": "buffalo_l",
-                    "model_tree_sha256": BUFFALO_L_TREE_SHA256,
-                    "det_size": [640, 640],
-                },
-                "entries": {"emotic:test:a.jpg:person=0": [1, 2, 10, 12]},
-                "unresolved": [],
-            }), encoding="utf-8")
+            source.write_text(
+                json.dumps(_detection_payload()), encoding="utf-8"
+            )
             result = subprocess.run(
                 [sys.executable, str(PREPARE), "--detections", str(source),
                  "--output", str(output)],
@@ -89,7 +139,12 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout)
             payload = json.loads(output.read_text(encoding="utf-8"))
             self.assertEqual(payload["upstream_commit"], MODULE.COMMIT)
-            self.assertEqual(len(payload["entries"]), 1)
+            self.assertEqual(payload["schema_version"], 2)
+            self.assertEqual(len(payload["entries"]), 2)
+            self.assertEqual(payload["fallback_samples"], 1)
+            self.assertEqual(
+                payload["conversion"]["fallback_calibration_split"], "train"
+            )
             self.assertEqual(
                 payload["detector_model_tree_sha256"], BUFFALO_L_TREE_SHA256
             )
@@ -99,20 +154,9 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
             directory = Path(temporary)
             source = directory / "detections.json"
             output = directory / "cache.json"
-            source.write_text(json.dumps({
-                "schema_version": 1,
-                "upstream_commit": MODULE.COMMIT,
-                "partial": True,
-                "detector": {
-                    "library": "insightface",
-                    "version": "0.7.3",
-                    "model": "buffalo_l",
-                    "model_tree_sha256": BUFFALO_L_TREE_SHA256,
-                    "det_size": [640, 640],
-                },
-                "entries": {"emotic:test:a.jpg:person=0": [1, 2, 10, 12]},
-                "unresolved": [],
-            }), encoding="utf-8")
+            source.write_text(
+                json.dumps(_detection_payload(partial=True)), encoding="utf-8"
+            )
             result = subprocess.run(
                 [sys.executable, str(PREPARE), "--detections", str(source),
                  "--output", str(output)],
@@ -121,6 +165,66 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("Partial CocoER detections", result.stdout)
+            self.assertFalse(output.exists())
+
+    def test_freezer_rejects_provider_fallback_and_test_calibration(self):
+        for mutate, message in (
+            (
+                lambda payload: payload["detector"].update(
+                    {"actual_providers": ["CPUExecutionProvider"]}
+                ),
+                "actual ONNX provider",
+            ),
+            (
+                lambda payload: payload["detector"][
+                    "faceanalysis_equivalence"
+                ].update(
+                    {"faceanalysis_detector_actual_providers": [
+                        "CPUExecutionProvider"
+                    ]}
+                ),
+                "SCRFD-only equivalence",
+            ),
+            (
+                lambda payload: payload["conversion"].update(
+                    {"fallback_calibration_split": "test"}
+                ),
+                "conversion contract",
+            ),
+        ):
+            with self.subTest(message=message), tempfile.TemporaryDirectory() as temporary:
+                directory = Path(temporary)
+                source = directory / "detections.json"
+                output = directory / "cache.json"
+                payload = _detection_payload()
+                mutate(payload)
+                source.write_text(json.dumps(payload), encoding="utf-8")
+                result = subprocess.run(
+                    [sys.executable, str(PREPARE), "--detections", str(source),
+                     "--output", str(output)],
+                    text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(message, result.stdout)
+                self.assertFalse(output.exists())
+
+    def test_freezer_rejects_inconsistent_sample_accounting(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            source = directory / "detections.json"
+            output = directory / "cache.json"
+            payload = _detection_payload()
+            payload["fallback_by_split"] = {"train": 0}
+            source.write_text(json.dumps(payload), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(PREPARE), "--detections", str(source),
+                 "--output", str(output)],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("split totals", result.stdout)
             self.assertFalse(output.exists())
 
 

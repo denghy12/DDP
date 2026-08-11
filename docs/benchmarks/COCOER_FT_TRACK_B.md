@@ -102,7 +102,18 @@ The official repository and CVPR supplementary material do not publish the
 training head-box preprocessing cache or a dataset-preparation entry point.
 The released inference path does specify InsightFace `0.7.3`, `buffalo_l`,
 640×640 detection and its face/person x-containment rule. The benchmark freezes
-that executable rule rather than inventing a top-of-body fallback.
+that executable rule and the following approved sample-preserving conversion:
+
+1. run the `buffalo_l` SCRFD detector and apply the released strict person
+   matching rule;
+2. estimate one componentwise-median relative head box from **native-resolved
+   train samples only**;
+3. project that fixed train-only geometry onto every native-unresolved body box.
+
+The fallback uses neither labels nor validation/test statistics. It preserves
+all benchmark person samples instead of changing the data split according to
+detector success. Every native/fallback sample ID, split count, median geometry,
+runtime provider, detector tree hash, and source-artifact hash is recorded.
 
 The fixed detector pack is InsightFace v0.7 `buffalo_l` from its official
 GitHub release. Its archive is exactly `288621354` bytes with SHA-256
@@ -118,20 +129,27 @@ repository with:
   --output-root /mnt/haoyuan/workspace/baseline_sources/cocoer_insightface
 ```
 
-Generate detections first:
+Generation uses the isolated `cocoer-preprocess` environment. The launcher must
+expose its CUDA 11 runtime libraries; declaring CUDA is insufficient unless the
+artifact records `CUDAExecutionProvider` as the first actual provider. The
+generator also checks a small fixed set of images through the full official
+`FaceAnalysis` path and requires exact integer-box equality with the faster
+SCRFD-only path before processing the dataset:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 /opt/conda/envs/ddp/bin/python \
-  scripts/emotic-mlcil/generate_cocoer_head_detections.py \
-  --data-root /mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC \
-  --insightface-root /mnt/haoyuan/workspace/baseline_sources/insightface \
-  --output /mnt/haoyuan/workspace/baseline_sources/cocoer_head_detections.json
+GPU=0 bash scripts/emotic-mlcil/run_cocoer_head_preprocess.sh
 ```
 
+The wrapper constructs `LD_LIBRARY_PATH` from the isolated environment and
+then delegates to `generate_cocoer_head_detections.py`. Its `DATA_ROOT`,
+`INSIGHTFACE_ROOT`, `OUTPUT`, and `COCOER_ENV` defaults may be overridden with
+environment variables without changing the registered algorithm.
+
 The generator hashes the complete `models/buffalo_l` tree, reuses detections
-per image, aligns them to the benchmark's stable person IDs, and exits `3` if
-any sample is unresolved. It never silently substitutes a heuristic box.
-Only a complete zero-unresolved artifact can be frozen:
+per image, aligns them to stable person IDs, computes the train-only calibration
+after native detection, and then fills only native-unresolved samples. It exits
+`3` if any sample remains unresolved after the registered conversion. Only a
+complete sample-preserving artifact can be frozen:
 
 ```bash
 /opt/conda/envs/ddp/bin/python \
@@ -150,6 +168,13 @@ Finally audit all three assets against every train/val/test sample:
   --head-cache pretrained/cocoer/emotic_head_boxes_v0.1.json \
   --output pretrained/cocoer/cocoer_assets_audit.json
 ```
+
+The joint audit independently reconstructs every fallback box from the frozen
+train median, checks the original CocoER matching rule for every native box,
+and verifies exact coverage of the 16,001 train, 2,397 validation, and 5,368
+test person samples. The full CUDA-generated cache statistics remain pending;
+the earlier 256-sample diagnostic (224 native, 32 fallback candidates) is not a
+formal dataset statistic and must not be copied into a result table.
 
 Train preprocessing ports the source coordinated crop/flip; all three views
 use ImageNet mean/std. Validation and test are deterministic resize-only.

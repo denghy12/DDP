@@ -5,15 +5,29 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
-import sys
+import math
 from collections import Counter
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+GEOMETRY_PATH = (
+    ROOT / "benchmarks" / "emotic_mlcil" / "methods" / "cocoer_ft"
+    / "head_geometry.py"
+)
+GEOMETRY_SPEC = importlib.util.spec_from_file_location(
+    "cocoer_head_geometry", GEOMETRY_PATH
+)
+GEOMETRY = importlib.util.module_from_spec(GEOMETRY_SPEC)
+GEOMETRY_SPEC.loader.exec_module(GEOMETRY)
+CONVERSION_NAME = GEOMETRY.CONVERSION_NAME
+clip_box = GEOMETRY.clip_box
+median_relative_geometry = GEOMETRY.median_relative_geometry
+project_relative_geometry = GEOMETRY.project_relative_geometry
+relative_geometry = GEOMETRY.relative_geometry
+source_match = GEOMETRY.source_match
 
 COMMIT = "dac8fc139e61b87f1bf0b27c581798df2a5a9d38"
 CLIP_RN50_SHA256 = "afeb0e10f9e5a86da6080e35cf09123aca3b358a0c3e3b6c78a7b63bc04b6762"
@@ -91,7 +105,7 @@ def main() -> None:
     cache = json.loads(args.head_cache.read_text(encoding="utf-8"))
     if (
         not isinstance(cache, dict)
-        or int(cache.get("schema_version", -1)) != 1
+        or int(cache.get("schema_version", -1)) != 2
         or cache.get("upstream_commit") != COMMIT
     ):
         raise ValueError("CocoER head cache provenance differs")
@@ -101,6 +115,8 @@ def main() -> None:
         or detector.get("library") != "insightface"
         or detector.get("version") != "0.7.3"
         or detector.get("model") != "buffalo_l"
+        or detector.get("detector_file") != "det_10g.onnx"
+        or detector.get("implementation") != "insightface_scrfd_only"
         or detector.get("det_size") != [640, 640]
     ):
         raise ValueError("CocoER head-cache detector differs")
@@ -110,6 +126,60 @@ def main() -> None:
         or cache.get("detector_model_tree_sha256") != model_tree_sha
     ):
         raise ValueError("CocoER detector model-tree SHA-256 differs")
+    actual_providers = detector.get("actual_providers")
+    requested_device = detector.get("requested_device")
+    expected_provider = (
+        "CUDAExecutionProvider"
+        if requested_device == "cuda"
+        else "CPUExecutionProvider"
+    )
+    if (
+        requested_device not in {"cuda", "cpu"}
+        or not isinstance(actual_providers, list)
+        or not actual_providers
+        or actual_providers[0] != expected_provider
+    ):
+        raise ValueError("CocoER actual ONNX provider differs from its request")
+    equivalence = detector.get("faceanalysis_equivalence")
+    faceanalysis_providers = (
+        equivalence.get("faceanalysis_detector_actual_providers")
+        if isinstance(equivalence, dict)
+        else None
+    )
+    if (
+        not isinstance(equivalence, dict)
+        or int(equivalence.get("samples", 0)) <= 0
+        or equivalence.get("integer_boxes_exact_match") is not True
+        or float(equivalence.get("max_abs_error_after_integer_clipping", math.inf))
+        != 0.0
+        or not isinstance(faceanalysis_providers, list)
+        or not faceanalysis_providers
+        or faceanalysis_providers[0] != expected_provider
+    ):
+        raise ValueError("CocoER SCRFD-only equivalence is invalid")
+    conversion = cache.get("conversion")
+    if (
+        not isinstance(conversion, dict)
+        or conversion.get("name") != CONVERSION_NAME
+        or conversion.get("sample_preserving") is not True
+        or conversion.get("native_source") != "buffalo_l_strict"
+        or conversion.get("fallback_source") != "train_median_relative_geometry"
+        or conversion.get("fallback_calibration_split") != "train"
+        or conversion.get("fallback_uses_labels") is not False
+        or conversion.get("fallback_uses_val_or_test_statistics") is not False
+        or conversion.get("fallback_statistic") != "componentwise_median"
+        or conversion.get("fallback_rounding")
+        != "clip_to_image_then_round_half_up"
+        or int(conversion.get("train_native_calibration_samples", 0)) <= 0
+    ):
+        raise ValueError("CocoER sample-preserving conversion differs")
+    median_geometry = conversion.get("median_relative_head_box")
+    if (
+        not isinstance(median_geometry, list)
+        or len(median_geometry) != 4
+        or not all(math.isfinite(float(value)) for value in median_geometry)
+    ):
+        raise ValueError("CocoER train-only median geometry is invalid")
     detection_source_sha = str(cache.get("source_detection_json_sha256", "")).lower()
     if len(detection_source_sha) != 64 or any(
         value not in "0123456789abcdef" for value in detection_source_sha
@@ -118,8 +188,18 @@ def main() -> None:
     entries = cache.get("entries")
     if not isinstance(entries, dict) or not entries:
         raise ValueError("CocoER head cache is empty")
+    fallback_sample_ids = cache.get("fallback_sample_ids")
+    if (
+        not isinstance(fallback_sample_ids, list)
+        or len(fallback_sample_ids) != len(set(fallback_sample_ids))
+        or len(fallback_sample_ids) != int(cache.get("fallback_samples", -1))
+        or len(fallback_sample_ids) != int(cache.get("native_unresolved_samples", -1))
+    ):
+        raise ValueError("CocoER fallback sample accounting differs")
+    fallback_set = set(fallback_sample_ids)
 
     expected = {}
+    sample_splits = {}
     split_counts = Counter()
     image_sizes = {}
     for split in ("train", "val", "test"):
@@ -141,6 +221,7 @@ def main() -> None:
                 Path(path).resolve(),
                 [float(value) for value in coordinates],
             )
+            sample_splits[key] = split
             split_counts[split] += 1
     missing = sorted(set(expected).difference(entries))
     unexpected = sorted(set(entries).difference(expected))
@@ -151,29 +232,52 @@ def main() -> None:
             f"unexpected={unexpected[:5]} ({len(unexpected)})"
         )
 
+    train_native_relative = []
     for key, (image_path, raw_body) in expected.items():
         if image_path not in image_sizes:
             with Image.open(image_path) as image:
                 image_sizes[image_path] = image.size
         width, height = image_sizes[image_path]
-        body = [
-            max(0.0, min(float(width), raw_body[0])),
-            max(0.0, min(float(height), raw_body[1])),
-            max(0.0, min(float(width), raw_body[2])),
-            max(0.0, min(float(height), raw_body[3])),
-        ]
+        body = clip_box(width, height, raw_body)
+        if body is None:
+            raise ValueError(f"CocoER body box is invalid after clipping: {key}")
         face = _valid_box(entries[key])
         if face is None or not (
             0 <= face[0] < face[2] <= width and 0 <= face[1] < face[3] <= height
         ):
             raise ValueError(f"CocoER head box is outside its image: {key}")
-        middle_x = (face[0] + face[2]) // 2
-        if not (
-            body[0] <= middle_x <= body[2]
-            and face[0] >= body[0]
-            and face[2] <= body[2]
-        ):
-            raise ValueError(f"CocoER head box violates released person matching: {key}")
+        if key in fallback_set:
+            expected_fallback = project_relative_geometry(
+                width, height, body, median_geometry
+            )
+            if [float(value) for value in expected_fallback] != face:
+                raise ValueError(f"CocoER fallback geometry differs: {key}")
+        elif not source_match(body, face):
+            raise ValueError(
+                f"CocoER native head box violates released person matching: {key}"
+            )
+        elif sample_splits[key] == "train":
+            train_native_relative.append(relative_geometry(body, face))
+
+    reconstructed_median = median_relative_geometry(train_native_relative)
+    if any(
+        abs(float(observed) - float(expected_value)) > 1e-12
+        for observed, expected_value in zip(median_geometry, reconstructed_median)
+    ):
+        raise ValueError("CocoER fallback geometry was not calibrated from train only")
+    if int(conversion["train_native_calibration_samples"]) != len(
+        train_native_relative
+    ):
+        raise ValueError("CocoER train calibration sample count differs")
+
+    if not fallback_set.issubset(entries):
+        raise ValueError("CocoER fallback IDs are absent from the head cache")
+    if (
+        int(cache.get("processed_samples", -1)) != len(entries)
+        or int(cache.get("native_resolved_samples", -1)) + len(fallback_set)
+        != len(entries)
+    ):
+        raise ValueError("CocoER head-cache totals differ")
 
     payload = {
         "schema_version": 1,
@@ -197,6 +301,10 @@ def main() -> None:
             "samples_by_split": dict(sorted(split_counts.items())),
             "unique_images": len(image_sizes),
             "detector": detector,
+            "conversion": conversion,
+            "native_resolved_samples": int(cache["native_resolved_samples"]),
+            "fallback_samples": len(fallback_set),
+            "fallback_by_split": dict(cache.get("fallback_by_split", {})),
             "source_detection_json_sha256": detection_source_sha,
         },
         "forbidden_full_emotic_assets_loaded": False,
