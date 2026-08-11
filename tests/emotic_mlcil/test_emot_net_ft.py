@@ -10,6 +10,7 @@ from benchmarks.emotic_mlcil.methods.emot_net_ft import (
     EMOTNetBodyEncoder,
     EMOTNetFTBenchmarkMethod,
     EMOTNetFTModel,
+    EMOTNetFTOptions,
     class_weights_from_current_targets,
     weighted_sigmoid_mse,
 )
@@ -108,7 +109,8 @@ class EMOTNetFTTest(unittest.TestCase):
         self.assertFalse(config["benchmark_added_adapter"])
         self.assertFalse(config["clip_visual_encoder_used"])
         self.assertFalse(config["clip_text_encoder_used"])
-        self.assertEqual(config["epochs"], 21)
+        self.assertEqual(EMOTNetFTOptions().epochs, 21)
+        self.assertEqual(config["epochs"], 1)
         self.assertAlmostEqual(config["discrete_loss_weight"], 1.0 / 6.0)
         self.assertEqual(config["native_body_variant"], "official_dropbox_alexnet")
         self.assertEqual(
