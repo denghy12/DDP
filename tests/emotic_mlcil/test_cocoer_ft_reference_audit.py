@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,6 +19,15 @@ GENERATE = ROOT / "scripts" / "emotic-mlcil" / "generate_cocoer_head_detections.
 ASSET_AUDIT = ROOT / "scripts" / "emotic-mlcil" / "audit_cocoer_assets.py"
 NATIVE_ASSETS = ROOT / "scripts" / "emotic-mlcil" / "prepare_cocoer_native_assets.py"
 INSIGHTFACE_ASSETS = ROOT / "scripts" / "emotic-mlcil" / "prepare_cocoer_insightface_assets.py"
+SMOKE = ROOT / "scripts" / "emotic-mlcil" / "smoke_cocoer_ft_training.py"
+PACKAGE = ROOT / "scripts" / "emotic-mlcil" / "package_cocoer_head_preprocess.py"
+PACKAGE_SPEC = importlib.util.spec_from_file_location(
+    "package_cocoer_head_preprocess", PACKAGE
+)
+PACKAGE_MODULE = importlib.util.module_from_spec(PACKAGE_SPEC)
+PACKAGE_SPEC.loader.exec_module(PACKAGE_MODULE)
+LAUNCHER = ROOT / "scripts" / "emotic-mlcil" / "launch_cocoer_ft_seed0_tmux.sh"
+HEAD_RESULT = ROOT / "docs" / "benchmarks" / "results" / "cocoer_head_preprocess_v0.1.json"
 BUFFALO_L_TREE_SHA256 = "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
 
 
@@ -83,6 +93,19 @@ def _detection_payload(*, partial=False):
 
 
 class CocoERFTReferenceAuditTest(unittest.TestCase):
+    def test_registered_head_result_and_memory_gate(self):
+        payload = json.loads(HEAD_RESULT.read_text(encoding="utf-8"))
+        self.assertEqual(payload["coverage"]["processed_samples"], 23766)
+        self.assertEqual(payload["coverage"]["native_resolved_samples"], 20611)
+        self.assertEqual(payload["coverage"]["fallback_samples"], 3155)
+        self.assertEqual(payload["coverage"]["unresolved_samples"], 0)
+        self.assertTrue(payload["assets"]["assets_valid"])
+        self.assertFalse(payload["gates"]["cuda_memory_smoke_passed"])
+        launcher = LAUNCHER.read_text(encoding="utf-8")
+        self.assertIn("smoke_cocoer_ft_training.py", launcher)
+        self.assertIn("--batch-size \"${TRAIN_BATCH_SIZE}\"", launcher)
+        self.assertIn("MEMORY_SMOKE_JSON", launcher)
+
     def test_runtime_entrypoints_restore_repository_root(self):
         for script in (GENERATE, ASSET_AUDIT):
             with self.subTest(script=script.name):
@@ -107,6 +130,8 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
             (ASSET_AUDIT, "--head-cache"),
             (NATIVE_ASSETS, "--resnet50-source"),
             (INSIGHTFACE_ASSETS, "--output-root"),
+            (SMOKE, "--resnet50-init"),
+            (PACKAGE, "--package-name"),
         ):
             with tempfile.TemporaryDirectory() as temporary:
                 result = subprocess.run(
@@ -116,6 +141,51 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
                 )
             self.assertEqual(result.returncode, 0, result.stdout)
             self.assertIn(option, result.stdout)
+
+    def test_preprocess_packager_uses_relative_non_self_manifest(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            sources = {}
+            for name in (
+                "detections.json",
+                "head_cache.json",
+                "asset_audit.json",
+                "native_manifest.json",
+            ):
+                path = root / "sources" / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps({"name": name}), encoding="utf-8")
+                sources[name] = path
+            log = root / "preprocess.log"
+            log.write_text("complete\n", encoding="utf-8")
+            result = PACKAGE_MODULE.build_package(
+                output_base=root / "output",
+                package_name="cocoer_head_test",
+                detections=sources["detections.json"],
+                head_cache=sources["head_cache.json"],
+                asset_audit=sources["asset_audit.json"],
+                native_manifest=sources["native_manifest.json"],
+                logs=[log],
+            )
+            destination = Path(result["download_directory"])
+            manifest = json.loads(
+                (destination / "download_manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            paths = [record["path"] for record in manifest["files"]]
+            self.assertTrue(manifest["paths_are_relative"])
+            self.assertFalse(manifest["manifest_self_included"])
+            self.assertNotIn("download_manifest.json", paths)
+            self.assertTrue(all(not Path(path).is_absolute() for path in paths))
+            self.assertFalse(result["contains_pth"])
+            self.assertFalse(result["contains_onnx"])
+            checksum = Path(result["checksum_file"]).read_text(encoding="utf-8")
+            self.assertIn(Path(result["archive"]).name, checksum)
+            self.assertNotIn(str(Path(result["archive"]).parent), checksum)
+            with tarfile.open(result["archive"], "r:gz") as stream:
+                members = [member.name.lower() for member in stream.getmembers()]
+            self.assertFalse(any(name.endswith((".pth", ".onnx")) for name in members))
 
     def test_fixed_external_source_and_conversion_contract(self):
         configured = os.environ.get("COCOER_UPSTREAM_ROOT")

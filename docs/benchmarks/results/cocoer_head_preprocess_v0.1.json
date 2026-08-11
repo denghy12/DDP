@@ -1,0 +1,113 @@
+{
+  "result_schema_version": 1,
+  "artifact_kind": "cocoer_head_preprocess",
+  "protocol_id": "emotic_b5c3_track_b_v0.1",
+  "track": "B",
+  "method": "CocoER-FT",
+  "status": "head_cache_and_assets_audited_memory_smoke_pending",
+  "source": {
+    "benchmark_git_commit": "0eb25df9deff657a152a2ca576047a256e1c6524",
+    "benchmark_git_dirty": false,
+    "upstream_repository": "https://github.com/bisno/CocoER",
+    "upstream_commit": "dac8fc139e61b87f1bf0b27c581798df2a5a9d38",
+    "insightface_version": "0.7.3",
+    "buffalo_l_tree_sha256": "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
+  },
+  "runtime": {
+    "device_requested": "cuda",
+    "actual_providers": [
+      "CUDAExecutionProvider",
+      "CPUExecutionProvider"
+    ],
+    "torch": "2.0.1+cu118",
+    "torch_cuda": "11.8",
+    "onnxruntime": "1.18.0",
+    "numpy": "1.26.4",
+    "opencv": "4.10.0"
+  },
+  "detector_equivalence": {
+    "implementation": "insightface_scrfd_only",
+    "reference": "InsightFace FaceAnalysis buffalo_l",
+    "sample_images": 8,
+    "integer_boxes_exact_match": true,
+    "max_abs_error_after_integer_clipping": 0.0
+  },
+  "conversion": {
+    "name": "buffalo_l_strict_then_train_median_v0.1",
+    "sample_preserving": true,
+    "native_source": "buffalo_l_strict",
+    "fallback_source": "train_median_relative_geometry",
+    "fallback_calibration_split": "train",
+    "fallback_uses_labels": false,
+    "fallback_uses_val_or_test_statistics": false,
+    "fallback_statistic": "componentwise_median",
+    "fallback_rounding": "clip_to_image_then_round_half_up",
+    "train_native_calibration_samples": 13770,
+    "median_relative_head_box": [
+      0.38227594702802586,
+      0.07203389830508475,
+      0.6165231038761954,
+      0.23950314391490862
+    ]
+  },
+  "coverage": {
+    "processed_samples": 23766,
+    "native_resolved_samples": 20611,
+    "native_resolved_percent": 86.72473281157957,
+    "fallback_samples": 3155,
+    "fallback_percent": 13.275267188420433,
+    "unresolved_samples": 0,
+    "unique_images": 18302,
+    "by_split": {
+      "train": {
+        "samples": 16001,
+        "native_resolved": 13770,
+        "fallback": 2231,
+        "fallback_percent": 13.94287857008937
+      },
+      "val": {
+        "samples": 2397,
+        "native_resolved": 2101,
+        "fallback": 296,
+        "fallback_percent": 12.348769294952023
+      },
+      "test": {
+        "samples": 5368,
+        "native_resolved": 4740,
+        "fallback": 628,
+        "fallback_percent": 11.698956780923995
+      }
+    }
+  },
+  "assets": {
+    "assets_valid": true,
+    "forbidden_full_emotic_assets_loaded": false,
+    "detection_json_sha256": "9cc675efcbac785b885fb1dd01cce3faaa4d0b25f2b92da59e57eec96f498087",
+    "head_cache_sha256": "f4a0795bd55d101f712d4e5fe2e46dbeda215d939a5cd37b992884bec62d309f",
+    "asset_audit_sha256": "9d5a264b14e94cd11eea05a87ad77ebc068d490fac755d2f3d9f25d00b6f7090",
+    "native_assets_manifest_sha256": "c799f4511905f6aeab88167186d428cc361608c8ed7846810142514fb3bc3974",
+    "resnet50_bundle_sha256": "ac8cddaea082ebd9932cdcd604c91aafa01d98b517a185c5926dc35a1e4dd277",
+    "resnet50_source_sha256": "0676ba61b6795bbe1773cffd859882e5e297624d384b6993f7c9e683e722fb8a",
+    "clip_rn50_sha256": "afeb0e10f9e5a86da6080e35cf09123aca3b358a0c3e3b6c78a7b63bc04b6762"
+  },
+  "download": {
+    "archive": "cocoer_head_preprocess_0eb25df.tar.gz",
+    "archive_sha256": "7e6a72bd2f65bc7b0ca3f16b6c002de05891c42253f225c6cfdf3a9b72f2bfe8",
+    "archive_sha256_verified_after_local_transfer": true,
+    "contains_pth": false,
+    "contains_onnx": false,
+    "payload_sha256_verified": true,
+    "legacy_manifest_used_server_absolute_paths": true,
+    "legacy_manifest_self_hash_is_not_valid": true,
+    "scientific_artifacts_affected_by_manifest_issue": false,
+    "replacement_packager": "scripts/emotic-mlcil/package_cocoer_head_preprocess.py"
+  },
+  "gates": {
+    "head_cache_complete": true,
+    "head_cache_audited": true,
+    "generic_initialization_audited": true,
+    "full_class_emotic_weights_rejected": true,
+    "cuda_memory_smoke_passed": false,
+    "seed0_validation_authorized": false
+  }
+}

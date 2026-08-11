@@ -80,6 +80,7 @@ EMOTIC conversions such as EMOT-Net-FT and CocoER-FT belong to Track B.
 - [Registered ER/PRS three-seed formal result](results/er_prs_seed012_formal_v0.1.json)
 - [Frozen DER++ seed-0 validation snapshot](results/derpp_seed0_validation_v0.1.json)
 - [Registered DER++ three-seed formal result](results/derpp_seed012_formal_v0.1.json)
+- [Audited CocoER head-preprocessing snapshot](results/cocoer_head_preprocess_v0.1.json)
 - [EMOTIC B5-C3 Track-A baseline summary table](results/TRACK_A_BASELINE_SUMMARY_V0.1.md)
 - [Paper-ready Track-A summary LaTeX](results/track_a_baseline_summary_v0.1.tex)
 - [Machine-readable Track-A summary data](results/track_a_baseline_summary_v0.1.json)
@@ -157,9 +158,11 @@ approved sample-preserving conversion now uses strict `buffalo_l` matches first
 and a componentwise-median relative box calibrated only on native-resolved
 training samples for the remainder. Labels and validation/test statistics are
 forbidden. The cache records actual ONNX providers, SCRFD/FaceAnalysis
-equivalence, native/fallback IDs and counts, geometry, and hashes. Seed-0
-validation remains gated on full CUDA cache generation, joint asset audit, and
-CUDA memory smoke. See
+equivalence, native/fallback IDs and counts, geometry, and hashes. The full
+CUDA run resolved 20,611 samples natively and supplied 3,155 train-median
+fallbacks, preserving all 23,766 samples with zero unresolved; the joint asset
+audit passed and the snapshot is registered. Seed-0 validation is now gated
+only on the launcher's full-path batch-64 CUDA memory smoke. See
 `COCOER_FT_TRACK_B.md`.
 
 Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It

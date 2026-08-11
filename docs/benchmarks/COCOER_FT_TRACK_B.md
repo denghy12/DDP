@@ -172,9 +172,27 @@ Finally audit all three assets against every train/val/test sample:
 The joint audit independently reconstructs every fallback box from the frozen
 train median, checks the original CocoER matching rule for every native box,
 and verifies exact coverage of the 16,001 train, 2,397 validation, and 5,368
-test person samples. The full CUDA-generated cache statistics remain pending;
-the earlier 256-sample diagnostic (224 native, 32 fallback candidates) is not a
-formal dataset statistic and must not be copied into a result table.
+test person samples. The completed CUDA artifact contains 20,611 native boxes
+and 3,155 fallbacks (13.2753%), with zero unresolved samples. The fallback
+geometry was calibrated from 13,770 native-resolved train samples. Its complete
+statistics and hashes are frozen in
+`results/cocoer_head_preprocess_v0.1.json`.
+
+Future preprocessing downloads must use the repository packager rather than a
+hand-written `find | sha256sum` manifest. It records only relative paths,
+excludes the manifest itself from its file records, and rejects both `.pth` and
+`.onnx` payloads:
+
+```bash
+/opt/conda/envs/ddp/bin/python \
+  scripts/emotic-mlcil/package_cocoer_head_preprocess.py \
+  --output-base /mnt/haoyuan/workspace/emotic_benchmark_runs/cocoer_ft_track_b_v0.1 \
+  --package-name cocoer_head_preprocess_v0.1 \
+  --detections /mnt/haoyuan/workspace/baseline_sources/cocoer_head_detections.json \
+  --head-cache pretrained/cocoer/emotic_head_boxes_v0.1.json \
+  --asset-audit pretrained/cocoer/cocoer_assets_audit.json \
+  --native-manifest pretrained/cocoer/native_assets_manifest.json
+```
 
 Train preprocessing ports the source coordinated crop/flip; all three views
 use ImageNet mean/std. Validation and test are deterministic resize-only.
@@ -200,9 +218,13 @@ use ImageNet mean/std. Validation and test are deterministic resize-only.
 | F1 threshold | 0.5 |
 
 These are validation-stage registered settings, not a held-out result freeze.
-CUDA memory smoke must determine whether source batch 64 fits one 4090 before
-the first run. A batch-size change requires an explicit validation decision
-and documentation; test data cannot make that decision.
+The launcher's mandatory CUDA smoke constructs the full final-task graph with
+all eight expanding heads, executes the head/body/context/VI/global paths,
+performs backward and one AdamW step, verifies optimizer-state creation and the
+frozen CLIP RN50, and records peak allocated/reserved MiB. It must determine
+whether source batch 64 fits one 4090 before the first run. A batch-size change
+requires an explicit smoke/validation decision and documentation; test data
+cannot make that decision.
 
 ## Validation launch
 
@@ -217,7 +239,9 @@ SESSION=emotic_cocoer_ft_seed0_val \
 bash scripts/emotic-mlcil/launch_cocoer_ft_seed0_tmux.sh
 ```
 
-The launcher runs the complete Core tests, immutable source audit, and full
-asset/sample-coverage audit before starting validation. Its universal download
-package contains logs, scores, metrics, manifests, source audit, and asset
-audit but excludes every `.pth` file.
+The launcher runs the complete Core tests, immutable source audit, full
+asset/sample-coverage audit, and mandatory full-path batch-64 CUDA memory smoke
+before starting validation. An OOM or missing optimizer step stops before tmux
+training is created. Its universal download package contains logs, scores,
+metrics, manifests, source audit, asset audit, and memory-smoke JSON but excludes
+every `.pth` file.

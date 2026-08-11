@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,6 +22,7 @@ from benchmarks.emotic_mlcil.methods.cocoer_ft.head_geometry import (
 )
 from benchmarks.emotic_mlcil.protocol import BenchmarkProtocol
 from benchmarks.emotic_mlcil.registry import method_class, method_names
+from benchmarks.emotic_mlcil.runner import _cocoer_transforms
 from benchmarks.emotic_mlcil.types import EvaluationBatch, TrainBatch
 from src.helper_functions.emotic_loader import CocoERTransforms, EMOTIC
 from tests.emotic_mlcil import protocol_config, task_context
@@ -89,6 +91,67 @@ def task_batch(protocol, task_id):
 
 
 class CocoERFTTest(unittest.TestCase):
+    def test_runner_accepts_only_audited_schema_v2_head_cache(self):
+        sample_id = "emotic:train:sample.jpg:person=0"
+        payload = {
+            "schema_version": 2,
+            "upstream_commit": "dac8fc139e61b87f1bf0b27c581798df2a5a9d38",
+            "detector_model_tree_sha256": (
+                "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
+            ),
+            "detector": {
+                "library": "insightface",
+                "version": "0.7.3",
+                "model": "buffalo_l",
+                "detector_file": "det_10g.onnx",
+                "implementation": "insightface_scrfd_only",
+                "model_tree_sha256": (
+                    "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
+                ),
+                "requested_device": "cuda",
+                "actual_providers": [
+                    "CUDAExecutionProvider", "CPUExecutionProvider"
+                ],
+                "det_size": [640, 640],
+                "faceanalysis_equivalence": {
+                    "samples": 8,
+                    "integer_boxes_exact_match": True,
+                    "max_abs_error_after_integer_clipping": 0.0,
+                },
+            },
+            "conversion": {
+                "name": "buffalo_l_strict_then_train_median_v0.1",
+                "sample_preserving": True,
+                "native_source": "buffalo_l_strict",
+                "fallback_source": "train_median_relative_geometry",
+                "fallback_calibration_split": "train",
+                "fallback_uses_labels": False,
+                "fallback_uses_val_or_test_statistics": False,
+                "fallback_statistic": "componentwise_median",
+                "fallback_rounding": "clip_to_image_then_round_half_up",
+            },
+            "processed_samples": 1,
+            "native_resolved_samples": 1,
+            "native_unresolved_samples": 0,
+            "fallback_samples": 0,
+            "fallback_sample_ids": [],
+            "entries": {sample_id: [20, 10, 80, 50]},
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "head_cache.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            train_transform, eval_transform = _cocoer_transforms(str(path))
+            self.assertTrue(train_transform.train)
+            self.assertFalse(eval_transform.train)
+            self.assertEqual(
+                train_transform.head_boxes[sample_id],
+                (20.0, 10.0, 80.0, 50.0),
+            )
+            payload["schema_version"] = 1
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "schema"):
+                _cocoer_transforms(str(path))
+
     def test_train_median_fallback_geometry_is_deterministic(self):
         body = [10, 20, 110, 220]
         first = [30, 30, 70, 90]

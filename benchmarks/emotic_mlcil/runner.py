@@ -50,7 +50,7 @@ from src.helper_functions.emotic_loader import BodyContextTransforms, CocoERTran
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
 CORE_BASE_COMMIT = "00f399f13bc7552c254c8f6e6c095a8be4f56146"
-CORE_RUNTIME_VERSION = "0.10.0"
+CORE_RUNTIME_VERSION = "0.10.1"
 
 
 def _current_git_commit() -> str:
@@ -960,7 +960,7 @@ def _cocoer_transforms(head_cache_path: str):
     if not path.is_file():
         raise FileNotFoundError(path)
     payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, Mapping) or int(payload.get("schema_version", -1)) != 1:
+    if not isinstance(payload, Mapping) or int(payload.get("schema_version", -1)) != 2:
         raise ValueError("Unsupported CocoER head-box cache schema")
     if payload.get("upstream_commit") != "dac8fc139e61b87f1bf0b27c581798df2a5a9d38":
         raise ValueError("CocoER head-box cache provenance differs")
@@ -970,6 +970,8 @@ def _cocoer_transforms(head_cache_path: str):
         or detector.get("library") != "insightface"
         or detector.get("version") != "0.7.3"
         or detector.get("model") != "buffalo_l"
+        or detector.get("detector_file") != "det_10g.onnx"
+        or detector.get("implementation") != "insightface_scrfd_only"
         or detector.get("det_size") != [640, 640]
     ):
         raise ValueError("CocoER head-box detector identity differs")
@@ -979,9 +981,55 @@ def _cocoer_transforms(head_cache_path: str):
         or payload.get("detector_model_tree_sha256") != model_sha
     ):
         raise ValueError("CocoER head-box detector hash differs")
+    if (
+        detector.get("requested_device") != "cuda"
+        or not isinstance(detector.get("actual_providers"), list)
+        or not detector["actual_providers"]
+        or detector["actual_providers"][0] != "CUDAExecutionProvider"
+    ):
+        raise ValueError("CocoER head-box cache was not produced with CUDA")
+    equivalence = detector.get("faceanalysis_equivalence")
+    if (
+        not isinstance(equivalence, Mapping)
+        or int(equivalence.get("samples", 0)) <= 0
+        or equivalence.get("integer_boxes_exact_match") is not True
+        or float(equivalence.get("max_abs_error_after_integer_clipping", math.inf))
+        != 0.0
+    ):
+        raise ValueError("CocoER detector-only equivalence differs")
+    conversion = payload.get("conversion")
+    if (
+        not isinstance(conversion, Mapping)
+        or conversion.get("name")
+        != "buffalo_l_strict_then_train_median_v0.1"
+        or conversion.get("sample_preserving") is not True
+        or conversion.get("native_source") != "buffalo_l_strict"
+        or conversion.get("fallback_source")
+        != "train_median_relative_geometry"
+        or conversion.get("fallback_calibration_split") != "train"
+        or conversion.get("fallback_uses_labels") is not False
+        or conversion.get("fallback_uses_val_or_test_statistics") is not False
+        or conversion.get("fallback_statistic") != "componentwise_median"
+        or conversion.get("fallback_rounding")
+        != "clip_to_image_then_round_half_up"
+    ):
+        raise ValueError("CocoER head-box conversion identity differs")
     entries = payload.get("entries")
     if not isinstance(entries, Mapping) or not entries:
         raise ValueError("CocoER head-box cache contains no entries")
+    fallback_ids = payload.get("fallback_sample_ids")
+    if (
+        not isinstance(fallback_ids, list)
+        or len(fallback_ids) != len(set(fallback_ids))
+        or len(fallback_ids) != int(payload.get("fallback_samples", -1))
+        or len(fallback_ids)
+        != int(payload.get("native_unresolved_samples", -1))
+        or not set(fallback_ids).issubset(entries)
+        or int(payload.get("processed_samples", -1)) != len(entries)
+        or int(payload.get("native_resolved_samples", -1)) + len(fallback_ids)
+        != len(entries)
+    ):
+        raise ValueError("CocoER head-box cache sample accounting differs")
     boxes = {}
     for sample_id, coordinates in entries.items():
         if not isinstance(sample_id, str) or not isinstance(coordinates, list) or len(coordinates) != 4:
