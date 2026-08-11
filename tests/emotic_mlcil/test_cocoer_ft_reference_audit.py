@@ -21,11 +21,18 @@ NATIVE_ASSETS = ROOT / "scripts" / "emotic-mlcil" / "prepare_cocoer_native_asset
 INSIGHTFACE_ASSETS = ROOT / "scripts" / "emotic-mlcil" / "prepare_cocoer_insightface_assets.py"
 SMOKE = ROOT / "scripts" / "emotic-mlcil" / "smoke_cocoer_ft_training.py"
 PACKAGE = ROOT / "scripts" / "emotic-mlcil" / "package_cocoer_head_preprocess.py"
+FORMAL_VALIDATOR = ROOT / "scripts" / "emotic-mlcil" / "validate_cocoer_ft_formal_results.py"
+FORMAL_LAUNCHER = ROOT / "scripts" / "emotic-mlcil" / "launch_cocoer_ft_formal_seed012_tmux.sh"
 PACKAGE_SPEC = importlib.util.spec_from_file_location(
     "package_cocoer_head_preprocess", PACKAGE
 )
 PACKAGE_MODULE = importlib.util.module_from_spec(PACKAGE_SPEC)
 PACKAGE_SPEC.loader.exec_module(PACKAGE_MODULE)
+FORMAL_SPEC = importlib.util.spec_from_file_location(
+    "validate_cocoer_ft_formal_results", FORMAL_VALIDATOR
+)
+FORMAL_MODULE = importlib.util.module_from_spec(FORMAL_SPEC)
+FORMAL_SPEC.loader.exec_module(FORMAL_MODULE)
 LAUNCHER = ROOT / "scripts" / "emotic-mlcil" / "launch_cocoer_ft_seed0_tmux.sh"
 HEAD_RESULT = ROOT / "docs" / "benchmarks" / "results" / "cocoer_head_preprocess_v0.1.json"
 BUFFALO_L_TREE_SHA256 = "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
@@ -132,6 +139,7 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
             (INSIGHTFACE_ASSETS, "--output-root"),
             (SMOKE, "--resnet50-init"),
             (PACKAGE, "--package-name"),
+            (FORMAL_VALIDATOR, "--expected-git-commit"),
         ):
             with tempfile.TemporaryDirectory() as temporary:
                 result = subprocess.run(
@@ -186,6 +194,84 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
             with tarfile.open(result["archive"], "r:gz") as stream:
                 members = [member.name.lower() for member in stream.getmembers()]
             self.assertFalse(any(name.endswith((".pth", ".onnx")) for name in members))
+
+    def test_formal_validator_enforces_three_locked_track_b_seeds(self):
+        commit = "a" * 40
+        provenance = {
+            "source_tree_hash": "tree",
+            "class_order_hash": "classes",
+            "data_split_hash": {"task0": "split"},
+            "core_base_commit": "core",
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for seed in range(3):
+                seed_root = root / "benchmarks" / "protocol" / "B" / "CocoER-FT" / f"seed{seed}"
+                (seed_root / "metrics").mkdir(parents=True)
+                method = dict(FORMAL_MODULE.LOCKED_METHOD_CONFIGURATION)
+                method.update(FORMAL_MODULE.EXPECTED_ASSET_HASHES)
+                manifest = {
+                    "method": "CocoER-FT",
+                    "protocol_id": "emotic_b5c3_track_b_v0.1",
+                    "track": "B",
+                    "seed": seed,
+                    "git_commit": commit,
+                    "git_dirty": False,
+                    "core_runtime_version": "0.10.1",
+                    "test_labels_used_for_selection": False,
+                    "checkpoint_selection_split": "val",
+                    "reporting_split": "test",
+                    "configuration_locked": True,
+                    "prediction_reused_task_ids": [],
+                    "eligible_for_main_table": True,
+                    "replay_memory_samples": 0,
+                    "replay_memory_bytes": 0,
+                    "total_parameters": 307509666,
+                    "trainable_parameters": 269192770,
+                    "incremental_parameters": 26985,
+                    "protocol_hash": f"protocol-{seed}",
+                    "method_configuration": method,
+                    **provenance,
+                }
+                config = {
+                    "runner": dict(FORMAL_MODULE.LOCKED_RUNNER_CONFIGURATION),
+                    "protocol": {
+                        "track": "B",
+                        "seed": seed,
+                        "threshold_policy": {"value": 0.5},
+                    },
+                }
+                metrics = {
+                    name: float(seed + index + 1)
+                    for index, name in enumerate(FORMAL_MODULE.AGGREGATE_METRICS)
+                }
+                summary = {"main_table": {**metrics, "replay_memory": {"samples": 0, "bytes": 0}}}
+                tasks = {"tasks": [{"task_id": task, "mAP": float(task + seed)} for task in range(8)]}
+                for name, payload in (
+                    ("run_manifest.json", manifest),
+                    ("config_resolved.json", config),
+                    ("metrics/summary.json", summary),
+                    ("metrics/task_metrics.json", tasks),
+                ):
+                    path = seed_root / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(json.dumps(payload), encoding="utf-8")
+                (seed_root / "train.log").write_text("complete\n", encoding="utf-8")
+            result = FORMAL_MODULE.validate(root, "formal", (0, 1, 2), (1, 2, 3), commit)
+            self.assertEqual(result["status"], "eligible_for_main_table")
+            self.assertEqual(result["aggregate"]["final_mAP"]["mean"], 2.0)
+            self.assertEqual(result["aggregate"]["final_mAP"]["std"], 1.0)
+            with self.assertRaisesRegex(ValueError, "distinct GPUs"):
+                FORMAL_MODULE.validate(root, "formal", (0, 1, 2), (1, 1, 2), commit)
+
+    def test_formal_launcher_requires_locked_test_and_memory_capacity(self):
+        text = FORMAL_LAUNCHER.read_text(encoding="utf-8")
+        worker = (ROOT / "scripts" / "emotic-mlcil" / "run_cocoer_ft_formal_seed012.sh").read_text(encoding="utf-8")
+        self.assertIn("COCOER_FT_TRACK_B_V0_1", text)
+        self.assertIn("COCOER_MIN_FREE_MIB:-18000", text)
+        self.assertIn("smoke_cocoer_ft_training.py", text)
+        self.assertIn("REPORTING_SPLIT=test", worker)
+        self.assertIn("TRAIN_BATCH_SIZE=64", worker)
 
     def test_fixed_external_source_and_conversion_contract(self):
         configured = os.environ.get("COCOER_UPSTREAM_ROOT")

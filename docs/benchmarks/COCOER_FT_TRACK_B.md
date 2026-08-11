@@ -245,3 +245,21 @@ before starting validation. An OOM or missing optimizer step stops before tmux
 training is created. Its universal download package contains logs, scores,
 metrics, manifests, source audit, asset audit, and memory-smoke JSON but excludes
 every `.pth` file.
+
+## Time-constrained formal freeze
+
+The registered batch-64 smoke completed before held-out access with peak
+allocated/reserved memory of `10951.1/14936.0 MiB`, a successful AdamW update,
+and `2013` initialized optimizer-state tensors. The method retains the source
+configuration above without validation-driven changes. Because the standalone
+seed-0 validation job was still running when the formal deadline arrived, the
+user authorized a time-constrained pre-freeze: no standalone validation metric
+and no test metric may change any hyperparameter. Each formal training task
+still uses only the validation split for the already-registered earliest-best
+epoch rule; test is reporting-only.
+
+Three formal seeds require distinct GPUs because the measured reserved peak is
+about 14.9 GiB per process. The formal launcher enforces a clean exact commit,
+the explicit `COCOER_FT_TRACK_B_V0_1` lock, at least 18,000 MiB free per GPU,
+batch `64`, fixed threshold `0.5`, held-out reporting, three-seed aggregation,
+and checkpoint-free packaging.
