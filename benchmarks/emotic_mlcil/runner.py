@@ -29,6 +29,7 @@ from .methods.l3a import L3ABenchmarkMethod
 from .methods.original_ddp import OriginalDDPBenchmarkMethod
 from .methods.agcn import AGCNBenchmarkMethod
 from .methods.emot_net_ft import EMOTNetFTBenchmarkMethod
+from .methods.dsct_ft import DSCTFTBenchmarkMethod
 from .methods.replay import (
     DERPPBenchmarkMethod,
     ERBenchmarkMethod,
@@ -44,7 +45,7 @@ from .types import (
     TaskContext,
     TaskMetrics,
 )
-from src.helper_functions.emotic_loader import BodyContextTransforms
+from src.helper_functions.emotic_loader import BodyContextTransforms, DSCTSceneTransform
 
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
@@ -803,6 +804,7 @@ def _parse_args() -> argparse.Namespace:
             "prs",
             "derpp",
             "emot_net_ft",
+            "dsct_ft",
         ),
         default="ddp",
     )
@@ -823,6 +825,14 @@ def _parse_args() -> argparse.Namespace:
             "Audited PyTorch conversion of the official EMOT-Net Places "
             "context and AlexNet body release initialization"
         ),
+    )
+    parser.add_argument(
+        "--dsct-source-root",
+        help="Immutable external DSCT checkout at the registered commit",
+    )
+    parser.add_argument(
+        "--dsct-pretrained-weights",
+        help="Official Deformable-DETR R50 pretraining checkpoint used by DSCT",
     )
     parser.add_argument("--output-root", default="./output")
     parser.add_argument("--reporting-split", default="val")
@@ -857,7 +867,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--input-mode",
-        choices=("full", "person_crop", "body_context"),
+        choices=("full", "person_crop", "body_context", "dsct_scene"),
         default="full",
     )
     execution = parser.add_mutually_exclusive_group()
@@ -937,6 +947,12 @@ def _emot_net_transforms():
     return transform, transform
 
 
+def _dsct_transforms():
+    """DSCT source geometry and ImageNet normalization."""
+
+    return DSCTSceneTransform(train=True), DSCTSceneTransform(train=False)
+
+
 def main() -> None:
     args = _parse_args()
     protocol = load_protocol(args.protocol)
@@ -996,6 +1012,7 @@ def main() -> None:
         "prs": PRSBenchmarkMethod,
         "derpp": DERPPBenchmarkMethod,
         "emot_net_ft": EMOTNetFTBenchmarkMethod,
+        "dsct_ft": DSCTFTBenchmarkMethod,
     }
     method_class = method_classes[args.method]
     artifacts = ArtifactStore(
@@ -1036,6 +1053,12 @@ def main() -> None:
         if not args.emot_net_native_init:
             raise ValueError("EMOT-Net-FT requires --emot-net-native-init")
         train_transform, eval_transform = _emot_net_transforms()
+    elif args.method == "dsct_ft":
+        if args.input_mode != "dsct_scene":
+            raise ValueError("DSCT-FT requires --input-mode dsct_scene")
+        if not args.dsct_source_root or not args.dsct_pretrained_weights:
+            raise ValueError("DSCT-FT requires --dsct-source-root and --dsct-pretrained-weights")
+        train_transform, eval_transform = _dsct_transforms()
     else:
         train_transform, eval_transform = _legacy_emotic_transforms()
     data_module = EMOTICMLCILDataModule(
@@ -1077,6 +1100,13 @@ def main() -> None:
         method = EMOTNetFTBenchmarkMethod(
             protocol,
             native_initialization_path=args.emot_net_native_init,
+            device=args.device,
+        )
+    elif args.method == "dsct_ft":
+        method = DSCTFTBenchmarkMethod(
+            protocol,
+            source_root=args.dsct_source_root,
+            pretrained_weights=args.dsct_pretrained_weights,
             device=args.device,
         )
     else:

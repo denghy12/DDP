@@ -58,6 +58,7 @@ remain a reserved extension point.
 - [ER control and PRS Track-A porting contract](ER_PRS_TRACK_A.md)
 - [DER++ source audit and Track-A porting contract](DERPP_TRACK_A.md)
 - [EMOT-Net native-backbone sequential FT Track-B contract](EMOT_NET_FT_TRACK_B.md)
+- [DSCT native-backbone sequential FT Track-B contract](DSCT_FT_TRACK_B.md)
 - [Universal checkpoint-free download standard](DOWNLOAD_STANDARD.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
 - [Registered Fine-Tuning/LwF and EWC λ=100 diagnostic](results/clip_continual_seed012_lambda100_v0.2.json)
@@ -152,6 +153,14 @@ deviation. Exact provenance is registered in the
 [`validation`](results/emot_net_ft_seed0_validation_v0.1.json) and
 [`formal`](results/emot_net_ft_seed0_formal_v0.1.json) snapshots. This Track-B
 result must not be placed in a unified Track-A ranking.
+
+DSCT-FT is under development on `codex/emotic-baseline-dsct-ft`, branched
+from the frozen EMOT-Net-FT commit. It retains the official DSCT ResNet-50 and
+Deformable-DETR architecture and converts only the static 26-class emotion
+head to protocol-ordered expanding heads. It is Track B, exposes current
+labels only, adds no anti-forgetting mechanism, and keeps upstream source
+external behind immutable hash/operator checks. Seed-0 validation is the next
+gate; held-out test execution is not yet authorized.
 
 Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It
 retains the collected original DDP

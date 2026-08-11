@@ -94,7 +94,7 @@ def _collate_train(rows: Sequence[Dict[str, Any]]) -> TrainBatch:
     if not rows:
         raise ValueError("Cannot collate an empty training batch")
     return TrainBatch(
-        images=torch.stack([row["image"] for row in rows]),
+        images=_stack_or_pad_images([row["image"] for row in rows]),
         sample_ids=[str(row["sample_id"]) for row in rows],
         targets_current=torch.stack([row["targets_current"] for row in rows]),
         visible_mask=torch.stack([row["visible_mask"] for row in rows]),
@@ -109,12 +109,33 @@ def _collate_evaluation(rows: Sequence[Dict[str, Any]]) -> EvaluationBatch:
     if len(class_hashes) != 1 or len(split_hashes) != 1:
         raise RuntimeError("Evaluation batch metadata is internally inconsistent")
     return EvaluationBatch(
-        images=torch.stack([row["image"] for row in rows]),
+        images=_stack_or_pad_images([row["image"] for row in rows]),
         sample_ids=[str(row["sample_id"]) for row in rows],
         targets_seen=torch.stack([row["targets_seen"] for row in rows]),
         class_order_hash=next(iter(class_hashes)),
         split_hash=next(iter(split_hashes)),
     )
+
+
+def _stack_or_pad_images(images: Sequence[torch.Tensor]) -> torch.Tensor:
+    """Stack fixed tensors or bottom/right-pad variable DSCT scene tensors."""
+
+    if not images:
+        raise ValueError("Cannot collate an empty image sequence")
+    shapes = {tuple(image.shape) for image in images}
+    if len(shapes) == 1:
+        return torch.stack(list(images))
+    if any(image.ndim != 3 for image in images):
+        raise ValueError("Variable-size collation supports CHW images only")
+    channels = {int(image.shape[0]) for image in images}
+    if len(channels) != 1:
+        raise ValueError("Variable-size images must have equal channels")
+    height = max(int(image.shape[-2]) for image in images)
+    width = max(int(image.shape[-1]) for image in images)
+    output = images[0].new_zeros((len(images), next(iter(channels)), height, width))
+    for index, image in enumerate(images):
+        output[index, :, : image.shape[-2], : image.shape[-1]] = image
+    return output
 
 
 class EMOTICMLCILDataModule:

@@ -1,4 +1,5 @@
 import os
+import random
 from dataclasses import dataclass
 from typing import Any
 
@@ -16,6 +17,59 @@ class BodyContextTransforms:
     body: Any
     context_size: int = 224
     body_size: int = 128
+
+
+@dataclass(frozen=True)
+class DSCTSceneTransform:
+    """Source-aligned DSCT scene transform carrying one target-person box.
+
+    The returned tensor has RGB, target-box-mask and valid-image channels.  It
+    keeps geometric metadata inside the existing tensor-only method boundary;
+    no emotion label is added.
+    """
+
+    train: bool
+    max_size: int = 1333
+    eval_short_side: int = 800
+    train_short_sides: tuple = (480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800)
+
+    @staticmethod
+    def _clamp_bbox(bbox, width, height):
+        values = np.asarray(bbox, dtype=np.float32).ravel()
+        if values.size < 4 or not np.isfinite(values[:4]).all():
+            raise ValueError("DSCT requires a finite target-person bbox")
+        x1, y1, x2, y2 = values[:4]
+        x1, x2 = sorted((max(0.0, min(float(width), float(x1))), max(0.0, min(float(width), float(x2)))))
+        y1, y2 = sorted((max(0.0, min(float(height), float(y1))), max(0.0, min(float(height), float(y2)))))
+        if x2 <= x1 or y2 <= y1:
+            raise ValueError("DSCT target-person bbox has zero area")
+        return x1, y1, x2, y2
+
+    def __call__(self, image, bbox):
+        import torchvision.transforms.functional as functional
+
+        width, height = image.size
+        x1, y1, x2, y2 = self._clamp_bbox(bbox, width, height)
+        if self.train and random.random() < 0.5:
+            image = functional.hflip(image)
+            x1, x2 = width - x2, width - x1
+        short_side = random.choice(self.train_short_sides) if self.train else self.eval_short_side
+        scale = float(short_side) / float(min(width, height))
+        if scale * max(width, height) > self.max_size:
+            scale = float(self.max_size) / float(max(width, height))
+        resized_width = max(1, int(round(width * scale)))
+        resized_height = max(1, int(round(height * scale)))
+        image = functional.resize(image, [resized_height, resized_width])
+        rgb = functional.to_tensor(image)
+        rgb = functional.normalize(rgb, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+        box_mask = torch.zeros((resized_height, resized_width), dtype=torch.float32)
+        sx1 = max(0, min(resized_width - 1, int(np.floor(x1 * scale))))
+        sy1 = max(0, min(resized_height - 1, int(np.floor(y1 * scale))))
+        sx2 = max(sx1 + 1, min(resized_width, int(np.ceil(x2 * scale))))
+        sy2 = max(sy1 + 1, min(resized_height, int(np.ceil(y2 * scale))))
+        box_mask[sy1:sy2, sx1:sx2] = 1.0
+        valid = torch.ones_like(box_mask)
+        return torch.cat((rgb, box_mask.unsqueeze(0), valid.unsqueeze(0)), dim=0)
 
 
 class EMOTIC(torch.utils.data.Dataset):
@@ -39,10 +93,10 @@ class EMOTIC(torch.utils.data.Dataset):
         self.input_mode = input_mode
         self.included_cats = list(included) if included is not None else []
 
-        if input_mode not in ("full", "person_crop", "body_context"):
+        if input_mode not in ("full", "person_crop", "body_context", "dsct_scene"):
             raise ValueError(
                 f"Invalid EMOTIC input_mode '{input_mode}'. "
-                "Expected 'full', 'person_crop', or 'body_context'."
+                "Expected 'full', 'person_crop', 'body_context', or 'dsct_scene'."
             )
 
         annotation_path = os.path.join(self.path, "CVPR17_Annotations.mat")
@@ -113,7 +167,11 @@ class EMOTIC(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         image = Image.open(self.file_paths[idx]).convert("RGB")
-        if self.input_mode == "body_context":
+        if self.input_mode == "dsct_scene":
+            if not isinstance(self.transform, DSCTSceneTransform):
+                raise RuntimeError("DSCT scene input requires DSCTSceneTransform")
+            image = self.transform(image, self.body_bboxes[idx])
+        elif self.input_mode == "body_context":
             body = self._crop_person(image, self.body_bboxes[idx])
             if self.transform is None:
                 raise RuntimeError("EMOTIC requires an image transform")
