@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import __future__
 import hashlib
-import importlib.util
 import json
 import subprocess
 import sys
+import types
 from pathlib import Path
 
 import torch
@@ -34,6 +35,31 @@ EXPECTED_FILES = {
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def load_upstream_module(path: Path) -> types.ModuleType:
+    """Load the fixed Python-3.10 source without editing the snapshot.
+
+    EmotionCLIP uses ``A | B`` annotations that Python 3.9 otherwise evaluates
+    eagerly.  Compiling with the standard postponed-annotations future flag
+    preserves the upstream executable operators while keeping the immutable
+    source bytes covered by ``EXPECTED_FILES`` unchanged.
+    """
+
+    name = "fixed_emotionclip_base"
+    module = types.ModuleType(name)
+    module.__file__ = str(path)
+    module.__package__ = ""
+    sys.modules[name] = module
+    code = compile(
+        path.read_text(encoding="utf-8"),
+        str(path),
+        "exec",
+        flags=__future__.annotations.compiler_flag,
+        dont_inherit=True,
+    )
+    exec(code, module.__dict__)
+    return module
 
 
 def main() -> None:
@@ -70,13 +96,7 @@ def main() -> None:
             "EmotionCLIP source requires either fixed .git metadata or SOURCE_SNAPSHOT.json"
         )
 
-    spec = importlib.util.spec_from_file_location(
-        "fixed_emotionclip_base", args.upstream_root / "src/models/base.py"
-    )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    module = load_upstream_module(args.upstream_root / "src/models/base.py")
     torch.manual_seed(31)
     source = module.VisualTransformer(32, 16, 16, 2, 2, 4.0, 8).eval()
     port = EmotionCLIPVisualTransformer(32, 16, 16, 2, 2, 4.0, 8).eval()
