@@ -74,8 +74,9 @@ is recorded and random/CLIP fallback is rejected.
 The source remains at
 `/mnt/haoyuan/workspace/baseline_sources/dsct_release_8b0fe36`; its custom CUDA
 operators must be compiled in the `ddp` environment. The fixed source's
-declared `ipython` import is pinned to `8.18.1` for the benchmark's Python 3.9
-runtime and its observed version is recorded by formal preflight.
+declared `ipython` and `scikit-learn` imports are pinned to `8.18.1` and
+`1.3.2` for the benchmark's Python 3.9 runtime. Their observed versions,
+along with SciPy, are recorded by formal preflight.
 
 ```bash
 cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1

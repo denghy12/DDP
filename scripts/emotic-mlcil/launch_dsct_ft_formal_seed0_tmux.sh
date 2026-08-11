@@ -49,6 +49,8 @@ import sys
 
 import IPython
 import MultiScaleDeformableAttention as msda
+import scipy
+import sklearn
 import torch
 
 print(json.dumps({
@@ -56,6 +58,8 @@ print(json.dumps({
     "torch": torch.__version__,
     "torch_cuda": torch.version.cuda,
     "ipython": IPython.__version__,
+    "scikit_learn": sklearn.__version__,
+    "scipy": scipy.__version__,
     "ms_deform_attn_extension": msda.__file__,
 }, indent=2))
 PY
