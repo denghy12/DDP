@@ -1,5 +1,8 @@
 import importlib.util
 import os
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -35,6 +38,19 @@ class FakeTorchObject:
 
 
 class EMOTNetFTReferenceAuditTest(unittest.TestCase):
+    def test_converter_direct_entrypoint_resolves_repository(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            result = subprocess.run(
+                [sys.executable, str(PREPARE_SCRIPT), "--help"],
+                cwd=temporary,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("--release-archive", result.stdout)
+
     def test_fixed_external_source_and_operator_contract(self):
         configured = os.environ.get("EMOT_NET_UPSTREAM_ROOT")
         candidates = (
