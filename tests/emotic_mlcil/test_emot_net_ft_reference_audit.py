@@ -1,4 +1,5 @@
 import importlib.util
+import os
 import unittest
 from pathlib import Path
 
@@ -35,9 +36,24 @@ class FakeTorchObject:
 
 class EMOTNetFTReferenceAuditTest(unittest.TestCase):
     def test_fixed_external_source_and_operator_contract(self):
-        source = Path(
-            "/Users/denghaoyuan/workspace/MyCode/baseline_sources/"
-            "emot_net_release_69c3a51"
+        configured = os.environ.get("EMOT_NET_UPSTREAM_ROOT")
+        candidates = (
+            [Path(configured)]
+            if configured
+            else [
+                Path(
+                    "/Users/denghaoyuan/workspace/MyCode/baseline_sources/"
+                    "emot_net_release_69c3a51"
+                ),
+                Path(
+                    "/mnt/haoyuan/workspace/baseline_sources/"
+                    "emot_net_release_69c3a51"
+                ),
+            ]
+        )
+        source = next(
+            (candidate for candidate in candidates if candidate.is_dir()),
+            candidates[0],
         )
         if not source.is_dir():
             self.skipTest("fixed external EMOT-Net source is not available")
