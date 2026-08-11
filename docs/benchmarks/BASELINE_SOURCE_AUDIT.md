@@ -16,6 +16,7 @@ vendored dependencies.
 
 | Method | Local snapshot | Git provenance | License file observed in snapshot | Required next action |
 |---|---|---|---|---|
+| EMOT-Net | `emot_net_release_69c3a51/` fixed snapshot | Official repository fixed at `69c3a5106aed08121cd12f6a5b359c745136931e`; critical hashes registered by executable audit | MIT | Track-B interface implemented; prepare and hash the separately distributed native Places/DecomposeMe initialization before validation |
 | AGCN | `AGCN-main/` plus byte-identical `agcn_release_3afe2ec/` fixed extraction | Official repository fixed at `3afe2ecbbef0051c6e841a97c369885011a683f0`; tree `6c25689b81d0807523108a782ee59630d25a9b40`; archive SHA-256 `b5843d3e...f301` | Apache-2.0 at the fixed commit | Source/algorithm audit complete; retain the external source as oracle and run Track-A validation |
 | CSC | `CSC-main/` plus byte-identical `csc_release_0bab38a/` fixed extraction | Exact official archive for `0bab38a00d6e0555f2df855ae2fe8db1fea68b12` | None at the fixed commit | Source/algorithm audit complete; implement an independent Track-A adapter without copying unlicensed source |
 | DER++ | `derpp_official/` plus adjacent `derpp_neurips2020_cb9a36d.tar.gz` | Official Mammoth `neurips2020` tag object `1f3978b`, dereferenced commit `cb9a36d788d6ad051c9eee0da358b25421d909f5`; archive SHA-256 `d7cdffef...1695b` | MIT | Source/objective audit complete; retain external source as oracle for the independent multi-label Track-A mapping |
@@ -53,3 +54,16 @@ references until their original paper and official source are audited.
 Before any row leaves `TBD`, record the paper version, official repository URL,
 immutable commit, repository license at that commit, and the exact source files
 used for the port.
+
+## EMOT-Net static-to-incremental audit
+
+The official source is fixed at `69c3a510...931e` under MIT. It uses full-scene
+context and a body crop, a native 640-D Places-context CNN plus 128-D
+DecomposeMe body CNN, 768→256 fusion, dropout `0.5`, sigmoid outputs, and
+weighted MSE. Defaults are 14 epochs, batch 52, SGD `lr=0.01`, momentum `0.9`,
+weight decay `5e-4`, and a tenfold LR drop at epoch 7. `EMOT-Net-FT` is Track B:
+it retains that architecture and optimizer family, replaces only the static
+categorical output with expanding task heads, and exposes only current labels.
+It adds no anti-forgetting or CLIP component. The separately distributed
+Torch7 pretraining files are not in Git and must be converted and hashed before
+validation; until then GPU execution is intentionally blocked.

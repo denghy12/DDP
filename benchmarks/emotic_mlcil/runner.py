@@ -28,6 +28,7 @@ from .methods.multi_lane import MultiLaneBenchmarkMethod
 from .methods.l3a import L3ABenchmarkMethod
 from .methods.original_ddp import OriginalDDPBenchmarkMethod
 from .methods.agcn import AGCNBenchmarkMethod
+from .methods.emot_net_ft import EMOTNetFTBenchmarkMethod
 from .methods.replay import (
     DERPPBenchmarkMethod,
     ERBenchmarkMethod,
@@ -43,6 +44,7 @@ from .types import (
     TaskContext,
     TaskMetrics,
 )
+from src.helper_functions.emotic_loader import BodyContextTransforms
 
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
@@ -800,6 +802,7 @@ def _parse_args() -> argparse.Namespace:
             "er",
             "prs",
             "derpp",
+            "emot_net_ft",
         ),
         default="ddp",
     )
@@ -813,6 +816,13 @@ def _parse_args() -> argparse.Namespace:
         "--agcn-word-embeddings",
         default="./pretrained/agcn/emotic_glove_6b_300d.json",
         help="Audited 26x300 GloVe JSON used only by AGCN",
+    )
+    parser.add_argument(
+        "--emot-net-native-init",
+        help=(
+            "Audited PyTorch conversion of the official EMOT-Net Places "
+            "context and DecomposeMe body initialization"
+        ),
     )
     parser.add_argument("--output-root", default="./output")
     parser.add_argument("--reporting-split", default="val")
@@ -847,7 +857,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--input-mode",
-        choices=("full", "person_crop"),
+        choices=("full", "person_crop", "body_context"),
         default="full",
     )
     execution = parser.add_mutually_exclusive_group()
@@ -898,6 +908,33 @@ def _legacy_emotic_transforms():
         ]
     )
     return train_transform, eval_transform
+
+
+def _emot_net_transforms():
+    """Official EMOT-Net resizing and EMOTIC channel normalization."""
+
+    import torchvision.transforms as transforms
+
+    def native_transform(size: int):
+        return transforms.Compose(
+            [
+                transforms.Resize(
+                    (size, size),
+                    interpolation=transforms.InterpolationMode.BILINEAR,
+                ),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=(0.4709, 0.4409, 0.4062),
+                    std=(0.2817, 0.2741, 0.2810),
+                ),
+            ]
+        )
+
+    transform = BodyContextTransforms(
+        context=native_transform(224),
+        body=native_transform(128),
+    )
+    return transform, transform
 
 
 def main() -> None:
@@ -958,6 +995,7 @@ def main() -> None:
         "er": ERBenchmarkMethod,
         "prs": PRSBenchmarkMethod,
         "derpp": DERPPBenchmarkMethod,
+        "emot_net_ft": EMOTNetFTBenchmarkMethod,
     }
     method_class = method_classes[args.method]
     artifacts = ArtifactStore(
@@ -992,7 +1030,14 @@ def main() -> None:
         return
     if not args.data_root:
         raise ValueError("--data-root is required for benchmark execution")
-    train_transform, eval_transform = _legacy_emotic_transforms()
+    if args.method == "emot_net_ft":
+        if args.input_mode != "body_context":
+            raise ValueError("EMOT-Net-FT requires --input-mode body_context")
+        if not args.emot_net_native_init:
+            raise ValueError("EMOT-Net-FT requires --emot-net-native-init")
+        train_transform, eval_transform = _emot_net_transforms()
+    else:
+        train_transform, eval_transform = _legacy_emotic_transforms()
     data_module = EMOTICMLCILDataModule(
         protocol,
         data_root=args.data_root,
@@ -1027,6 +1072,12 @@ def main() -> None:
             clip_model_path=args.clip_model_path,
             device=args.device,
             memory_contract_path=args.replay_contract,
+        )
+    elif args.method == "emot_net_ft":
+        method = EMOTNetFTBenchmarkMethod(
+            protocol,
+            native_initialization_path=args.emot_net_native_init,
+            device=args.device,
         )
     else:
         option_overrides = (

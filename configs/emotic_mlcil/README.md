@@ -3,6 +3,12 @@
 `protocol_b5c3.yaml` is the frozen Core v0.1 protocol. The loader validates
 configuration content and never infers a protocol from the filename.
 
+`protocol_b5c3_track_b.yaml` keeps the identical B5-C3 class order, task
+boundaries, split roles, visibility firewall, metrics, and fixed threshold but
+declares Track B for methods that retain an audited original backbone. Track-A
+and Track-B outputs have distinct protocol IDs/hashes and must not be merged
+into one ranking. Native-backbone `EMOT-Net-FT` uses this configuration.
+
 `protocol_b10c4.yaml` is the registered five-task extension over the identical
 alphabetical 26-class order. Task sizes are `10/4/4/4/4`, seen-class counts are
 `10/14/18/22/26`, and all label-visibility, validation-selection, held-out test,

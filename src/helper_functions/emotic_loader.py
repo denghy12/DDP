@@ -1,9 +1,21 @@
 import os
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import scipy.io as sio
 import torch
 from PIL import Image
+
+
+@dataclass(frozen=True)
+class BodyContextTransforms:
+    """Separate native transforms stored in one fixed-size batch tensor."""
+
+    context: Any
+    body: Any
+    context_size: int = 224
+    body_size: int = 128
 
 
 class EMOTIC(torch.utils.data.Dataset):
@@ -27,10 +39,10 @@ class EMOTIC(torch.utils.data.Dataset):
         self.input_mode = input_mode
         self.included_cats = list(included) if included is not None else []
 
-        if input_mode not in ("full", "person_crop"):
+        if input_mode not in ("full", "person_crop", "body_context"):
             raise ValueError(
                 f"Invalid EMOTIC input_mode '{input_mode}'. "
-                "Expected 'full' or 'person_crop'."
+                "Expected 'full', 'person_crop', or 'body_context'."
             )
 
         annotation_path = os.path.join(self.path, "CVPR17_Annotations.mat")
@@ -101,11 +113,50 @@ class EMOTIC(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         image = Image.open(self.file_paths[idx]).convert("RGB")
-        if self.input_mode == "person_crop":
+        if self.input_mode == "body_context":
+            body = self._crop_person(image, self.body_bboxes[idx])
+            if self.transform is None:
+                raise RuntimeError("EMOTIC requires an image transform")
+            # The native EMOT-Net interface consumes full-scene context first
+            # and the annotated person crop second.  Keeping both views inside
+            # one tensor preserves the benchmark TrainBatch/EvaluationBatch
+            # boundary without exposing any additional labels or metadata.
+            if isinstance(self.transform, BodyContextTransforms):
+                context_tensor = self.transform.context(image)
+                body_tensor = self.transform.body(body)
+                if context_tensor.shape[-2:] != (
+                    self.transform.context_size,
+                    self.transform.context_size,
+                ):
+                    raise ValueError("Context transform returned an unexpected size")
+                if body_tensor.shape[-2:] != (
+                    self.transform.body_size,
+                    self.transform.body_size,
+                ):
+                    raise ValueError("Body transform returned an unexpected size")
+                pad = self.transform.context_size - self.transform.body_size
+                if pad < 0:
+                    raise ValueError("Body canvas cannot exceed context canvas")
+                # Normalized zero is the per-channel dataset mean. Padding is
+                # only a transport detail; EMOT-Net crops back to 128x128.
+                body_tensor = torch.nn.functional.pad(
+                    body_tensor,
+                    (0, pad, 0, pad),
+                    value=0.0,
+                )
+            else:
+                context_tensor = self.transform(image)
+                body_tensor = self.transform(body)
+            image = torch.stack((context_tensor, body_tensor), dim=0)
+        elif self.input_mode == "person_crop":
             image = self._crop_person(image, self.body_bboxes[idx])
-        if self.transform is None:
-            raise RuntimeError("EMOTIC requires an image transform")
-        image = self.transform(image)
+            if self.transform is None:
+                raise RuntimeError("EMOTIC requires an image transform")
+            image = self.transform(image)
+        else:
+            if self.transform is None:
+                raise RuntimeError("EMOTIC requires an image transform")
+            image = self.transform(image)
 
         target = torch.zeros(len(self.classes), dtype=torch.float32)
         target[self.targets[idx]] = 1
