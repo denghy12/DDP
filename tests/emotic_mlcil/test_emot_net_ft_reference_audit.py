@@ -26,6 +26,13 @@ PREPARE_SPEC = importlib.util.spec_from_file_location(
 PREPARE = importlib.util.module_from_spec(PREPARE_SPEC)
 PREPARE_SPEC.loader.exec_module(PREPARE)
 
+SMOKE_SCRIPT = (
+    Path(__file__).resolve().parents[2]
+    / "scripts"
+    / "emotic-mlcil"
+    / "smoke_emot_net_ft_training.py"
+)
+
 
 class FakeTorchObject:
     def __init__(self, typename, modules=(), weight=None, bias=None):
@@ -50,6 +57,19 @@ class EMOTNetFTReferenceAuditTest(unittest.TestCase):
             )
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("--release-archive", result.stdout)
+
+    def test_smoke_direct_entrypoint_resolves_repository(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            result = subprocess.run(
+                [sys.executable, str(SMOKE_SCRIPT), "--help"],
+                cwd=temporary,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("--native-init", result.stdout)
 
     def test_fixed_external_source_and_operator_contract(self):
         configured = os.environ.get("EMOT_NET_UPSTREAM_ROOT")

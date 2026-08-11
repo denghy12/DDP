@@ -3,9 +3,14 @@
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import torch
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
 
 from benchmarks.emotic_mlcil.methods.emot_net_ft import EMOTNetFTModel
 from benchmarks.emotic_mlcil.methods.emot_net_ft.method import weighted_sigmoid_mse
