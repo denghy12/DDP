@@ -1,3 +1,6 @@
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -6,6 +9,24 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class BENetFTReferenceAuditTest(unittest.TestCase):
+    def test_direct_script_entrypoints_resolve_repository(self):
+        for name, option in (
+            ("compare_benet_upstream_reference.py", "--source-root"),
+            ("smoke_benet_ft_training.py", "--pretrained-weights"),
+        ):
+            script = ROOT / "scripts" / "emotic-mlcil" / name
+            with tempfile.TemporaryDirectory() as temporary:
+                result = subprocess.run(
+                    [sys.executable, str(script), "--help"],
+                    cwd=temporary,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    check=False,
+                )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            self.assertIn(option, result.stdout)
+
     def test_fixed_source_and_download_standard_are_registered(self):
         comparison = (ROOT / "scripts/emotic-mlcil/compare_benet_upstream_reference.py").read_text()
         launcher = (ROOT / "scripts/emotic-mlcil/launch_benet_ft_seed0_tmux.sh").read_text()
