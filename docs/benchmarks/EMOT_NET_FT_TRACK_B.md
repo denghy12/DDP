@@ -108,7 +108,7 @@ uses the internally consistent, executable official Dropbox release variant:
 Places context + bundled AlexNet body. This difference is explicit provenance,
 not a benchmark-added backbone substitution.
 
-## Source hyperparameters retained for validation
+## Frozen source hyperparameters
 
 | Setting | Registered value | Source relation |
 |---|---:|---|
@@ -128,9 +128,9 @@ not a benchmark-added backbone substitution.
 | normalization | mean `(0.4709,0.4409,0.4062)`, std `(0.2817,0.2741,0.2810)` | `GetImagePatches` |
 | F1 threshold | 0.5 | benchmark-wide fixed policy |
 
-These are validation-stage registered settings, not a held-out result freeze.
-After seed-0 validation, a separate commit must freeze the reviewed setting
-before any test access.
+Seed-0 validation completed without changing these settings. They are frozen
+for the held-out test; test metrics must not alter the model, optimizer,
+schedule, selection rule, loader, or fixed F1 threshold.
 
 The release source explicitly uses body size 128 and applies fusion
 BatchNorm+ReLU. The body tensor is zero-padded only while crossing the
@@ -160,3 +160,54 @@ bash scripts/emotic-mlcil/launch_emot_net_ft_seed0_tmux.sh
 
 On success the launcher creates the universal `.tar.gz` and `.sha256` with
 scores, metrics, manifests, audit, and logs. All `.pth` files are excluded.
+
+## Seed-0 validation freeze
+
+The audited validation run `emot_net_ft_seed0_val_20260811_133117` used clean
+commit `7851386be204485b78765e184d48b811d150b7e4`. It completed all eight tasks,
+168 epochs, and 12,012 optimizer updates with no skipped update, NaN, OOM, or
+traceback. Its validation-only metrics were:
+
+| Metric | Value |
+|---|---:|
+| Final mAP | 27.3062 |
+| Average mAP | 33.5043 |
+| Forgetting | 5.9747 |
+| Final cF1 | 24.6012 |
+| Final oF1 | 53.5006 |
+
+The result is deliberately not main-table eligible because it reports `val`
+and predates the configuration lock. Complete provenance, per-task curves,
+best epochs, parameter counts, native hashes, memory smoke, and archive SHA are
+stored in
+[`results/emot_net_ft_seed0_validation_v0.1.json`](results/emot_net_ft_seed0_validation_v0.1.json).
+No hyperparameter was changed after reviewing validation.
+
+## Locked held-out scope
+
+The formal scope is one seed only: seed 0. Seeds 1 and 2 will not be launched,
+and the final report must present a single value rather than a mean or standard
+deviation. The formal entry point requires a clean frozen commit, an explicit
+commit match, the confirmation string `EMOT_NET_FT_TRACK_B_V0_1`, at least
+4 GiB free GPU memory, and at least 8 GiB free output-filesystem space. It
+forces `reporting_split=test`, `configuration_locked=true`, train/eval batches
+`52/16`, and `workers=0`:
+
+```bash
+cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1
+
+FROZEN_COMMIT="$(git rev-parse HEAD)"
+
+RUN_ID="emot_net_ft_formal_seed0_$(date +%Y%m%d_%H%M%S)" \
+GPU=0 \
+SESSION=emotic_emot_net_ft_formal_seed0 \
+EXPECTED_GIT_COMMIT="$FROZEN_COMMIT" \
+CONFIGURATION_LOCKED_CONFIRMATION=EMOT_NET_FT_TRACK_B_V0_1 \
+EMOT_NET_NATIVE_INIT="$PWD/pretrained/emot_net/emot_net_native_init_v0.1.pth" \
+bash scripts/emotic-mlcil/launch_emot_net_ft_formal_seed0_tmux.sh
+```
+
+The worker validates the eight task artifacts and locked configuration before
+creating one checkpoint-free download archive. A formal result with a dirty
+tree, validation reporting, missing scores, changed source settings, or more
+than seed 0 is rejected.

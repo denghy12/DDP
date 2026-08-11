@@ -139,10 +139,15 @@ EMOT-Net-FT development is active on
 the unified CLIP tower. It is therefore Track B, with the official
 Places-context and official-release AlexNet-body architecture, full-scene plus
 person-crop input, source weighted sigmoid-MSE, and current-label-only
-expanding-head sequential fine-tuning. The Git repository does not bundle its
-Torch7 assets; seed-0 validation remains gated on hash-verifying and converting
-the separately distributed official Dropbox ZIP. CLIP and random fallback are
-explicitly rejected.
+expanding-head sequential fine-tuning. The separately distributed official
+Dropbox ZIP and both Torch7 assets have been hash-verified and converted into
+the registered native initialization; CLIP and random fallback are explicitly
+rejected. Seed-0 validation completed all eight tasks with Final mAP `27.3062`,
+Average mAP `33.5043`, Forgetting `5.9747`, and zero skipped updates. The
+configuration is now frozen. At the user's direction the formal scope is one
+configuration-locked held-out seed-0 run only, so no three-seed aggregate will
+be claimed. Exact validation provenance is registered in
+[`results/emot_net_ft_seed0_validation_v0.1.json`](results/emot_net_ft_seed0_validation_v0.1.json).
 
 Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It
 retains the collected original DDP

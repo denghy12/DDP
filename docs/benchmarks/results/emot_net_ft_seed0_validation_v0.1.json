@@ -1,0 +1,177 @@
+{
+  "result_schema_version": 1,
+  "protocol_id": "emotic_b5c3_track_b_v0.1",
+  "track": "B",
+  "method": "EMOT-Net-FT",
+  "status": "validation_passed_configuration_frozen",
+  "validation_run": {
+    "run_id": "emot_net_ft_seed0_val_20260811_133117",
+    "reporting_split": "val",
+    "seed": 0,
+    "source": {
+      "git_commit": "7851386be204485b78765e184d48b811d150b7e4",
+      "git_dirty": false,
+      "source_tree_hash": "e277dde39e3661dcb0cfd23ecbccdfd184e35db4b637e86c50d2cae958ff857d",
+      "core_runtime_version": "0.10.0",
+      "core_base_commit": "00f399f13bc7552c254c8f6e6c095a8be4f56146",
+      "protocol_hash": "4d49f4a244a3471b08940f5757ffbc802ac7440b4f3da7f8d1fb1e609820023e",
+      "class_order_hash": "8e5cdd50fe5282edc9885aba3118a6e86d137107da67e101b588057d63b899ee",
+      "upstream_commit": "69c3a5106aed08121cd12f6a5b359c745136931e",
+      "release_archive_sha256": "ce6096c1af5a3e91badbc06752e2dbbd04fc63f67f24acc95d76a68e1f7e339b",
+      "native_initialization_sha256": "036d0778d7ddb94682b20fbb635fdf9c8f5d43e8f09fd6773ac7ab9245d11027",
+      "context_asset_sha256": "bbf8a09edb1a17338f8004b78cf2e83f3cccc3a7f0bf7c3705368b482cab1e7c",
+      "body_asset_sha256": "0abdbce4910f4c242433d614287448d110a81e7d26562ab291364762cf2dae87"
+    },
+    "eligibility": {
+      "configuration_locked": false,
+      "reporting_split_is_test": false,
+      "test_labels_used_for_selection": false,
+      "prediction_reused_task_ids": [],
+      "eligible_for_main_table": false
+    },
+    "configuration": {
+      "strategy": "sequential_finetuning",
+      "backbone": "Native EMOT-Net Places-context + AlexNet-body CNN",
+      "input": "full context plus annotated person crop",
+      "epochs_per_task": 21,
+      "early_stopping_patience": 21,
+      "train_batch_size": 52,
+      "eval_batch_size": 16,
+      "workers": 0,
+      "optimizer": "SGD reset per task",
+      "learning_rate": 0.01,
+      "lr_drop_epoch": 7,
+      "lr_drop_gamma": 0.1,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "dropout": 0.5,
+      "class_norm_factor": 1.2,
+      "categorical_loss_weight": 0.16666666666666666,
+      "loss": "source weighted sigmoid MSE over current classes only",
+      "class_weight_scope": "current mini-batch visible labels only",
+      "gradient_clip_norm": 10.0,
+      "amp": false,
+      "tf32": false,
+      "f1_threshold": 0.5,
+      "replay": false,
+      "distillation": false,
+      "adapter": false,
+      "clip_used": false
+    },
+    "main_table": {
+      "final_mAP": 27.306173311698075,
+      "average_mAP": 33.504318987998225,
+      "forgetting": 5.97466433015481,
+      "final_cF1": 24.601247841954958,
+      "final_oF1": 53.50063849869524,
+      "parameter_growth": 5397,
+      "replay_memory": {
+        "samples": 0,
+        "bytes": 0
+      }
+    },
+    "per_task_mAP": [
+      39.20406747707246,
+      39.42972541863175,
+      30.91634574089339,
+      37.048550456837326,
+      34.435220084060504,
+      31.300791074058353,
+      28.39367834073393,
+      27.306173311698075
+    ],
+    "per_task_cF1": [
+      27.5031099843935,
+      30.43491498310819,
+      22.1458076537788,
+      28.755425564976722,
+      26.994246284750886,
+      27.525955332478667,
+      25.688280019366744,
+      24.601247841954958
+    ],
+    "per_task_oF1": [
+      77.52808988764045,
+      71.39199016695687,
+      52.807934593218064,
+      59.53915341462284,
+      63.56992538741151,
+      60.64073226544623,
+      55.8806146572104,
+      53.50063849869524
+    ],
+    "training_stability": {
+      "epochs_by_task": [21, 21, 21, 21, 21, 21, 21, 21],
+      "optimizer_updates": 12012,
+      "optimizer_updates_by_task": [2163, 1785, 357, 4011, 1764, 1029, 273, 630],
+      "skipped_optimizer_updates": 0,
+      "skipped_optimizer_updates_by_task": [0, 0, 0, 0, 0, 0, 0, 0],
+      "best_epoch_by_task": [20, 13, 0, 14, 12, 12, 16, 16],
+      "best_current_task_validation_mAP": [
+        39.20406879696292,
+        61.243963490294284,
+        43.7488206622945,
+        66.45121946850604,
+        42.4927375711524,
+        49.26083656851302,
+        60.57519771778979,
+        42.598370151295576
+      ],
+      "all_logged_values_finite": true,
+      "nan_detected": false,
+      "oom_detected": false,
+      "traceback_detected": false
+    },
+    "class_forgetting": {
+      "largest": {
+        "Affection": 20.849307750520683,
+        "Disapproval": 20.02327456367885,
+        "Anger": 18.86096369990006,
+        "Anticipation": 11.346233334269499,
+        "Fatigue": 9.75333610863999,
+        "Confidence": 9.012765631327227
+      },
+      "interpretation": "The native static model under plain sequential fine-tuning exhibits the intended no-anti-forgetting lower-bound behavior."
+    },
+    "resources": {
+      "total_parameters": 14069914,
+      "trainable_parameters": 14069914,
+      "incremental_parameters": 5397,
+      "gpu_smoke_batch_size": 52,
+      "peak_allocated_mib": 734.8837890625,
+      "peak_reserved_mib": 1142.0,
+      "optimizer": "SGD",
+      "native_backbone": true,
+      "clip_used": false
+    },
+    "upstream_equivalence": {
+      "class_weight_max_abs_error": 0.0,
+      "weighted_sigmoid_mse_abs_error": 0.0
+    },
+    "artifacts": {
+      "archive": "emot_net_ft_seed0_val_20260811_133117.tar.gz",
+      "archive_sha256": "d72481231e69e4c156746d4ada1e8c2e9f82f343d6858154cde9e2ea375affdb",
+      "manifest_file_count": 19,
+      "manifest_total_bytes": 4102831,
+      "score_tasks_present": [0, 1, 2, 3, 4, 5, 6, 7],
+      "canonical_scores_included": true,
+      "contains_pth": false,
+      "all_manifest_sha256_verified": true
+    }
+  },
+  "freeze_decision": {
+    "hyperparameters_changed_after_validation": false,
+    "configuration_is_locked_for_held_out_test": true,
+    "native_backbone_and_initialization_are_frozen": true,
+    "optimizer_schedule_and_all_21_epochs_are_frozen": true,
+    "batch_sizes_and_zero_worker_loader_are_frozen": true,
+    "loss_weighting_and_current-label firewall_are_frozen": true,
+    "test_metrics_must_not_change_configuration": true,
+    "global_threshold_remains": 0.5,
+    "required_confirmation": "EMOT_NET_FT_TRACK_B_V0_1",
+    "formal_seeds": [0],
+    "formal_execution": "one configuration-locked held-out seed-0 run only; no three-seed aggregate is claimed",
+    "formal_results_pending": true,
+    "formal_result_snapshot": "emot_net_ft_seed0_formal_v0.1.json"
+  }
+}
