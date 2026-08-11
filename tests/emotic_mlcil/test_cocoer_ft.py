@@ -12,6 +12,7 @@ from benchmarks.emotic_mlcil.methods.cocoer_ft import (
     CocoERFTOptions,
     dynamic_bce,
 )
+from benchmarks.emotic_mlcil.methods.cocoer_ft.method import _load_resnet_state
 from benchmarks.emotic_mlcil.protocol import BenchmarkProtocol
 from benchmarks.emotic_mlcil.registry import method_class, method_names
 from benchmarks.emotic_mlcil.types import EvaluationBatch, TrainBatch
@@ -117,6 +118,29 @@ class CocoERFTTest(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "Track B"):
             CocoERFTBenchmarkMethod(BenchmarkProtocol.from_dict(track_a), model=tiny_model())
+
+    def test_resnet_initialization_requires_audited_official_bundle(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "resnet.pth"
+            state = {
+                "conv1.weight": torch.zeros(1),
+                "layer4.2.conv3.weight": torch.zeros(1),
+                "fc.weight": torch.zeros(1),
+            }
+            payload = {
+                "schema_version": 1,
+                "asset_kind": "cocoer_torchvision_resnet50_imagenet1k_v1",
+                "weights_enum": "ResNet50_Weights.IMAGENET1K_V1",
+                "source_url": "https://download.pytorch.org/models/resnet50-0676ba61.pth",
+                "source_file_sha256": "0676ba61" + "0" * 56,
+                "state_dict": state,
+            }
+            torch.save(payload, path)
+            self.assertEqual(set(_load_resnet_state(path)), set(state))
+            payload["source_file_sha256"] = "0" * 64
+            torch.save(payload, path)
+            with self.assertRaisesRegex(ValueError, "source-file SHA"):
+                _load_resnet_state(path)
 
     def test_dynamic_bce_matches_released_visible_column_formula(self):
         logits = torch.tensor([[0.2, -0.4], [0.8, 0.3]])

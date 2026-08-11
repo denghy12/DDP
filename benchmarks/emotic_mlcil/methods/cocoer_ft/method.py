@@ -30,6 +30,17 @@ from .model import CocoERFTModel, NativeResNet50GridEncoder, dynamic_bce
 
 
 UPSTREAM_COMMIT = "dac8fc139e61b87f1bf0b27c581798df2a5a9d38"
+OPENAI_CLIP_RN50_SHA256 = (
+    "afeb0e10f9e5a86da6080e35cf09123aca3b358a0c3e3b6c78a7b63bc04b6762"
+)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 @dataclass(frozen=True)
@@ -84,8 +95,20 @@ class _CLIPRN50ImageEncoder(nn.Module):
 
 def _load_resnet_state(path: Path) -> Mapping[str, torch.Tensor]:
     payload = torch.load(path, map_location="cpu")
-    if isinstance(payload, Mapping) and isinstance(payload.get("state_dict"), Mapping):
-        payload = payload["state_dict"]
+    if not isinstance(payload, Mapping) or int(payload.get("schema_version", -1)) != 1:
+        raise ValueError("CocoER ResNet-50 initialization is not an audited asset bundle")
+    expected_metadata = {
+        "asset_kind": "cocoer_torchvision_resnet50_imagenet1k_v1",
+        "weights_enum": "ResNet50_Weights.IMAGENET1K_V1",
+        "source_url": "https://download.pytorch.org/models/resnet50-0676ba61.pth",
+    }
+    for key, expected in expected_metadata.items():
+        if payload.get(key) != expected:
+            raise ValueError(f"CocoER ResNet-50 asset {key} differs")
+    source_sha = str(payload.get("source_file_sha256", "")).lower()
+    if len(source_sha) != 64 or not source_sha.startswith("0676ba61"):
+        raise ValueError("CocoER ResNet-50 source-file SHA-256 differs")
+    payload = payload.get("state_dict")
     if not isinstance(payload, Mapping):
         raise ValueError("CocoER ResNet-50 initialization must be a state dict")
     state = {str(key).removeprefix("module."): value for key, value in payload.items()}
@@ -167,7 +190,7 @@ class CocoERFTBenchmarkMethod(BenchmarkMethod):
             if head_box_cache_path is not None else None
         )
         self.head_box_cache_sha256 = (
-            hashlib.sha256(Path(self.head_box_cache_path).read_bytes()).hexdigest()
+            _sha256_file(Path(self.head_box_cache_path))
             if self.head_box_cache_path is not None else None
         )
         if model is None:
@@ -179,6 +202,9 @@ class CocoERFTBenchmarkMethod(BenchmarkMethod):
             clip_path = Path(clip_rn50_path).expanduser().resolve()
             if not resnet_path.is_file() or not clip_path.is_file():
                 raise FileNotFoundError("CocoER native initialization asset is missing")
+            clip_sha256 = _sha256_file(clip_path)
+            if clip_sha256 != OPENAI_CLIP_RN50_SHA256:
+                raise ValueError("CocoER CLIP RN50 checkpoint SHA-256 differs from OpenAI")
             state = _load_resnet_state(resnet_path)
             from clip import clip
 
@@ -195,9 +221,9 @@ class CocoERFTBenchmarkMethod(BenchmarkMethod):
                 pseudo_threshold=self.options.pseudo_threshold,
             )
             self.resnet50_initialization_path = str(resnet_path)
-            self.resnet50_initialization_sha256 = hashlib.sha256(resnet_path.read_bytes()).hexdigest()
+            self.resnet50_initialization_sha256 = _sha256_file(resnet_path)
             self.clip_rn50_path = str(clip_path)
-            self.clip_rn50_sha256 = hashlib.sha256(clip_path.read_bytes()).hexdigest()
+            self.clip_rn50_sha256 = clip_sha256
         self.model = model.float().to(self.device)
         self.model.clip_image_encoder.requires_grad_(False)
         self.task_context: Optional[TaskContext] = None

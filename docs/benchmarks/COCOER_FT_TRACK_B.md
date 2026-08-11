@@ -65,6 +65,29 @@ pretrained/cocoer/resnet50_imagenet1k_v1.pth
 pretrained/clip/RN50.pt
 ```
 
+Prepare both without importing any EMOTIC-trained CocoER state:
+
+```bash
+/opt/conda/envs/ddp/bin/python \
+  scripts/emotic-mlcil/prepare_cocoer_native_assets.py
+```
+
+If the server network is slow, download the two official files locally, copy
+them to the server, and use the offline path without changing their names or
+contents:
+
+```bash
+/opt/conda/envs/ddp/bin/python \
+  scripts/emotic-mlcil/prepare_cocoer_native_assets.py \
+  --resnet50-source /path/to/resnet50-0676ba61.pth \
+  --clip-rn50-source /path/to/RN50.pt
+```
+
+The script asks torchvision for exactly
+`ResNet50_Weights.IMAGENET1K_V1`, requires its official
+`resnet50-0676ba61.pth` URL and SHA prefix, and requires OpenAI RN50 SHA-256
+`afeb0e10...b6762`. It writes `pretrained/cocoer/native_assets_manifest.json`.
+
 ## Head-box cache
 
 The benchmark EMOTIC annotations contain body boxes but not CocoER's required
@@ -75,17 +98,43 @@ requires a complete sample-ID keyed cache:
 pretrained/cocoer/emotic_head_boxes_v0.1.json
 ```
 
-Every selected sample must have one finite nondegenerate box or loading stops.
-The cache records detector name/model hash and source JSON hash. Freeze an
-externally generated mapping with:
+The official repository and CVPR supplementary material do not publish the
+training head-box preprocessing cache or a dataset-preparation entry point.
+The released inference path does specify InsightFace `0.7.3`, `buffalo_l`,
+640×640 detection and its face/person x-containment rule. The benchmark freezes
+that executable rule rather than inventing a top-of-body fallback.
+
+Generate detections first:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 /opt/conda/envs/ddp/bin/python \
+  scripts/emotic-mlcil/generate_cocoer_head_detections.py \
+  --data-root /mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC \
+  --insightface-root /mnt/haoyuan/workspace/baseline_sources/insightface \
+  --output /mnt/haoyuan/workspace/baseline_sources/cocoer_head_detections.json
+```
+
+The generator hashes the complete `models/buffalo_l` tree, reuses detections
+per image, aligns them to the benchmark's stable person IDs, and exits `3` if
+any sample is unresolved. It never silently substitutes a heuristic box.
+Only a complete zero-unresolved artifact can be frozen:
 
 ```bash
 /opt/conda/envs/ddp/bin/python \
   scripts/emotic-mlcil/prepare_cocoer_head_cache.py \
-  --detections /path/to/cocoer_head_detections.json \
-  --detector-name insightface-fixed-release \
-  --detector-model-sha256 <64-hex-sha256> \
+  --detections /mnt/haoyuan/workspace/baseline_sources/cocoer_head_detections.json \
   --output pretrained/cocoer/emotic_head_boxes_v0.1.json
+```
+
+Finally audit all three assets against every train/val/test sample:
+
+```bash
+/opt/conda/envs/ddp/bin/python scripts/emotic-mlcil/audit_cocoer_assets.py \
+  --data-root /mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC \
+  --resnet50-init pretrained/cocoer/resnet50_imagenet1k_v1.pth \
+  --clip-rn50 pretrained/clip/RN50.pt \
+  --head-cache pretrained/cocoer/emotic_head_boxes_v0.1.json \
+  --output pretrained/cocoer/cocoer_assets_audit.json
 ```
 
 Train preprocessing ports the source coordinated crop/flip; all three views
@@ -121,7 +170,7 @@ and documentation; test data cannot make that decision.
 After syncing the branch and the three assets:
 
 ```bash
-cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1
+cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-cocoer-ft
 
 RUN_ID="cocoer_ft_seed0_val_$(date +%Y%m%d_%H%M%S)" \
 GPU=0 \
@@ -129,6 +178,7 @@ SESSION=emotic_cocoer_ft_seed0_val \
 bash scripts/emotic-mlcil/launch_cocoer_ft_seed0_tmux.sh
 ```
 
-The launcher runs the complete Core tests and immutable source audit before
-starting validation. Its universal download package contains logs, scores,
-metrics, manifests, and the source audit but excludes every `.pth` file.
+The launcher runs the complete Core tests, immutable source audit, and full
+asset/sample-coverage audit before starting validation. Its universal download
+package contains logs, scores, metrics, manifests, source audit, and asset
+audit but excludes every `.pth` file.

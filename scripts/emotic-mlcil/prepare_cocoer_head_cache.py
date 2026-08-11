@@ -21,11 +21,30 @@ def main():
     )
     parser.add_argument("--detections", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--detector-name", required=True)
-    parser.add_argument("--detector-model-sha256", required=True)
     args = parser.parse_args()
     raw = json.loads(args.detections.read_text(encoding="utf-8"))
-    entries = raw.get("entries", raw) if isinstance(raw, dict) else None
+    if not isinstance(raw, dict) or int(raw.get("schema_version", -1)) != 1:
+        raise ValueError("Detection JSON is not a CocoER detection artifact")
+    if raw.get("upstream_commit") != COMMIT:
+        raise ValueError("Detection JSON CocoER commit differs")
+    if raw.get("partial") is not False:
+        raise ValueError("Partial CocoER detections cannot be frozen")
+    unresolved = raw.get("unresolved")
+    if not isinstance(unresolved, list) or unresolved:
+        raise ValueError("Unresolved CocoER head detections cannot be frozen")
+    detector = raw.get("detector")
+    if (
+        not isinstance(detector, dict)
+        or detector.get("library") != "insightface"
+        or detector.get("version") != "0.7.3"
+        or detector.get("model") != "buffalo_l"
+        or detector.get("det_size") != [640, 640]
+    ):
+        raise ValueError("CocoER detector identity differs from the frozen interface")
+    model_sha = str(detector.get("model_tree_sha256", "")).lower()
+    if len(model_sha) != 64 or any(value not in "0123456789abcdef" for value in model_sha):
+        raise ValueError("CocoER detector model-tree SHA-256 is malformed")
+    entries = raw.get("entries")
     if not isinstance(entries, dict) or not entries:
         raise ValueError("Detection JSON must contain a non-empty mapping")
     normalized = {}
@@ -43,8 +62,8 @@ def main():
         "schema_version": 1,
         "upstream_repository": "https://github.com/bisno/CocoER",
         "upstream_commit": COMMIT,
-        "detector_name": args.detector_name,
-        "detector_model_sha256": args.detector_model_sha256.lower(),
+        "detector": dict(detector),
+        "detector_model_tree_sha256": model_sha,
         "source_detection_json_sha256": source_sha,
         "entries": normalized,
     }

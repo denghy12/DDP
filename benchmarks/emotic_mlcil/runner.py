@@ -964,6 +964,22 @@ def _cocoer_transforms(head_cache_path: str):
         raise ValueError("Unsupported CocoER head-box cache schema")
     if payload.get("upstream_commit") != "dac8fc139e61b87f1bf0b27c581798df2a5a9d38":
         raise ValueError("CocoER head-box cache provenance differs")
+    detector = payload.get("detector")
+    if (
+        not isinstance(detector, Mapping)
+        or detector.get("library") != "insightface"
+        or detector.get("version") != "0.7.3"
+        or detector.get("model") != "buffalo_l"
+        or detector.get("det_size") != [640, 640]
+    ):
+        raise ValueError("CocoER head-box detector identity differs")
+    model_sha = str(detector.get("model_tree_sha256", "")).lower()
+    if (
+        len(model_sha) != 64
+        or any(value not in "0123456789abcdef" for value in model_sha)
+        or payload.get("detector_model_tree_sha256") != model_sha
+    ):
+        raise ValueError("CocoER head-box detector hash differs")
     entries = payload.get("entries")
     if not isinstance(entries, Mapping) or not entries:
         raise ValueError("CocoER head-box cache contains no entries")

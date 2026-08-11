@@ -151,8 +151,10 @@ official method's three ImageNet ResNet-50 towers plus native frozen OpenAI
 CLIP RN50 vocabulary-informed image branch; it does not use the Track-A CLIP
 ViT-B/16. The conversion adds only current-label expanding heads and protocol
 visibility. Full-26-class CocoER GWT/VI weights are rejected as future-label
-leakage. Seed-0 validation remains gated on a complete sample-ID-aligned head
-box cache, explicit generic initialization files, and CUDA memory smoke. See
+leakage. The initial server suite passed 185 Core/baseline tests (4 skips) and
+17 legacy regressions at `881b0e6`. Seed-0 validation remains gated on the
+strict InsightFace-derived sample-ID-aligned head-box cache, hash-gated generic
+initialization files, joint asset audit, and CUDA memory smoke. See
 `COCOER_FT_TRACK_B.md`.
 
 Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It

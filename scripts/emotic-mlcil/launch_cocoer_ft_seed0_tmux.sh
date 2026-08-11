@@ -39,6 +39,7 @@ RUN_ROOT="${OUTPUT_BASE}/${RUN_ID}"
 LOG_DIR="${OUTPUT_BASE}/_launcher_logs"
 PREFLIGHT_LOG="${LOG_DIR}/${RUN_ID}_preflight.log"
 ORACLE_JSON="${LOG_DIR}/${RUN_ID}_upstream_oracle.json"
+ASSET_AUDIT_JSON="${LOG_DIR}/${RUN_ID}_asset_audit.json"
 mkdir -p "${LOG_DIR}"
 
 set +e
@@ -60,6 +61,13 @@ echo "Running CocoER-FT/Core preflight tests..."
 echo "Running immutable CocoER source/operator audit..."
 "${PYTHON}" "${SCRIPT_DIR}/compare_cocoer_upstream_reference.py" \
   --upstream-root "${UPSTREAM_ROOT}" --output "${ORACLE_JSON}"
+echo "Running CocoER native-asset and full head-cache audit..."
+"${PYTHON}" "${SCRIPT_DIR}/audit_cocoer_assets.py" \
+  --data-root "${DATA_ROOT}" \
+  --resnet50-init "${RESNET_INIT}" \
+  --clip-rn50 "${CLIP_RN50}" \
+  --head-cache "${HEAD_CACHE}" \
+  --output "${ASSET_AUDIT_JSON}"
 ) 2>&1 | tee "${PREFLIGHT_LOG}"
 PREFLIGHT_RC="${PIPESTATUS[0]}"
 set -e
@@ -69,13 +77,13 @@ if [[ "${PREFLIGHT_RC}" -ne 0 ]]; then
 fi
 
 printf -v command \
-  'cd %q && RUN_ID=%q SEED=0 GPU=%q PYTHON=%q DATA_ROOT=%q COCOER_RESNET50_INIT=%q COCOER_CLIP_RN50=%q COCOER_HEAD_CACHE=%q OUTPUT_ROOT=%q REPORTING_SPLIT=val TRAIN_BATCH_SIZE=%q EVAL_BATCH_SIZE=%q WORKERS=%q bash %q 2>&1 | tee %q; code=${PIPESTATUS[0]}; package_code=not_run; if [[ "$code" -eq 0 ]]; then %q %q --run-root %q --run-id %q --expected-bundles 1 --extra %q; package_code=$?; fi; echo COCOER_FT_EXIT_CODE=$code; echo DOWNLOAD_PACKAGE_EXIT_CODE=$package_code; exec bash' \
+  'cd %q && RUN_ID=%q SEED=0 GPU=%q PYTHON=%q DATA_ROOT=%q COCOER_RESNET50_INIT=%q COCOER_CLIP_RN50=%q COCOER_HEAD_CACHE=%q OUTPUT_ROOT=%q REPORTING_SPLIT=val TRAIN_BATCH_SIZE=%q EVAL_BATCH_SIZE=%q WORKERS=%q bash %q 2>&1 | tee %q; code=${PIPESTATUS[0]}; package_code=not_run; if [[ "$code" -eq 0 ]]; then %q %q --run-root %q --run-id %q --expected-bundles 1 --extra %q --extra %q; package_code=$?; fi; echo COCOER_FT_EXIT_CODE=$code; echo DOWNLOAD_PACKAGE_EXIT_CODE=$package_code; exec bash' \
   "${ROOT}" "${RUN_ID}" "${GPU}" "${PYTHON}" "${DATA_ROOT}" \
   "${RESNET_INIT}" "${CLIP_RN50}" "${HEAD_CACHE}" "${RUN_ROOT}" \
   "${TRAIN_BATCH_SIZE}" "${EVAL_BATCH_SIZE}" "${WORKERS}" \
   "${SCRIPT_DIR}/run_cocoer_ft_baseline.sh" "${LOG_DIR}/${RUN_ID}.log" \
   "${PYTHON}" "${SCRIPT_DIR}/package_benchmark_download.py" \
-  "${RUN_ROOT}" "${RUN_ID}" "${ORACLE_JSON}"
+  "${RUN_ROOT}" "${RUN_ID}" "${ORACLE_JSON}" "${ASSET_AUDIT_JSON}"
 
 tmux new-session -d -s "${SESSION}" -n "cocoer_ft_seed0_g${GPU}" "${command}"
 echo "Started CocoER-FT Track-B validation session: ${SESSION}"
