@@ -69,7 +69,7 @@ Initialization must be the official linked
 is forbidden because it has learned future classes. Actual checkpoint SHA-256
 is recorded and random/CLIP fallback is rejected.
 
-## Validation entry point
+## Execution entry points
 
 The source remains at
 `/mnt/haoyuan/workspace/baseline_sources/dsct_release_8b0fe36`; its custom CUDA
@@ -86,6 +86,12 @@ DSCT_PRETRAINED_WEIGHTS=/mnt/haoyuan/workspace/baseline_sources/dsct_release_8b0
 bash scripts/emotic-mlcil/launch_dsct_ft_seed0_tmux.sh
 ```
 
-Only validation is authorized now. A configuration-locked held-out test runner
-will be added after validation is audited and frozen. Download packages follow
-`DOWNLOAD_STANDARD.md` and exclude all `.pth` files.
+The registered configuration above is frozen a priori from the official R50
+recipe before any held-out-test access. A formal seed-0 run must use a clean,
+exact Git commit, `configuration_locked=true`, GPU memory preflight, the fixed
+source and initialization hashes, and the dedicated
+`launch_dsct_ft_formal_seed0_tmux.sh` entry point. The source operator test
+passes forward equivalence and numerical gradients through width 1025; the
+official widths 2048/3096 are synthetic stress cases that exceed a 24 GiB
+RTX 4090, while the registered DSCT width 256 passes numerical gradients.
+Download packages follow `DOWNLOAD_STANDARD.md` and exclude all `.pth` files.
