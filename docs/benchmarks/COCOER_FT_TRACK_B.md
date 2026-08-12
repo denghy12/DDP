@@ -306,6 +306,20 @@ CUDA_VISIBLE_DEVICES=0 /opt/conda/envs/ddp/bin/python \
   --output /tmp/cocoer_gpu_preprocess_benchmark.json
 ```
 
+The first server candidate gate at commit `283e7bf` passed on GPU 2 while
+other jobs were active. For two measured batch-64 iterations it reported
+`188.75` versus `130.53` samples/s for CUDA-v0.2 versus CPU-v0.1 evaluation
+(`1.446x`) and `64.55` versus `61.31` samples/s for their respective training
+augmentation paths (`1.053x`). Sample IDs matched exactly; geometry maximum
+absolute error was `1.526e-5`, within the registered `2e-5` float32 tolerance.
+The normalized tensor mean/max absolute differences were `0.00485/0.01751`,
+as expected from PIL versus CUDA-tensor antialiased bilinear interpolation.
+Preprocessing alone peaked at `1375.9/3556.0 MiB` allocated/reserved. The
+larger operational benefit is bounded CPU contention: two loader workers and
+four math threads replace the observed roughly 48 logical cores per v0.1
+process. A full-model batch-64 v0.2 smoke remains mandatory on a safely empty
+GPU before validation.
+
 The v0.1 formal launcher is intentionally absent from the v0.2 branch. A new
 configuration-locked formal runner may be added only after v0.2 seed-0
 validation completes and the execution configuration is frozen.
