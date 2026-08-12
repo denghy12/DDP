@@ -234,7 +234,10 @@ class DSCTFTModel(nn.Module):
         target_boxes = target_boxes_from_transport(images)
         target_sizes = target_sizes_from_transport(images)
         valid = images[:, 4] > 0.5
-        nested = self.nested_tensor_factory(images[:, :3], ~valid)
+        rgb = images[:, :3]
+        if images.is_contiguous(memory_format=torch.channels_last):
+            rgb = rgb.contiguous(memory_format=torch.channels_last)
+        nested = self.nested_tensor_factory(rgb, ~valid)
         output = dict(self.core(nested))
         output["target_boxes"] = target_boxes
         output["target_sizes"] = target_sizes

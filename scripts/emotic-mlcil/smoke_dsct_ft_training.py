@@ -20,7 +20,7 @@ def main():
     parser.add_argument("--width", type=int, default=1333)
     parser.add_argument("--warmup-steps", type=int, default=1)
     parser.add_argument("--benchmark-steps", type=int, default=2)
-    parser.add_argument("--eval-batch-sizes", default="4,8,16")
+    parser.add_argument("--eval-batch-sizes", default="4,16,32")
     args = parser.parse_args()
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is required")

@@ -47,7 +47,7 @@ never exposed.
 | Encoder/decoder layers | 6 / 6 |
 | Hidden width | 256 |
 | Epochs / patience | 50 / 50 |
-| Effective train/eval batch | 4 / 4 |
+| Effective train/eval batch | 4 / 32 |
 | Per-GPU micro-batch | 2 |
 | Multi-GPU execution | two replicas; two samples/replica; one synchronized optimizer step |
 | Single-GPU fallback | two sequential micro-batches of 2; one optimizer step |
@@ -134,4 +134,8 @@ single-GPU direct batch 4 was `0.3137 s`, two GPUs with 2 samples each was
 `5,6`; allocating four GPUs is slower for this small effective batch because
 DataParallel replication/synchronization dominates. Channels-last is an
 execution-only memory layout applied consistently to model and images.
+Evaluation batch 32 is frozen from a pure execution-throughput gate: worst-case
+batch 24/32/40 reached `73.13/78.39/79.08 samples/s`, while batch 40 reserved
+`22.7 GiB` and offered less than one percent gain over 32. Batch 32 reserves
+at most `15.4 GiB` in the same post-training process and retains safe headroom.
 Download packages follow `DOWNLOAD_STANDARD.md` and exclude all `.pth` files.
