@@ -12,6 +12,9 @@ SCRIPT = ROOT / "scripts" / "emotic-mlcil" / "compare_ccim_upstream_reference.py
 PREPARE = ROOT / "scripts" / "emotic-mlcil" / "prepare_ccim_task0_dictionary.py"
 PREPARE_SOURCE = ROOT / "scripts" / "emotic-mlcil" / "prepare_ccim_source.sh"
 CONVERTER = ROOT / "scripts" / "emotic-mlcil" / "convert_places365_resnet152_caffe.py"
+FORMAL_RUNNER = ROOT / "scripts" / "emotic-mlcil" / "run_emot_net_ccim_ft_formal_seed0.sh"
+FORMAL_LAUNCHER = ROOT / "scripts" / "emotic-mlcil" / "launch_emot_net_ccim_ft_formal_seed0_tmux.sh"
+FORMAL_VALIDATOR = ROOT / "scripts" / "emotic-mlcil" / "validate_emot_net_ccim_ft_formal_result.py"
 SPEC = importlib.util.spec_from_file_location("compare_ccim_upstream", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
@@ -48,6 +51,18 @@ class EMOTNetCCIMFTReferenceAuditTest(unittest.TestCase):
         self.assertIn("PLACES365_PROTOTXT_SHA256", source)
         self.assertIn('net.forward("pool5")', source)
         self.assertIn("operator_equivalence", source)
+
+    def test_formal_runner_is_locked_and_checkpoint_free(self):
+        runner = FORMAL_RUNNER.read_text(encoding="utf-8")
+        launcher = FORMAL_LAUNCHER.read_text(encoding="utf-8")
+        validator = FORMAL_VALIDATOR.read_text(encoding="utf-8")
+        self.assertIn("REPORTING_SPLIT=test", runner)
+        self.assertIn("EMOT_NET_CCIM_TOWER_MODEL_PARALLEL=1", runner)
+        self.assertIn("WORKERS=8", runner)
+        self.assertIn('GPUS="${GPUS:-2,3,4}"', launcher)
+        self.assertIn("--tower-model-parallel", launcher)
+        self.assertIn("package_benchmark_download.py", runner)
+        self.assertIn('"configuration_locked": True', validator)
 
     def test_fixed_external_source_and_operator_equivalence(self):
         configured = os.environ.get("CCIM_SOURCE_ROOT")

@@ -146,7 +146,14 @@ class EMOTNetCCIMFTTest(unittest.TestCase):
         self.assertFalse(config["replay_enabled"])
         self.assertFalse(config["distillation_enabled"])
         self.assertFalse(config["benchmark_added_adapter"])
+        self.assertFalse(config["execution_tower_model_parallel"])
+        self.assertEqual(config["execution_tower_model_parallel_devices"], [])
         self.assertEqual(EMOTNetCCIMFTOptions().ccim_dictionary_size, 256)
+
+    def test_tower_model_parallel_requires_three_distinct_cuda_devices(self):
+        method = self.make_method()
+        with self.assertRaisesRegex(ValueError, "three distinct GPUs"):
+            method.model.enable_tower_model_parallel("cuda:0", "cuda:0", "cuda:1")
 
     def test_dot_intervention_matches_direct_formula(self):
         torch.manual_seed(4)

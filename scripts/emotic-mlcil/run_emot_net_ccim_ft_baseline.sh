@@ -18,11 +18,13 @@ REPORTING_SPLIT="${REPORTING_SPLIT:-val}"
 TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-52}"
 EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-16}"
 WORKERS="${WORKERS:-0}"
+TOWER_MODEL_PARALLEL="${EMOT_NET_CCIM_TOWER_MODEL_PARALLEL:-0}"
 EXPORT_SYNC_RESULTS="${EXPORT_SYNC_RESULTS:-1}"
 CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:-}"
 
 [[ "${SEED}" =~ ^[0-9]+$ ]] || { echo "Invalid SEED" >&2; exit 2; }
-[[ "${GPU}" =~ ^[0-9]+$ ]] || { echo "Invalid GPU" >&2; exit 2; }
+[[ "${GPU}" =~ ^[0-9]+(,[0-9]+){0,2}$ ]] || { echo "Invalid GPU list" >&2; exit 2; }
+[[ "${TOWER_MODEL_PARALLEL}" == "0" || "${TOWER_MODEL_PARALLEL}" == "1" ]] || { echo "Invalid tower model-parallel flag" >&2; exit 2; }
 [[ "${TRAIN_BATCH_SIZE}" == "52" ]] || { echo "Registered EMOT-Net+CCIM-FT train batch size is 52" >&2; exit 2; }
 [[ -s "${NATIVE_INIT}" ]] || { echo "Missing audited native EMOT-Net initialization: ${NATIVE_INIT}" >&2; exit 2; }
 [[ -s "${CCIM_DICTIONARY}" ]] || { echo "Missing audited Task-0 CCIM dictionary: ${CCIM_DICTIONARY}" >&2; exit 2; }
@@ -43,6 +45,10 @@ runner_args=(
   --workers "${WORKERS}"
   --device cuda
 )
+if [[ "${TOWER_MODEL_PARALLEL}" == "1" ]]; then
+  [[ "${GPU}" == *,*,* ]] || { echo "Tower model parallelism requires exactly three visible GPUs" >&2; exit 2; }
+  runner_args+=(--emot-net-tower-model-parallel)
+fi
 if [[ "${REPORTING_SPLIT}" == "test" ]]; then
   [[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "EMOT_NET_CCIM_FT_TRACK_B_V0_1" ]] || {
     echo "Held-out test requires a frozen EMOT-Net+CCIM-FT configuration" >&2

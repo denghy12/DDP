@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Mapping, Optional, Tuple
+from typing import Iterable, Mapping, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
@@ -114,7 +114,47 @@ class EMOTNetFTModel(nn.Module):
         self.dropout = nn.Dropout(float(dropout))
         self.heads = nn.ModuleList()
         self._head_sizes = []
+        self._tower_devices: Optional[Tuple[torch.device, torch.device, torch.device]] = None
         self._reset_native_parameters()
+
+    def enable_tower_model_parallel(
+        self,
+        primary_device: Union[str, torch.device],
+        context_device: Union[str, torch.device],
+        body_device: Union[str, torch.device],
+    ) -> None:
+        """Place both native towers on separate GPUs without splitting the batch.
+
+        Keeping the full batch on each tower preserves the source BatchNorm
+        semantics.  Only descriptors cross devices; fusion, CCIM (when present),
+        and all task heads remain on the primary device.
+        """
+
+        devices = tuple(
+            torch.device(value)
+            for value in (primary_device, context_device, body_device)
+        )
+        if any(device.type != "cuda" for device in devices):
+            raise ValueError("EMOT-Net tower model parallelism requires CUDA devices")
+        normalized = tuple(
+            torch.device("cuda", torch.cuda.current_device())
+            if device.index is None
+            else device
+            for device in devices
+        )
+        if len({device.index for device in normalized}) != 3:
+            raise ValueError("EMOT-Net tower model parallelism requires three distinct GPUs")
+        primary, context, body = normalized
+        self.to(primary)
+        self.context_encoder.to(context)
+        self.body_encoder.to(body)
+        self._tower_devices = (primary, context, body)
+
+    @property
+    def tower_model_parallel_devices(self) -> Tuple[str, ...]:
+        if self._tower_devices is None:
+            return ()
+        return tuple(str(device) for device in self._tower_devices)
 
     def _reset_native_parameters(self) -> None:
         for module in self.modules():
@@ -174,12 +214,20 @@ class EMOTNetFTModel(nn.Module):
 
     def encode(self, images: torch.Tensor) -> torch.Tensor:
         context, body = self._split_views(images)
+        if self._tower_devices is not None:
+            primary_device, context_device, body_device = self._tower_devices
+            context = context.to(context_device, non_blocking=True)
+            body = body.to(body_device, non_blocking=True)
+        else:
+            primary_device = images.device
         context_features = self._validate_descriptor(
             self.context_encoder(context), images.shape[0], self.context_dim, "context encoder"
         )
         body_features = self._validate_descriptor(
             self.body_encoder(body), images.shape[0], self.body_dim, "body encoder"
         )
+        context_features = context_features.to(primary_device, non_blocking=True)
+        body_features = body_features.to(primary_device, non_blocking=True)
         features = self.fusion(torch.cat((context_features, body_features), dim=1))
         # Torch BatchNorm cannot estimate variance for a singleton last batch.
         # Reusing the accumulated statistics preserves the official layer while

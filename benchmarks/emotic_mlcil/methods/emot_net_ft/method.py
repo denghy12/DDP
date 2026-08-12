@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import os
 import random
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -162,6 +163,7 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
         device: Optional[Union[str, torch.device]] = None,
         model: Optional[EMOTNetFTModel] = None,
         option_overrides: Optional[Mapping[str, Any]] = None,
+        tower_model_parallel: bool = False,
     ) -> None:
         if protocol.track not in self.supported_tracks:
             raise ValueError("Native-backbone EMOT-Net-FT supports Track B only")
@@ -212,11 +214,37 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
             raise ValueError("EMOT-Net model fusion width differs from options")
         self.model = model.float().to(self.device)
         self.model.requires_grad_(True)
+        self._tower_model_parallel = bool(tower_model_parallel)
+        self._tower_model_parallel_devices: Tuple[str, ...] = ()
+        if self._tower_model_parallel:
+            if self.device.type != "cuda" or torch.cuda.device_count() < 3:
+                raise RuntimeError(
+                    "EMOT-Net tower model parallelism requires three visible CUDA GPUs"
+                )
+            self._apply_tower_model_parallel()
         self.task_context: Optional[TaskContext] = None
         self._completed_task_id = -1
         self._optimizer_parameter_names: Tuple[str, ...] = ()
         self.training_history: List[Dict[str, float]] = []
         self.current_class_weights: Optional[torch.Tensor] = None
+
+    def _apply_tower_model_parallel(self) -> None:
+        primary_index = (
+            torch.cuda.current_device()
+            if self.device.index is None
+            else int(self.device.index)
+        )
+        available = [index for index in range(torch.cuda.device_count()) if index != primary_index]
+        if len(available) < 2:
+            raise RuntimeError(
+                "EMOT-Net tower model parallelism requires two secondary CUDA GPUs"
+            )
+        self.model.enable_tower_model_parallel(
+            torch.device("cuda", primary_index),
+            torch.device("cuda", available[0]),
+            torch.device("cuda", available[1]),
+        )
+        self._tower_model_parallel_devices = self.model.tower_model_parallel_devices
 
     @staticmethod
     def _set_seed(seed: int) -> None:
@@ -240,6 +268,8 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
             raise RuntimeError("EMOT-Net heads do not match the task boundary")
         self.model.add_head(len(task_context.current_class_indices))
         self.model.to(self.device).requires_grad_(True)
+        if self._tower_model_parallel:
+            self._apply_tower_model_parallel()
         self.task_context = task_context
         self._optimizer_parameter_names = tuple(
             name for name, parameter in self.model.named_parameters() if parameter.requires_grad
@@ -356,6 +386,8 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
             raise RuntimeError("No EMOT-Net epoch produced a checkpoint")
         self.model.load_state_dict(best_state, strict=True)
         self.model.to(self.device)
+        if self._tower_model_parallel:
+            self._apply_tower_model_parallel()
         self._completed_task_id = self.task_context.task_id
 
     def predict_scores(
@@ -427,6 +459,13 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
             "benchmark_added_adapter": False,
             "clip_visual_encoder_used": False,
             "clip_text_encoder_used": False,
+            "execution_tower_model_parallel": self._tower_model_parallel,
+            "execution_tower_model_parallel_devices": list(
+                self._tower_model_parallel_devices
+            ),
+            "execution_cuda_visible_devices": os.environ.get(
+                "CUDA_VISIBLE_DEVICES"
+            ),
             "loss": "source weighted sigmoid MSE over current classes only",
             "class_weight_scope": "current mini-batch visible labels only",
             "selection_metric": "current_label_validation_mAP",

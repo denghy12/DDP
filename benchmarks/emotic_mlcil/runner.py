@@ -54,7 +54,7 @@ from src.helper_functions.emotic_loader import (
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
 CORE_BASE_COMMIT = "00f399f13bc7552c254c8f6e6c095a8be4f56146"
-CORE_RUNTIME_VERSION = "0.12.0"
+CORE_RUNTIME_VERSION = "0.12.1"
 
 
 def _current_git_commit() -> str:
@@ -842,6 +842,14 @@ def _parse_args() -> argparse.Namespace:
             "confounder dictionary for EMOT-Net+CCIM-FT"
         ),
     )
+    parser.add_argument(
+        "--emot-net-tower-model-parallel",
+        action="store_true",
+        help=(
+            "Execute native EMOT-Net context/body towers on two secondary "
+            "visible GPUs while fusion and heads remain on the primary GPU"
+        ),
+    )
     parser.add_argument("--output-root", default="./output")
     parser.add_argument("--reporting-split", default="val")
     parser.add_argument(
@@ -1057,6 +1065,10 @@ def main() -> None:
         return
     if not args.data_root:
         raise ValueError("--data-root is required for benchmark execution")
+    if args.emot_net_tower_model_parallel and args.method != "emot_net_ccim_ft":
+        raise ValueError(
+            "--emot-net-tower-model-parallel is registered only for EMOT-Net+CCIM-FT"
+        )
     if args.method in {"emot_net_ft", "emot_net_ccim_ft"}:
         if args.input_mode != "body_context":
             raise ValueError("EMOT-Net methods require --input-mode body_context")
@@ -1120,6 +1132,7 @@ def main() -> None:
             native_initialization_path=args.emot_net_native_init,
             ccim_dictionary_path=args.ccim_dictionary,
             device=args.device,
+            tower_model_parallel=args.emot_net_tower_model_parallel,
         )
     elif args.method == "emotionclip_ft":
         method = EmotionCLIPFTBenchmarkMethod(

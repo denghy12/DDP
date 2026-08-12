@@ -148,6 +148,7 @@ class EMOTNetCCIMFTBenchmarkMethod(EMOTNetFTBenchmarkMethod):
         model: Optional[EMOTNetCCIMFTModel] = None,
         dictionary_payload: Optional[Mapping[str, Any]] = None,
         option_overrides: Optional[Mapping[str, Any]] = None,
+        tower_model_parallel: bool = False,
     ) -> None:
         configured = dict(protocol.method_options("emot_net_ccim_ft"))
         if option_overrides:
@@ -217,6 +218,7 @@ class EMOTNetCCIMFTBenchmarkMethod(EMOTNetFTBenchmarkMethod):
             device=device,
             model=model,
             option_overrides=base_options,
+            tower_model_parallel=tower_model_parallel,
         )
         self.options = full_options
         if native_sha is not None:

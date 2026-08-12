@@ -50,7 +50,7 @@ set -e
 "${PYTHON}" - <<'PY'
 from benchmarks.emotic_mlcil.registry import method_names
 from benchmarks.emotic_mlcil.runner import CORE_RUNTIME_VERSION
-if CORE_RUNTIME_VERSION != "0.12.0":
+if CORE_RUNTIME_VERSION != "0.12.1":
     raise RuntimeError(f"Unexpected runtime: {CORE_RUNTIME_VERSION}")
 if "emot_net_ccim_ft" not in method_names():
     raise RuntimeError("EMOT-Net+CCIM-FT is not registered")
