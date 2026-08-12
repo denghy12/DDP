@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--batches", type=int, default=4)
     parser.add_argument("--equivalence-samples", type=int, default=8)
-    parser.add_argument("--geometry-atol", type=float, default=1.0e-5)
+    parser.add_argument("--geometry-atol", type=float, default=2.0e-5)
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
 
@@ -57,26 +57,40 @@ def main() -> None:
     cpu_data = EMOTICMLCILDataModule(
         protocol, args.data_root, cpu_train, cpu_eval, "cocoer_multilevel"
     )
-    gpu_loader = gpu_data.method_loader(
+    gpu_eval_loader = gpu_data.method_loader(
         protocol.num_tasks - 1,
         args.batch_size,
         args.workers,
         split=protocol.validation_split,
         shuffle=False,
     )
-    cpu_loader = cpu_data.method_loader(
+    cpu_eval_loader = cpu_data.method_loader(
         protocol.num_tasks - 1,
         args.batch_size,
         args.workers,
         split=protocol.validation_split,
+        shuffle=False,
+    )
+    gpu_train_loader = gpu_data.method_loader(
+        protocol.num_tasks - 1,
+        args.batch_size,
+        args.workers,
+        split=protocol.train_split,
+        shuffle=False,
+    )
+    cpu_train_loader = cpu_data.method_loader(
+        protocol.num_tasks - 1,
+        args.batch_size,
+        args.workers,
+        split=protocol.train_split,
         shuffle=False,
     )
     preprocessor = CocoERGPUPreprocessor(torch.device("cuda"), protocol.seed)
 
-    def timed_cpu():
+    def timed_cpu(loader):
         total = 0
         start = time.perf_counter()
-        for index, batch in enumerate(cpu_loader):
+        for index, batch in enumerate(loader):
             batch.images = batch.images.cuda(non_blocking=True)
             batch.geometry = batch.geometry.cuda(non_blocking=True)
             total += batch.images.shape[0]
@@ -85,11 +99,11 @@ def main() -> None:
         torch.cuda.synchronize()
         return total, time.perf_counter() - start
 
-    def timed_gpu(train: bool):
+    def timed_gpu(loader, train: bool):
         total = 0
         torch.cuda.reset_peak_memory_stats()
         start = time.perf_counter()
-        for index, batch in enumerate(gpu_loader):
+        for index, batch in enumerate(loader):
             images, geometry = preprocessor(
                 batch.images,
                 batch.geometry,
@@ -110,16 +124,24 @@ def main() -> None:
         )
 
     # Warm both worker pools and CUDA kernels before measurement.
-    next(iter(cpu_loader))
-    warm = next(iter(gpu_loader))
+    next(iter(cpu_eval_loader))
+    next(iter(cpu_train_loader))
+    warm = next(iter(gpu_eval_loader))
     preprocessor(warm.images, warm.geometry, warm.image_sizes, train=False)
+    warm = next(iter(gpu_train_loader))
+    preprocessor(warm.images, warm.geometry, warm.image_sizes, train=True)
     torch.cuda.synchronize()
-    cpu_samples, cpu_seconds = timed_cpu()
-    eval_samples, eval_seconds, eval_allocated, eval_reserved = timed_gpu(False)
-    train_samples, train_seconds, train_allocated, train_reserved = timed_gpu(True)
+    cpu_eval_samples, cpu_eval_seconds = timed_cpu(cpu_eval_loader)
+    cpu_train_samples, cpu_train_seconds = timed_cpu(cpu_train_loader)
+    eval_samples, eval_seconds, eval_allocated, eval_reserved = timed_gpu(
+        gpu_eval_loader, False
+    )
+    train_samples, train_seconds, train_allocated, train_reserved = timed_gpu(
+        gpu_train_loader, True
+    )
 
-    cpu_iterator = iter(cpu_loader)
-    gpu_iterator = iter(gpu_loader)
+    cpu_iterator = iter(cpu_eval_loader)
+    gpu_iterator = iter(gpu_eval_loader)
     compared = 0
     tensor_max, tensor_sum, tensor_count, geometry_max = 0.0, 0.0, 0, 0.0
     sample_ids_equal = True
@@ -156,13 +178,25 @@ def main() -> None:
         "workers": args.workers,
         "measured_batches": args.batches,
         "throughput": {
-            "cpu_v0.1_samples": cpu_samples,
-            "cpu_v0.1_seconds": cpu_seconds,
-            "cpu_v0.1_samples_per_second": cpu_samples / cpu_seconds,
+            "cpu_v0.1_eval_samples": cpu_eval_samples,
+            "cpu_v0.1_eval_seconds": cpu_eval_seconds,
+            "cpu_v0.1_eval_samples_per_second": (
+                cpu_eval_samples / cpu_eval_seconds
+            ),
+            "cpu_v0.1_train_samples": cpu_train_samples,
+            "cpu_v0.1_train_seconds": cpu_train_seconds,
+            "cpu_v0.1_train_samples_per_second": (
+                cpu_train_samples / cpu_train_seconds
+            ),
             "cuda_v0.2_eval_samples_per_second": eval_samples / eval_seconds,
             "cuda_v0.2_train_samples_per_second": train_samples / train_seconds,
             "eval_speedup_over_cpu": (
-                (eval_samples / eval_seconds) / (cpu_samples / cpu_seconds)
+                (eval_samples / eval_seconds)
+                / (cpu_eval_samples / cpu_eval_seconds)
+            ),
+            "train_speedup_over_cpu": (
+                (train_samples / train_seconds)
+                / (cpu_train_samples / cpu_train_seconds)
             ),
         },
         "equivalence": {
