@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import json
 import math
+import os
 import random
 import subprocess
 import sys
+import time
 from argparse import Namespace
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -58,6 +61,9 @@ class DSCTFTOptions:
     aux_loss: bool = True
     amp: bool = False
     tf32: bool = False
+    effective_train_batch_size: int = 4
+    per_gpu_micro_batch_size: int = 1
+    maximum_data_parallel_replicas: int = 4
 
     @classmethod
     def from_mapping(cls, values: Mapping[str, Any]) -> "DSCTFTOptions":
@@ -66,8 +72,15 @@ class DSCTFTOptions:
             raise ValueError("Unknown DSCT-FT option(s): " + ", ".join(unknown))
         result = cls(**dict(values))
         if min(result.epochs, result.early_stopping_patience, result.lr_drop_epoch,
-               result.num_queries, result.hidden_dim) <= 0:
+               result.num_queries, result.hidden_dim, result.effective_train_batch_size,
+               result.per_gpu_micro_batch_size, result.maximum_data_parallel_replicas) <= 0:
             raise ValueError("DSCT dimensions and epoch settings must be positive")
+        if result.per_gpu_micro_batch_size != 1:
+            raise ValueError("DSCT-FT v0.2 requires per-GPU micro-batch size 1")
+        if result.effective_train_batch_size != 4:
+            raise ValueError("DSCT-FT v0.2 requires effective train batch size 4")
+        if result.maximum_data_parallel_replicas != 4:
+            raise ValueError("DSCT-FT v0.2 requires four DataParallel replicas")
         if min(result.learning_rate, result.backbone_learning_rate,
                result.linear_projection_lr_multiplier, result.gradient_clip_norm) <= 0:
             raise ValueError("DSCT optimizer settings must be positive")
@@ -219,6 +232,11 @@ class DSCTFTBenchmarkMethod(BenchmarkMethod):
         else:
             self.provenance = {"injected_test_model": True}
         self.model = model.float().to(self.device).requires_grad_(True)
+        visible_cuda_devices = torch.cuda.device_count() if self.device.type == "cuda" else 0
+        self._execution_gpu_count = max(
+            1, min(self.options.maximum_data_parallel_replicas, visible_cuda_devices)
+        )
+        self._parallel_model: Optional[torch.nn.Module] = None
         self.task_context: Optional[TaskContext] = None
         self._completed_task_id = -1
         self._optimizer_parameter_names: Tuple[str, ...] = ()
@@ -243,6 +261,15 @@ class DSCTFTBenchmarkMethod(BenchmarkMethod):
             raise RuntimeError("DSCT heads do not match the task boundary")
         self.model.add_head(len(task_context.current_class_indices))
         self.model.to(self.device).requires_grad_(True)
+        self._parallel_model = (
+            torch.nn.DataParallel(
+                self.model,
+                device_ids=list(range(self._execution_gpu_count)),
+                output_device=0,
+            )
+            if self.device.type == "cuda" and self._execution_gpu_count > 1
+            else self.model
+        )
         self.task_context = task_context
         self._optimizer_parameter_names = tuple(name for name, value in self.model.named_parameters() if value.requires_grad)
         self.training_history = []
@@ -273,6 +300,24 @@ class DSCTFTBenchmarkMethod(BenchmarkMethod):
             total = total + aux_total
         return total, parts
 
+    def _forward(
+        self, images: torch.Tensor, *, parallel_training: bool = False
+    ) -> Mapping[str, Any]:
+        if parallel_training and self._parallel_model is not None:
+            return self._parallel_model(images)
+        return self.model(images)
+
+    def _parallel_micro_batch_size(self) -> int:
+        return self.options.per_gpu_micro_batch_size * self._execution_gpu_count
+
+    def _training_micro_batches(
+        self, images: torch.Tensor, targets: torch.Tensor
+    ) -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
+        width = self._parallel_micro_batch_size()
+        for start in range(0, images.shape[0], width):
+            stop = min(images.shape[0], start + width)
+            yield images[start:stop], targets[start:stop]
+
     def _selection_map(self, loader: Iterable[TrainBatch]) -> float:
         self.model.eval(); scores, targets = [], []
         with torch.no_grad():
@@ -280,7 +325,7 @@ class DSCTFTBenchmarkMethod(BenchmarkMethod):
                 batch = self._batch(raw)
                 images = batch.images.to(self.device).float()
                 with self._autocast():
-                    output = self.model(images)
+                    output = self._forward(images)
                     logits = self.model.selected_scores(output, batch.targets_current.shape[1])
                 scores.append(logits.sigmoid().float().cpu()); targets.append(batch.targets_current.float().cpu())
         if not scores: raise ValueError("Validation loader produced no samples")
@@ -305,33 +350,71 @@ class DSCTFTBenchmarkMethod(BenchmarkMethod):
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, self.options.lr_drop_epoch)
         scaler = torch.cuda.amp.GradScaler(enabled=self._amp_enabled)
         best_map, best_state, stale = -math.inf, None, 0
+        task_started = time.monotonic()
         for epoch in range(self.options.epochs):
+            epoch_started = time.monotonic()
             self.model.train(); sums = {"loss": 0.0, "classification": 0.0, "bbox": 0.0, "giou": 0.0}; batches = steps = skips = 0
+            micro_batches = 0
             for raw in train_loader:
                 batch = self._batch(raw)
                 expected = torch.zeros_like(batch.visible_mask, dtype=torch.bool)
                 expected[:, list(self.task_context.current_class_indices)] = True
                 if not torch.equal(batch.visible_mask.bool(), expected):
                     raise ValueError("DSCT training batch exposes labels outside current classes")
-                images = batch.images.to(self.device).float(); targets = batch.targets_current.to(self.device).float()
+                if batch.images.shape[0] > self.options.effective_train_batch_size:
+                    raise ValueError("DSCT loader batch exceeds the frozen effective batch size")
+                images = batch.images; targets = batch.targets_current
                 optimizer.zero_grad(set_to_none=True)
-                with self._autocast(): output = self.model(images); loss, parts = self._loss(output, targets)
-                old_scale = float(scaler.get_scale()); scaler.scale(loss).backward(); scaler.unscale_(optimizer)
+                batch_size = int(images.shape[0])
+                batch_sums = {"loss": 0.0, "classification": 0.0, "bbox": 0.0, "giou": 0.0}
+                for micro_images, micro_targets in self._training_micro_batches(images, targets):
+                    micro_images = micro_images.to(self.device).float()
+                    micro_targets = micro_targets.to(self.device).float()
+                    weight = float(micro_images.shape[0]) / float(batch_size)
+                    with self._autocast():
+                        output = self._forward(micro_images, parallel_training=True)
+                        loss, parts = self._loss(output, micro_targets)
+                    scaler.scale(loss * weight).backward()
+                    batch_sums["loss"] += float(loss.detach().cpu()) * weight
+                    for key in ("classification", "bbox", "giou"):
+                        batch_sums[key] += float(parts[key].detach().cpu()) * weight
+                    micro_batches += 1
+                    del output, loss, parts, micro_images, micro_targets
+                old_scale = float(scaler.get_scale()); scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.options.gradient_clip_norm)
                 scaler.step(optimizer); scaler.update(); stepped = float(scaler.get_scale()) >= old_scale
                 steps += int(stepped); skips += int(not stepped); batches += 1
-                sums["loss"] += float(loss.detach().cpu())
-                for key in ("classification", "bbox", "giou"): sums[key] += float(parts[key].detach().cpu())
+                for key in sums: sums[key] += batch_sums[key]
             if not batches: raise ValueError("Training loader produced no samples")
             validation_map = self._selection_map(val_loader)
             row = {"epoch": float(epoch), "validation_current_mAP": validation_map,
                    "optimizer_steps": float(steps), "skipped_optimizer_steps": float(skips),
+                   "micro_batches": float(micro_batches),
+                   "execution_gpu_count": float(self._execution_gpu_count),
+                   "per_gpu_micro_batch_size": float(self.options.per_gpu_micro_batch_size),
+                   "effective_train_batch_size": float(self.options.effective_train_batch_size),
                    "learning_rate": float(optimizer.param_groups[0]["lr"])}
             row.update({key: value / batches for key, value in sums.items()}); self.training_history.append(row)
             if validation_map > best_map:
                 best_map = validation_map; stale = 0
                 best_state = {name: value.detach().cpu().clone() for name, value in self.model.state_dict().items()}
             else: stale += 1
+            epoch_seconds = time.monotonic() - epoch_started
+            task_elapsed_seconds = time.monotonic() - task_started
+            task_eta_seconds = (
+                task_elapsed_seconds / float(epoch + 1) * float(self.options.epochs - epoch - 1)
+            )
+            row.update({"epoch_seconds": epoch_seconds,
+                        "task_elapsed_seconds": task_elapsed_seconds,
+                        "task_eta_seconds": task_eta_seconds})
+            print("DSCT_PROGRESS " + json.dumps({
+                "task": self.task_context.task_id,
+                "epoch_number": epoch + 1,
+                "epochs_planned": self.options.epochs,
+                **row,
+                "best_validation_current_mAP": best_map,
+                "stale_epochs": stale,
+            }, sort_keys=True), flush=True)
             scheduler.step()
             if stale >= self.options.early_stopping_patience: break
         if best_state is None: raise RuntimeError("No DSCT epoch produced a checkpoint")
@@ -347,12 +430,13 @@ class DSCTFTBenchmarkMethod(BenchmarkMethod):
                 if batch.class_order_hash != self.task_context.class_order_hash: raise ValueError("DSCT evaluation class order differs")
                 if split_hash is None: split_hash = batch.split_hash
                 elif split_hash != batch.split_hash: raise ValueError("Evaluation loader mixes split hashes")
-                with self._autocast(): output = self.model(batch.images.to(self.device).float()); logits = self.model.selected_scores(output)
+                with self._autocast(): output = self._forward(batch.images.to(self.device).float()); logits = self.model.selected_scores(output)
                 scores.append(logits.sigmoid().float().cpu()); targets.append(batch.targets_seen.float().cpu()); ids.extend(batch.sample_ids)
         if not scores or split_hash is None: raise ValueError("Evaluation loader produced no samples")
         return PredictionOutput(torch.cat(scores), torch.cat(targets), ids, self.task_context.class_order_hash, split_hash)
 
     def end_task(self) -> None:
+        self._parallel_model = None
         self.task_context = None
 
     def training_log_records(self):
@@ -360,7 +444,7 @@ class DSCTFTBenchmarkMethod(BenchmarkMethod):
 
     def resolved_method_config(self) -> Mapping[str, Any]:
         return {
-            "strategy": "sequential_finetuning", "conversion_interface": "DSCT-FT-v0.1",
+            "strategy": "sequential_finetuning", "conversion_interface": "DSCT-FT-v0.2",
             "upstream_repository": self.upstream_repository, "upstream_commit": self.upstream_commit,
             "upstream_license": self.upstream_license, "track": "B", "input_mode": "dsct_scene",
             "current_label_only": True, "old_label_truth_used": False, "future_label_truth_used": False,
@@ -369,6 +453,11 @@ class DSCTFTBenchmarkMethod(BenchmarkMethod):
             "query_selection": "maximum IoU to benchmark target-person bbox (official face_matching)",
             "augmentation": "official horizontal flip and multi-scale resize; target-dropping random crop disabled",
             "checkpoint_selection": "current-label validation mAP; earliest epoch tie-break; test forbidden",
+            "execution_mode": "data_parallel_micro_batch_then_accumulate",
+            "execution_gpu_count": self._execution_gpu_count,
+            "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
+            "parallel_micro_batch_size": self._parallel_micro_batch_size(),
+            "optimizer_steps_per_effective_batch": 1,
             **asdict(self.options), **self.provenance,
         }
 

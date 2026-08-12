@@ -8,6 +8,7 @@ export PYTHONPATH="${ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 
 RUN_ID="${RUN_ID:?RUN_ID is required}"
 GPU="${GPU:-0}"
+GPU_LABEL="${GPU//,/_}"
 PYTHON="${PYTHON:-/opt/conda/envs/ddp/bin/python}"
 DATA_ROOT="${DATA_ROOT:-/mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC}"
 SOURCE_ROOT="${DSCT_SOURCE_ROOT:-/mnt/haoyuan/workspace/baseline_sources/dsct_release_8b0fe36}"
@@ -17,7 +18,7 @@ RUN_OUTPUT_ROOT="${RUN_OUTPUT_ROOT:?RUN_OUTPUT_ROOT is required}"
 EXPECTED_GIT_COMMIT="${EXPECTED_GIT_COMMIT:?EXPECTED_GIT_COMMIT is required}"
 CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:?CONFIGURATION_LOCKED_CONFIRMATION is required}"
 
-[[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "DSCT_FT_TRACK_B_V0_1" ]] || {
+[[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "DSCT_FT_TRACK_B_V0_2" ]] || {
   echo "Invalid DSCT-FT configuration-lock confirmation" >&2
   exit 2
 }
@@ -32,7 +33,7 @@ CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:?CONFIGUR
 
 STATE_DIR="${RUN_OUTPUT_ROOT}/runtime_logs"
 PREFLIGHT_DIR="${RUN_OUTPUT_ROOT}/preflight_logs"
-RUNTIME_LOG="${STATE_DIR}/seed0_gpu${GPU}.log"
+RUNTIME_LOG="${STATE_DIR}/seed0_gpu${GPU_LABEL}.log"
 mkdir -p "${STATE_DIR}"
 
 set +e
@@ -55,12 +56,12 @@ RUN_RC=$?
 set -e
 
 if [[ "${RUN_RC}" -ne 0 ]]; then
-  printf 'seed=0\nphysical_gpu=%s\nexit_code=%s\nlog=%s\n' \
+  printf 'seed=0\nphysical_gpus=%s\nexit_code=%s\nlog=%s\n' \
     "${GPU}" "${RUN_RC}" "${RUNTIME_LOG}" >"${STATE_DIR}/seed0.failed"
   echo "DSCT-FT seed 0 failed with exit code ${RUN_RC}; see ${RUNTIME_LOG}" >&2
   exit "${RUN_RC}"
 fi
-printf 'seed=0\nphysical_gpu=%s\nexit_code=0\nlog=%s\n' \
+printf 'seed=0\nphysical_gpus=%s\nexit_code=0\nlog=%s\n' \
   "${GPU}" "${RUNTIME_LOG}" >"${STATE_DIR}/seed0.done"
 
 "${PYTHON}" "${SCRIPT_DIR}/package_benchmark_download.py" \

@@ -159,8 +159,12 @@ from the frozen EMOT-Net-FT commit. It retains the official DSCT ResNet-50 and
 Deformable-DETR architecture and converts only the static 26-class emotion
 head to protocol-ordered expanding heads. It is Track B, exposes current
 labels only, adds no anti-forgetting mechanism, and keeps upstream source
-external behind immutable hash/operator checks. Seed-0 validation is the next
-gate; held-out test execution is not yet authorized.
+external behind immutable hash/operator checks. The first single-GPU batch-4
+execution OOMed in task 0 before producing any metric or checkpoint. Execution
+contract v0.2 retains effective batch 4 and every algorithmic hyperparameter,
+but uses micro-batch 1 on four DataParallel replicas (physical GPUs 1/2/5/6)
+and one synchronized optimizer update. Its frozen worst-case `800x1333` smoke
+and server test rerun are the next gates before restarting seed 0 from epoch 1.
 
 Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It
 retains the collected original DDP

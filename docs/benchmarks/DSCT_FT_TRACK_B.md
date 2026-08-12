@@ -47,7 +47,10 @@ never exposed.
 | Encoder/decoder layers | 6 / 6 |
 | Hidden width | 256 |
 | Epochs / patience | 50 / 50 |
-| Train/eval batch | 4 / 1 |
+| Effective train/eval batch | 4 / 1 |
+| Per-GPU micro-batch | 1 |
+| Multi-GPU execution | four replicas; one sample/replica; one synchronized optimizer step |
+| Single-GPU fallback | four sequential micro-batches; one optimizer step |
 | Optimizer | AdamW |
 | Main/backbone LR | `2e-4` / `2e-5` |
 | Projection LR | `2e-5` |
@@ -97,4 +100,15 @@ source and initialization hashes, and the dedicated
 passes forward equivalence and numerical gradients through width 1025; the
 official widths 2048/3096 are synthetic stress cases that exceed a 24 GiB
 RTX 4090, while the registered DSCT width 256 passes numerical gradients.
+The first single-GPU batch-4 attempt failed inside task 0 when a real
+high-resolution batch reached 22.34 GiB allocated with only 74 MiB free; it
+produced no checkpoint, metric, manifest, or held-out-test result. Version
+`v0.2` therefore preserves the official effective batch and learning rates but
+uses per-GPU micro-batch 1. Four visible GPUs process the four samples in
+parallel and synchronize once per effective batch; a one-GPU fallback
+accumulates the same four weighted micro-losses before its single optimizer
+step. Formal smoke uses the true maximum `800x1333` geometry, and every epoch
+flushes a `DSCT_PROGRESS` JSON record with loss, validation mAP and ETA.
+The registered seed-0 server placement is physical GPUs `1,2,5,6`, exposed in
+that order so physical GPU 1 is the DataParallel output/checkpoint device.
 Download packages follow `DOWNLOAD_STANDARD.md` and exclude all `.pth` files.

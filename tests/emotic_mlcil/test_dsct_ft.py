@@ -1,5 +1,8 @@
+import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 import torch
@@ -97,6 +100,15 @@ class DSCTFTTest(unittest.TestCase):
         self.assertEqual(options.epochs, 50)
         self.assertEqual(options.num_queries, 4)
         self.assertEqual(options.class_loss_weight, 5.0)
+        self.assertEqual(options.effective_train_batch_size, 4)
+        self.assertEqual(options.per_gpu_micro_batch_size, 1)
+        self.assertEqual(options.maximum_data_parallel_replicas, 4)
+        with self.assertRaisesRegex(ValueError, "effective train batch size 4"):
+            DSCTFTOptions.from_mapping({"effective_train_batch_size": 2})
+        with self.assertRaisesRegex(ValueError, "per-GPU micro-batch size 1"):
+            DSCTFTOptions.from_mapping({"per_gpu_micro_batch_size": 2})
+        with self.assertRaisesRegex(ValueError, "four DataParallel replicas"):
+            DSCTFTOptions.from_mapping({"maximum_data_parallel_replicas": 2})
         with self.assertRaisesRegex(ValueError, "Track B"):
             DSCTFTBenchmarkMethod(
                 BenchmarkProtocol.from_dict(protocol_config()), model=DSCTFTModel(TinyDSCTCore(), Nested)
@@ -129,7 +141,25 @@ class DSCTFTTest(unittest.TestCase):
         context = task_context(protocol, 0)
         method.begin_task(context)
         batch = train_batch(protocol)
-        method.train_task([batch], [batch])
+        progress = StringIO()
+        with redirect_stdout(progress):
+            method.train_task([batch], [batch])
+        self.assertIn("DSCT_PROGRESS", progress.getvalue())
+        progress_payload = json.loads(
+            next(
+                line.removeprefix("DSCT_PROGRESS ")
+                for line in progress.getvalue().splitlines()
+                if line.startswith("DSCT_PROGRESS ")
+            )
+        )
+        self.assertEqual(progress_payload["task"], 0)
+        self.assertEqual(progress_payload["epoch_number"], 1)
+        self.assertEqual(progress_payload["epochs_planned"], 1)
+        self.assertIn("task_eta_seconds", progress_payload)
+        history = method.training_log_records()
+        self.assertEqual(history[0]["optimizer_steps"], 1.0)
+        self.assertEqual(history[0]["micro_batches"], 4.0)
+        self.assertEqual(history[0]["effective_train_batch_size"], 4.0)
         evaluation = EvaluationBatch(
             images=batch.images, sample_ids=batch.sample_ids,
             targets_seen=batch.targets_current, class_order_hash=protocol.class_order_hash,
@@ -142,12 +172,53 @@ class DSCTFTTest(unittest.TestCase):
         config = method.resolved_method_config()
         self.assertFalse(config["benchmark_added_adapter"])
         self.assertFalse(config["clip_visual_encoder_used"])
+        self.assertEqual(config["execution_mode"], "data_parallel_micro_batch_then_accumulate")
+        self.assertEqual(config["optimizer_steps_per_effective_batch"], 1)
         with tempfile.TemporaryDirectory() as directory:
             checkpoint = Path(directory) / "task0.pth"
             method.save_checkpoint(checkpoint)
             _, restored = self.make_method()
             restored.load_checkpoint(checkpoint)
             self.assertEqual(restored.model.head_sizes, (2,))
+
+    def test_micro_batch_partition_preserves_effective_batch(self):
+        _, method = self.make_method()
+        images = transport()
+        targets = torch.zeros(4, 2)
+        method._execution_gpu_count = 1
+        single_gpu = list(method._training_micro_batches(images, targets))
+        self.assertEqual([chunk[0].shape[0] for chunk in single_gpu], [1, 1, 1, 1])
+        method._execution_gpu_count = 4
+        four_gpu = list(method._training_micro_batches(images, targets))
+        self.assertEqual([chunk[0].shape[0] for chunk in four_gpu], [4])
+
+    def test_micro_batch_accumulation_matches_effective_batch_update(self):
+        protocol, accumulated = self.make_method()
+        _, effective_batch = self.make_method()
+        context = task_context(protocol, 0)
+        accumulated.begin_task(context)
+        effective_batch.begin_task(context)
+        effective_batch.model.load_state_dict(accumulated.model.state_dict(), strict=True)
+        accumulated._execution_gpu_count = 1
+        effective_batch._execution_gpu_count = 4
+        accumulated._parallel_model = accumulated.model
+        effective_batch._parallel_model = effective_batch.model
+        batch = train_batch(protocol)
+        with redirect_stdout(StringIO()):
+            accumulated.train_task([batch], [batch])
+            effective_batch.train_task([batch], [batch])
+        self.assertEqual(accumulated.training_log_records()[0]["micro_batches"], 4.0)
+        self.assertEqual(effective_batch.training_log_records()[0]["micro_batches"], 1.0)
+        accumulated_state = accumulated.model.state_dict()
+        effective_state = effective_batch.model.state_dict()
+        self.assertEqual(tuple(accumulated_state), tuple(effective_state))
+        for name in accumulated_state:
+            self.assertTrue(
+                torch.allclose(
+                    accumulated_state[name], effective_state[name], rtol=1e-5, atol=1e-6
+                ),
+                msg=f"effective-batch update differs after micro accumulation: {name}",
+            )
 
     def test_scene_transform_and_variable_padding(self):
         image = Image.new("RGB", (20, 10), "white")
@@ -159,6 +230,16 @@ class DSCTFTTest(unittest.TestCase):
         padded = _stack_or_pad_images((transformed, transformed[:, :, :15]))
         self.assertEqual(padded.shape, (2, 5, 10, 20))
         self.assertEqual(padded[1, 4, :, 15:].sum().item(), 0)
+
+    def test_formal_launcher_freezes_four_gpu_worst_case_contract(self):
+        repository = Path(__file__).resolve().parents[2]
+        launcher = (repository / "scripts/emotic-mlcil/launch_dsct_ft_formal_seed0_tmux.sh").read_text()
+        worker = (repository / "scripts/emotic-mlcil/run_dsct_ft_formal_seed0.sh").read_text()
+        self.assertIn('GPU="${GPU:-1,2,5,6}"', launcher)
+        self.assertIn("--batch-size 4 --height 800 --width 1333", launcher)
+        self.assertIn("DSCT_FT_TRACK_B_V0_2", launcher)
+        self.assertIn("DSCT_FT_TRACK_B_V0_2", worker)
+        self.assertIn("TRAIN_BATCH_SIZE=4", worker)
 
 
 if __name__ == "__main__":

@@ -21,6 +21,10 @@ WORKERS="${WORKERS:-0}"
 CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:-}"
 
 [[ "${TRAIN_BATCH_SIZE}" == "4" ]] || { echo "Official DSCT train batch size is 4" >&2; exit 2; }
+[[ "${GPU}" =~ ^[0-9]+$|^[0-9]+,[0-9]+,[0-9]+,[0-9]+$ ]] || { echo "DSCT GPU must contain one or four physical IDs" >&2; exit 2; }
+IFS=',' read -r -a DSCT_GPU_IDS <<<"${GPU}"
+DSCT_UNIQUE_GPU_COUNT="$(printf '%s\n' "${DSCT_GPU_IDS[@]}" | sort -u | wc -l | tr -d '[:space:]')"
+[[ "${DSCT_UNIQUE_GPU_COUNT}" -eq "${#DSCT_GPU_IDS[@]}" ]] || { echo "DSCT physical GPU IDs must be unique" >&2; exit 2; }
 [[ -d "${SOURCE_ROOT}/models" ]] || { echo "Missing fixed DSCT source: ${SOURCE_ROOT}" >&2; exit 2; }
 [[ -s "${PRETRAINED}" ]] || { echo "Missing official DSCT R50 pretraining: ${PRETRAINED}" >&2; exit 2; }
 args=(--protocol "${PROTOCOL}" --method dsct_ft --seed "${SEED}" --data-root "${DATA_ROOT}"
@@ -29,7 +33,7 @@ args=(--protocol "${PROTOCOL}" --method dsct_ft --seed "${SEED}" --data-root "${
   --train-batch-size "${TRAIN_BATCH_SIZE}" --eval-batch-size "${EVAL_BATCH_SIZE}"
   --workers "${WORKERS}" --device cuda)
 if [[ "${REPORTING_SPLIT}" == "test" ]]; then
-  [[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "DSCT_FT_TRACK_B_V0_1" ]] || { echo "Held-out test requires frozen DSCT-FT configuration" >&2; exit 2; }
+  [[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "DSCT_FT_TRACK_B_V0_2" ]] || { echo "Held-out test requires frozen DSCT-FT v0.2 configuration" >&2; exit 2; }
   args+=(--configuration-locked)
 fi
 CUDA_VISIBLE_DEVICES="${GPU}" "${PYTHON}" -m benchmarks.emotic_mlcil.runner "${args[@]}"
