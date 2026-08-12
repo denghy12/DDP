@@ -333,7 +333,7 @@ class EMOTICMLCILDataModule:
                 num_workers=num_workers,
                 pin_memory=(
                     selected_split == self.protocol.train_split
-                    or self.input_mode == "dsct_scene"
+                    or getattr(self, "input_mode", "full") == "dsct_scene"
                 ),
                 drop_last=False,
                 collate_fn=_collate_train,
@@ -361,7 +361,7 @@ class EMOTICMLCILDataModule:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
-            pin_memory=self.input_mode == "dsct_scene",
+            pin_memory=getattr(self, "input_mode", "full") == "dsct_scene",
             drop_last=False,
             collate_fn=_collate_evaluation,
             **loader_options,
