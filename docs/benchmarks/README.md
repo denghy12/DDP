@@ -161,9 +161,9 @@ head to protocol-ordered expanding heads. It is Track B, exposes current
 labels only, adds no anti-forgetting mechanism, and keeps upstream source
 external behind immutable hash/operator checks. The first single-GPU batch-4
 execution OOMed in task 0 before producing any metric or checkpoint. Execution
-contract v0.3-fast retains effective batch 4 and every algorithmic
-hyperparameter, uses micro-batch 1 on four same-NUMA DataParallel replicas
-(physical GPUs 4/5/6/7), AMP with an FP32 legacy-operator/loss boundary,
+contract v0.4-fast retains effective batch 4 and every algorithmic
+hyperparameter, uses micro-batch 2 on the empirically fastest two same-NUMA
+DataParallel replicas (physical GPUs 5/6), AMP/channels-last with an FP32 legacy-operator/loss boundary,
 effective eval batch 4, two persistent workers and bounded CPU threads. The
 v0.2 FP32 run was stopped without a registered result after projecting 55--65
 hours. A true-geometry throughput preflight now decides whether the next gate

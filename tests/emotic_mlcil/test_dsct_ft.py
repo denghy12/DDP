@@ -103,16 +103,17 @@ class DSCTFTTest(unittest.TestCase):
         self.assertEqual(options.num_queries, 4)
         self.assertEqual(options.class_loss_weight, 5.0)
         self.assertEqual(options.effective_train_batch_size, 4)
-        self.assertEqual(options.per_gpu_micro_batch_size, 1)
-        self.assertEqual(options.maximum_data_parallel_replicas, 4)
+        self.assertEqual(options.per_gpu_micro_batch_size, 2)
+        self.assertEqual(options.maximum_data_parallel_replicas, 2)
         self.assertTrue(options.amp)
         self.assertTrue(options.tf32)
+        self.assertTrue(options.channels_last)
         with self.assertRaisesRegex(ValueError, "effective train batch size 4"):
             DSCTFTOptions.from_mapping({"effective_train_batch_size": 2})
         with self.assertRaisesRegex(ValueError, "per-GPU micro-batch size 1"):
-            DSCTFTOptions.from_mapping({"per_gpu_micro_batch_size": 2})
-        with self.assertRaisesRegex(ValueError, "four DataParallel replicas"):
-            DSCTFTOptions.from_mapping({"maximum_data_parallel_replicas": 2})
+            DSCTFTOptions.from_mapping({"per_gpu_micro_batch_size": 1})
+        with self.assertRaisesRegex(ValueError, "two DataParallel replicas"):
+            DSCTFTOptions.from_mapping({"maximum_data_parallel_replicas": 4})
         with self.assertRaisesRegex(ValueError, "Track B"):
             DSCTFTBenchmarkMethod(
                 BenchmarkProtocol.from_dict(protocol_config()), model=DSCTFTModel(TinyDSCTCore(), Nested)
@@ -194,6 +195,7 @@ class DSCTFTTest(unittest.TestCase):
         self.assertEqual(config["optimizer_steps_per_effective_batch"], 1)
         self.assertTrue(config["amp"])
         self.assertTrue(config["tf32"])
+        self.assertTrue(config["channels_last"])
         with tempfile.TemporaryDirectory() as directory:
             checkpoint = Path(directory) / "task0.pth"
             method.save_checkpoint(checkpoint)
@@ -207,10 +209,10 @@ class DSCTFTTest(unittest.TestCase):
         targets = torch.zeros(4, 2)
         method._execution_gpu_count = 1
         single_gpu = list(method._training_micro_batches(images, targets))
-        self.assertEqual([chunk[0].shape[0] for chunk in single_gpu], [1, 1, 1, 1])
-        method._execution_gpu_count = 4
-        four_gpu = list(method._training_micro_batches(images, targets))
-        self.assertEqual([chunk[0].shape[0] for chunk in four_gpu], [4])
+        self.assertEqual([chunk[0].shape[0] for chunk in single_gpu], [2, 2])
+        method._execution_gpu_count = 2
+        two_gpu = list(method._training_micro_batches(images, targets))
+        self.assertEqual([chunk[0].shape[0] for chunk in two_gpu], [4])
 
     def test_micro_batch_accumulation_matches_effective_batch_update(self):
         protocol, accumulated = self.make_method()
@@ -220,14 +222,14 @@ class DSCTFTTest(unittest.TestCase):
         effective_batch.begin_task(context)
         effective_batch.model.load_state_dict(accumulated.model.state_dict(), strict=True)
         accumulated._execution_gpu_count = 1
-        effective_batch._execution_gpu_count = 4
+        effective_batch._execution_gpu_count = 2
         accumulated._parallel_model = accumulated.model
         effective_batch._parallel_model = effective_batch.model
         batch = train_batch(protocol)
         with redirect_stdout(StringIO()):
             accumulated.train_task([batch], [batch])
             effective_batch.train_task([batch], [batch])
-        self.assertEqual(accumulated.training_log_records()[0]["micro_batches"], 4.0)
+        self.assertEqual(accumulated.training_log_records()[0]["micro_batches"], 2.0)
         self.assertEqual(effective_batch.training_log_records()[0]["micro_batches"], 1.0)
         accumulated_state = accumulated.model.state_dict()
         effective_state = effective_batch.model.state_dict()
@@ -255,10 +257,10 @@ class DSCTFTTest(unittest.TestCase):
         repository = Path(__file__).resolve().parents[2]
         launcher = (repository / "scripts/emotic-mlcil/launch_dsct_ft_formal_seed0_tmux.sh").read_text()
         worker = (repository / "scripts/emotic-mlcil/run_dsct_ft_formal_seed0.sh").read_text()
-        self.assertIn('GPU="${GPU:-4,5,6,7}"', launcher)
+        self.assertIn('GPU="${GPU:-5,6}"', launcher)
         self.assertIn("--batch-size 4 --height 800 --width 1333", launcher)
-        self.assertIn("DSCT_FT_TRACK_B_V0_3_FAST", launcher)
-        self.assertIn("DSCT_FT_TRACK_B_V0_3_FAST", worker)
+        self.assertIn("DSCT_FT_TRACK_B_V0_4_FAST", launcher)
+        self.assertIn("DSCT_FT_TRACK_B_V0_4_FAST", worker)
         self.assertIn("TRAIN_BATCH_SIZE=4", worker)
         self.assertIn("EVAL_BATCH_SIZE=4", worker)
         self.assertIn("WORKERS=2", worker)

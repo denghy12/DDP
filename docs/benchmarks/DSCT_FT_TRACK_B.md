@@ -48,9 +48,9 @@ never exposed.
 | Hidden width | 256 |
 | Epochs / patience | 50 / 50 |
 | Effective train/eval batch | 4 / 4 |
-| Per-GPU micro-batch | 1 |
-| Multi-GPU execution | four replicas; one sample/replica; one synchronized optimizer step |
-| Single-GPU fallback | four sequential micro-batches; one optimizer step |
+| Per-GPU micro-batch | 2 |
+| Multi-GPU execution | two replicas; two samples/replica; one synchronized optimizer step |
+| Single-GPU fallback | two sequential micro-batches of 2; one optimizer step |
 | Optimizer | AdamW |
 | Main/backbone LR | `2e-4` / `2e-5` |
 | Projection LR | `2e-5` |
@@ -62,7 +62,7 @@ never exposed.
 | Focal alpha/gamma | 0.25 / 2 |
 | Selection | current-label val mAP, earliest tie |
 | Main-table F1 | fixed 0.5 |
-| Numerical execution | AMP visual/transformer path; FP32 deformable attention and loss/matching |
+| Numerical execution | AMP + channels-last visual/transformer path; FP32 deformable attention and loss/matching |
 | Loader / CPU contract | 2 persistent workers, prefetch 2, pinned transfer, 4 BLAS/OpenMP threads |
 
 Training retains official horizontal flip and multi-scale short sides 480--800
@@ -87,7 +87,7 @@ along with SciPy, are recorded by formal preflight.
 cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-dsct-ft
 
 RUN_ID="dsct_ft_seed0_val_$(date +%Y%m%d_%H%M%S)" \
-GPU=4,5,6,7 \
+GPU=5,6 \
 SESSION=emotic_dsct_ft_seed0_val \
 DSCT_SOURCE_ROOT=/mnt/haoyuan/workspace/baseline_sources/dsct_release_8b0fe36 \
 DSCT_PRETRAINED_WEIGHTS=/mnt/haoyuan/workspace/baseline_sources/dsct_release_8b0fe36/r50_deformable_detr-checkpoint.pth \
@@ -126,4 +126,12 @@ oversubscription. Before launching a long run, the true `800x1333` smoke
 measures optimizer-step time and memory. A full-run estimate above nine hours
 requires seed-0 validation first; an estimate at or below nine hours permits
 the user-authorized single-seed locked test directly.
+
+The topology gate measured the same worst-case batch and optimizer update:
+single-GPU direct batch 4 was `0.3137 s`, two GPUs with 2 samples each was
+`0.2939 s`, and four GPUs with 1 sample each was `0.3633--0.4024 s`. Therefore
+`v0.4-fast` freezes the empirically fastest two-GPU topology on physical GPUs
+`5,6`; allocating four GPUs is slower for this small effective batch because
+DataParallel replication/synchronization dominates. Channels-last is an
+execution-only memory layout applied consistently to model and images.
 Download packages follow `DOWNLOAD_STANDARD.md` and exclude all `.pth` files.

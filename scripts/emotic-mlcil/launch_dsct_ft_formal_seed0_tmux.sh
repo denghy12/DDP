@@ -8,7 +8,7 @@ export PYTHONPATH="${ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 
 SESSION="${SESSION:-emotic_dsct_ft_formal_seed0}"
 RUN_ID="${RUN_ID:-dsct_ft_formal_seed0_$(date +%Y%m%d_%H%M%S)}"
-GPU="${GPU:-4,5,6,7}"
+GPU="${GPU:-5,6}"
 PYTHON="${PYTHON:-/opt/conda/envs/ddp/bin/python}"
 DATA_ROOT="${DATA_ROOT:-/mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC}"
 SOURCE_ROOT="${DSCT_SOURCE_ROOT:-/mnt/haoyuan/workspace/baseline_sources/dsct_release_8b0fe36}"
@@ -20,9 +20,9 @@ CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:?CONFIGUR
 MIN_FREE_GPU_MIB="${DSCT_MIN_FREE_GPU_MIB:-12288}"
 CPUSET="${DSCT_CPUSET:-36-47,108-119}"
 
-[[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "DSCT_FT_TRACK_B_V0_3_FAST" ]] || { echo "Invalid DSCT-FT v0.3-fast configuration lock" >&2; exit 2; }
+[[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "DSCT_FT_TRACK_B_V0_4_FAST" ]] || { echo "Invalid DSCT-FT v0.4-fast configuration lock" >&2; exit 2; }
 [[ "${RUN_ID}" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$ ]] || { echo "Invalid RUN_ID" >&2; exit 2; }
-[[ "${GPU}" =~ ^[0-9]+$|^[0-9]+,[0-9]+,[0-9]+,[0-9]+$ ]] || { echo "GPU must contain one or four physical IDs" >&2; exit 2; }
+[[ "${GPU}" =~ ^[0-9]+,[0-9]+$ ]] || { echo "Fast formal DSCT requires two physical GPU IDs" >&2; exit 2; }
 [[ "${EXPECTED_GIT_COMMIT}" =~ ^[0-9a-f]{40}$ ]] || { echo "EXPECTED_GIT_COMMIT must be a full SHA" >&2; exit 2; }
 tmux has-session -t "${SESSION}" 2>/dev/null && { echo "tmux session exists: ${SESSION}" >&2; exit 2; }
 [[ -x "${PYTHON}" && -d "${DATA_ROOT}" && -d "${SOURCE_ROOT}/models" && -s "${PRETRAINED}" ]] || { echo "Missing DSCT runtime, data, source, or pretraining" >&2; exit 2; }

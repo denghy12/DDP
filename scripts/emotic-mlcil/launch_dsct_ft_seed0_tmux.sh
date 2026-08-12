@@ -7,7 +7,7 @@ cd "${ROOT}"
 export PYTHONPATH="${ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 SESSION="${SESSION:-emotic_dsct_ft_seed0_val}"
 RUN_ID="${RUN_ID:-dsct_ft_seed0_val_$(date +%Y%m%d_%H%M%S)}"
-GPU="${GPU:-4,5,6,7}"
+GPU="${GPU:-5,6}"
 PYTHON="${PYTHON:-/opt/conda/envs/ddp/bin/python}"
 SOURCE_ROOT="${DSCT_SOURCE_ROOT:-/mnt/haoyuan/workspace/baseline_sources/dsct_release_8b0fe36}"
 PRETRAINED="${DSCT_PRETRAINED_WEIGHTS:-${SOURCE_ROOT}/r50_deformable_detr-checkpoint.pth}"
@@ -16,8 +16,8 @@ DATA_ROOT="${DATA_ROOT:-/mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC}"
 RUN_GPU_SMOKE="${DSCT_RUN_GPU_SMOKE:-1}"
 CPUSET="${DSCT_CPUSET:-36-47,108-119}"
 
-[[ "${GPU}" =~ ^[0-9]+,[0-9]+,[0-9]+,[0-9]+$ ]] || {
-  echo "Fast DSCT validation requires four physical GPU IDs" >&2
+[[ "${GPU}" =~ ^[0-9]+,[0-9]+$ ]] || {
+  echo "Fast DSCT validation requires two physical GPU IDs" >&2
   exit 2
 }
 

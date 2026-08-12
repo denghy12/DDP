@@ -61,9 +61,10 @@ class DSCTFTOptions:
     aux_loss: bool = True
     amp: bool = True
     tf32: bool = True
+    channels_last: bool = True
     effective_train_batch_size: int = 4
-    per_gpu_micro_batch_size: int = 1
-    maximum_data_parallel_replicas: int = 4
+    per_gpu_micro_batch_size: int = 2
+    maximum_data_parallel_replicas: int = 2
 
     @classmethod
     def from_mapping(cls, values: Mapping[str, Any]) -> "DSCTFTOptions":
@@ -75,12 +76,12 @@ class DSCTFTOptions:
                result.num_queries, result.hidden_dim, result.effective_train_batch_size,
                result.per_gpu_micro_batch_size, result.maximum_data_parallel_replicas) <= 0:
             raise ValueError("DSCT dimensions and epoch settings must be positive")
-        if result.per_gpu_micro_batch_size != 1:
-            raise ValueError("DSCT-FT v0.3 requires per-GPU micro-batch size 1")
+        if result.per_gpu_micro_batch_size != 2:
+            raise ValueError("DSCT-FT v0.4 requires per-GPU micro-batch size 2")
         if result.effective_train_batch_size != 4:
-            raise ValueError("DSCT-FT v0.3 requires effective train batch size 4")
-        if result.maximum_data_parallel_replicas != 4:
-            raise ValueError("DSCT-FT v0.3 requires four DataParallel replicas")
+            raise ValueError("DSCT-FT v0.4 requires effective train batch size 4")
+        if result.maximum_data_parallel_replicas != 2:
+            raise ValueError("DSCT-FT v0.4 requires two DataParallel replicas")
         if min(result.learning_rate, result.backbone_learning_rate,
                result.linear_projection_lr_multiplier, result.gradient_clip_norm) <= 0:
             raise ValueError("DSCT optimizer settings must be positive")
@@ -234,7 +235,10 @@ class DSCTFTBenchmarkMethod(BenchmarkMethod):
             )
         else:
             self.provenance = {"injected_test_model": True}
-        self.model = model.float().to(self.device).requires_grad_(True)
+        self.model = model.float().to(self.device)
+        if self.device.type == "cuda" and self.options.channels_last:
+            self.model.to(memory_format=torch.channels_last)
+        self.model.requires_grad_(True)
         visible_cuda_devices = torch.cuda.device_count() if self.device.type == "cuda" else 0
         self._execution_gpu_count = max(
             1, min(self.options.maximum_data_parallel_replicas, visible_cuda_devices)
@@ -252,9 +256,15 @@ class DSCTFTBenchmarkMethod(BenchmarkMethod):
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
 
-    @staticmethod
-    def _to_device(tensor: torch.Tensor, device: torch.device) -> torch.Tensor:
-        return tensor.to(device, non_blocking=True)
+    def _to_device(self, tensor: torch.Tensor, device: torch.device) -> torch.Tensor:
+        moved = tensor.to(device, non_blocking=True)
+        if (
+            self.options.channels_last
+            and moved.ndim == 4
+            and moved.is_floating_point()
+        ):
+            moved = moved.contiguous(memory_format=torch.channels_last)
+        return moved
 
     def _autocast(self):
         return torch.cuda.amp.autocast(enabled=self._amp_enabled)
@@ -479,7 +489,7 @@ class DSCTFTBenchmarkMethod(BenchmarkMethod):
 
     def resolved_method_config(self) -> Mapping[str, Any]:
         return {
-            "strategy": "sequential_finetuning", "conversion_interface": "DSCT-FT-v0.3-fast",
+            "strategy": "sequential_finetuning", "conversion_interface": "DSCT-FT-v0.4-fast",
             "upstream_repository": self.upstream_repository, "upstream_commit": self.upstream_commit,
             "upstream_license": self.upstream_license, "track": "B", "input_mode": "dsct_scene",
             "current_label_only": True, "old_label_truth_used": False, "future_label_truth_used": False,
