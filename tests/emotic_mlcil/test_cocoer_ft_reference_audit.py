@@ -110,6 +110,11 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
         self.assertIn("MEMORY_SMOKE_JSON", launcher)
         self.assertIn("benchmark_cocoer_gpu_preprocess.py", launcher)
         self.assertIn("GPU_PREPROCESS_BENCHMARK_JSON", launcher)
+        runner = (
+            ROOT / "scripts" / "emotic-mlcil" / "run_cocoer_ft_baseline.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn("COCOER_FT_TRACK_B_V0_2", runner)
+        self.assertNotIn("COCOER_FT_TRACK_B_V0_1", runner)
 
     def test_runtime_entrypoints_restore_repository_root(self):
         for script in (GENERATE, ASSET_AUDIT):

@@ -317,8 +317,11 @@ as expected from PIL versus CUDA-tensor antialiased bilinear interpolation.
 Preprocessing alone peaked at `1375.9/3556.0 MiB` allocated/reserved. The
 larger operational benefit is bounded CPU contention: two loader workers and
 four math threads replace the observed roughly 48 logical cores per v0.1
-process. A full-model batch-64 v0.2 smoke remains mandatory on a safely empty
-GPU before validation.
+process. The full-model batch-64 v0.2 gate subsequently passed on GPU 2 at
+commit `27670de`: forward/backward and one AdamW step completed with all five
+model paths, `2013` optimizer-state tensors, and `10953.9/14942.0 MiB` peak
+allocated/reserved memory. The registered held-out lock token is
+`COCOER_FT_TRACK_B_V0_2`.
 
 The v0.1 formal launcher is intentionally absent from the v0.2 branch. A new
 configuration-locked formal runner may be added only after v0.2 seed-0

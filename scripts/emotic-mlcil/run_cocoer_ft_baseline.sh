@@ -55,7 +55,7 @@ runner_args=(
   --device cuda
 )
 if [[ "${REPORTING_SPLIT}" == "test" ]]; then
-  [[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "COCOER_FT_TRACK_B_V0_1" ]] || {
+  [[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "COCOER_FT_TRACK_B_V0_2" ]] || {
     echo "Held-out test requires a frozen CocoER-FT validation configuration" >&2
     exit 2
   }
