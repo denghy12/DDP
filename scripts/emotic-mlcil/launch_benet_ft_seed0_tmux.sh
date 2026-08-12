@@ -17,6 +17,15 @@ TRAIN_BATCH_SIZE="${BENET_TRAIN_BATCH_SIZE:-24}"
 EVAL_BATCH_SIZE="${BENET_EVAL_BATCH_SIZE:-8}"
 WORKERS="${BENET_WORKERS:-0}"
 RUN_GPU_SMOKE="${BENET_RUN_GPU_SMOKE:-1}"
+CPU_THREADS="${BENET_CPU_THREADS:-2}"
+
+[[ "${CPU_THREADS}" =~ ^[1-9][0-9]*$ ]] || { echo "BENET_CPU_THREADS must be a positive integer" >&2; exit 2; }
+# Export for preflight.  The same values are also embedded in the tmux command
+# because an already-running tmux server may retain an older environment.
+export OMP_NUM_THREADS="${CPU_THREADS}"
+export MKL_NUM_THREADS="${CPU_THREADS}"
+export OPENBLAS_NUM_THREADS="${CPU_THREADS}"
+export NUMEXPR_NUM_THREADS="${CPU_THREADS}"
 
 tmux has-session -t "${SESSION}" 2>/dev/null && { echo "tmux session already exists: ${SESSION}" >&2; exit 2; }
 [[ -x "${PYTHON}" ]] || { echo "Missing Python: ${PYTHON}" >&2; exit 2; }
@@ -57,9 +66,10 @@ set -e
 [[ "${PREFLIGHT_RC}" -eq 0 ]] || { echo "BENet-FT preflight failed: ${PREFLIGHT_RC}" >&2; exit "${PREFLIGHT_RC}"; }
 
 printf -v command \
-  'cd %q && RUN_ID=%q SEED=0 GPU=%q PYTHON=%q DATA_ROOT=%q BENET_SOURCE_ROOT=%q BENET_PRETRAINED_WEIGHTS=%q OUTPUT_ROOT=%q REPORTING_SPLIT=val TRAIN_BATCH_SIZE=%q EVAL_BATCH_SIZE=%q WORKERS=%q bash %q 2>&1 | tee %q; code=${PIPESTATUS[0]}; package_code=not_run; if [[ "$code" -eq 0 ]]; then %q %q --run-root %q --run-id %q --expected-bundles 1 --extra %q; package_code=$?; fi; echo BENET_FT_EXIT_CODE=$code; echo DOWNLOAD_PACKAGE_EXIT_CODE=$package_code; exec bash' \
+  'cd %q && RUN_ID=%q SEED=0 GPU=%q PYTHON=%q DATA_ROOT=%q BENET_SOURCE_ROOT=%q BENET_PRETRAINED_WEIGHTS=%q OUTPUT_ROOT=%q REPORTING_SPLIT=val TRAIN_BATCH_SIZE=%q EVAL_BATCH_SIZE=%q WORKERS=%q BENET_CPU_THREADS=%q OMP_NUM_THREADS=%q MKL_NUM_THREADS=%q OPENBLAS_NUM_THREADS=%q NUMEXPR_NUM_THREADS=%q bash %q 2>&1 | tee %q; code=${PIPESTATUS[0]}; package_code=not_run; if [[ "$code" -eq 0 ]]; then %q %q --run-root %q --run-id %q --expected-bundles 1 --extra %q; package_code=$?; fi; echo BENET_FT_EXIT_CODE=$code; echo DOWNLOAD_PACKAGE_EXIT_CODE=$package_code; exec bash' \
   "${ROOT}" "${RUN_ID}" "${GPU}" "${PYTHON}" "${DATA_ROOT}" "${SOURCE_ROOT}" \
   "${PRETRAINED_WEIGHTS}" "${RUN_ROOT}" "${TRAIN_BATCH_SIZE}" "${EVAL_BATCH_SIZE}" "${WORKERS}" \
+  "${CPU_THREADS}" "${CPU_THREADS}" "${CPU_THREADS}" "${CPU_THREADS}" "${CPU_THREADS}" \
   "${SCRIPT_DIR}/run_benet_ft_baseline.sh" "${LOG_DIR}/${RUN_ID}.log" \
   "${PYTHON}" "${SCRIPT_DIR}/package_benchmark_download.py" "${RUN_ROOT}" "${RUN_ID}" "${ORACLE_JSON}"
 

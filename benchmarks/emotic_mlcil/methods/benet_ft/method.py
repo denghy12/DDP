@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import math
 import random
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Union
@@ -214,6 +216,20 @@ class BENetFTBenchmarkMethod(BenchmarkMethod):
         self.task_context = task_context
         self._optimizer_parameter_names = tuple(name for name, value in self.model.named_parameters() if value.requires_grad)
         self.training_history = []
+        print(
+            json.dumps(
+                {
+                    "event": "benet_task_begin",
+                    "task_id": task_context.task_id,
+                    "current_classes": len(task_context.current_class_indices),
+                    "seen_classes": len(task_context.seen_class_indices),
+                    "max_epochs": self.options.epochs,
+                    "early_stopping_patience": self.options.early_stopping_patience,
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
 
     def _selection_map(self, loader: Iterable[TrainBatch]) -> float:
         if self.task_context is None:
@@ -243,7 +259,9 @@ class BENetFTBenchmarkMethod(BenchmarkMethod):
         scaler = torch.cuda.amp.GradScaler(enabled=self._amp_enabled)
         best_map, best_state, stale = -math.inf, None, 0
         modes = ("det", "bu", "pc", "context")
+        task_started = time.perf_counter()
         for epoch in range(self.options.epochs):
+            epoch_started = time.perf_counter()
             self.model.train()
             totals = {name: 0.0 for name in ("loss", "classification", "heatmap", "size")}
             branch_batches = {name: 0 for name in modes}
@@ -295,6 +313,8 @@ class BENetFTBenchmarkMethod(BenchmarkMethod):
                 "optimizer_steps": float(optimizer_steps),
                 "skipped_optimizer_steps": float(skipped_steps),
                 "branch_batches": dict(branch_batches),
+                "epoch_seconds": time.perf_counter() - epoch_started,
+                "task_elapsed_seconds": time.perf_counter() - task_started,
             }
             self.training_history.append(record)
             if validation_map > best_map:
@@ -303,6 +323,19 @@ class BENetFTBenchmarkMethod(BenchmarkMethod):
                 stale = 0
             else:
                 stale += 1
+            print(
+                json.dumps(
+                    {
+                        "event": "benet_epoch_complete",
+                        "task_id": self.task_context.task_id,
+                        **record,
+                        "best_validation_current_mAP": best_map,
+                        "epochs_without_improvement": stale,
+                    },
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
             if stale >= self.options.early_stopping_patience:
                 break
         if best_state is None:
@@ -310,6 +343,21 @@ class BENetFTBenchmarkMethod(BenchmarkMethod):
         self.model.load_state_dict(best_state, strict=True)
         self.model.to(self.device)
         self._completed_task_id = self.task_context.task_id
+        best_record = max(self.training_history, key=lambda row: float(row["validation_current_mAP"]))
+        print(
+            json.dumps(
+                {
+                    "event": "benet_task_complete",
+                    "task_id": self.task_context.task_id,
+                    "epochs_completed": len(self.training_history),
+                    "best_epoch": int(best_record["epoch"]),
+                    "best_validation_current_mAP": float(best_record["validation_current_mAP"]),
+                    "task_elapsed_seconds": time.perf_counter() - task_started,
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
 
     def predict_scores(self, data_loader: Iterable[EvaluationBatch]) -> PredictionOutput:
         if self.task_context is None:

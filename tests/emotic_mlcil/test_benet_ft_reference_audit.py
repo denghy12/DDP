@@ -30,11 +30,18 @@ class BENetFTReferenceAuditTest(unittest.TestCase):
     def test_fixed_source_and_download_standard_are_registered(self):
         comparison = (ROOT / "scripts/emotic-mlcil/compare_benet_upstream_reference.py").read_text()
         launcher = (ROOT / "scripts/emotic-mlcil/launch_benet_ft_seed0_tmux.sh").read_text()
+        runner = (ROOT / "scripts/emotic-mlcil/run_benet_ft_baseline.sh").read_text()
+        method = (ROOT / "benchmarks/emotic_mlcil/methods/benet_ft/method.py").read_text()
         document = (ROOT / "docs/benchmarks/BENET_FT_TRACK_B.md").read_text()
         self.assertIn("b86747e0e259b1ec70fc84ca76efd7ea3bb3728e", comparison)
         self.assertIn("package_benchmark_download.py", launcher)
         self.assertIn("exclude", document.lower())
         self.assertIn(".pth", document)
+        for variable in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
+            self.assertIn(variable, launcher)
+            self.assertIn(variable, runner)
+        self.assertIn("benet_epoch_complete", method)
+        self.assertIn("epoch_seconds", method)
 
     def test_smoke_expands_before_cuda_transfer(self):
         smoke = (ROOT / "scripts/emotic-mlcil/smoke_benet_ft_training.py").read_text()

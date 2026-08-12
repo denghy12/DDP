@@ -20,6 +20,13 @@ EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-8}"
 WORKERS="${WORKERS:-0}"
 EXPORT_SYNC_RESULTS="${EXPORT_SYNC_RESULTS:-1}"
 CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:-}"
+CPU_THREADS="${BENET_CPU_THREADS:-2}"
+
+[[ "${CPU_THREADS}" =~ ^[1-9][0-9]*$ ]] || { echo "BENET_CPU_THREADS must be a positive integer" >&2; exit 2; }
+export OMP_NUM_THREADS="${CPU_THREADS}"
+export MKL_NUM_THREADS="${CPU_THREADS}"
+export OPENBLAS_NUM_THREADS="${CPU_THREADS}"
+export NUMEXPR_NUM_THREADS="${CPU_THREADS}"
 
 [[ "${TRAIN_BATCH_SIZE}" == "24" ]] || { echo "Registered BENet train batch size is 24" >&2; exit 2; }
 [[ -s "${SOURCE_ROOT}/lib/models/BENet.py" ]] || { echo "Missing fixed BENet source: ${SOURCE_ROOT}" >&2; exit 2; }

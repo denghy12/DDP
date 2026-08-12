@@ -89,6 +89,16 @@ the fixed external source and official
 `pose_higher_hrnet_w32_512.pth`, runs the source/operator gate, tests, and a
 batch-24 GPU memory smoke before starting seed-0 validation.
 
+The launcher defaults `BENET_CPU_THREADS=2` and explicitly propagates the
+corresponding OpenMP, MKL, OpenBLAS, and NumExpr limits into the tmux command.
+This prevents an existing tmux server from silently retaining a high-thread
+environment while other baselines are running. The training log emits one
+JSON record per epoch (`benet_epoch_complete`) with the task/epoch identifiers,
+validation mAP, epoch duration, cumulative task duration, optimizer-step
+counts, and early-stopping state. Task 0 must finish before benchmark artifact
+directories appear; the launcher log is therefore the authoritative live
+progress source during the first task.
+
 Every completed run follows `DOWNLOAD_STANDARD.md`: the launcher creates one
 `download_packages/<RUN_ID>.tar.gz` and adjacent `.sha256`. The archive includes
 metrics, score artifacts, manifests, reports, logs, and source-equivalence
