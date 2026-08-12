@@ -16,8 +16,9 @@ OUTPUT_ROOT="${OUTPUT_ROOT:-/mnt/haoyuan/workspace/emotic_benchmark_runs/dsct_ft
 PROTOCOL="${PROTOCOL:-${ROOT}/configs/emotic_mlcil/protocol_b5c3_track_b.yaml}"
 REPORTING_SPLIT="${REPORTING_SPLIT:-val}"
 TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-4}"
-EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-1}"
-WORKERS="${WORKERS:-0}"
+EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-4}"
+WORKERS="${WORKERS:-2}"
+CPUSET="${DSCT_CPUSET:-}"
 CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:-}"
 
 [[ "${TRAIN_BATCH_SIZE}" == "4" ]] || { echo "Official DSCT train batch size is 4" >&2; exit 2; }
@@ -33,9 +34,14 @@ args=(--protocol "${PROTOCOL}" --method dsct_ft --seed "${SEED}" --data-root "${
   --train-batch-size "${TRAIN_BATCH_SIZE}" --eval-batch-size "${EVAL_BATCH_SIZE}"
   --workers "${WORKERS}" --device cuda)
 if [[ "${REPORTING_SPLIT}" == "test" ]]; then
-  [[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "DSCT_FT_TRACK_B_V0_2" ]] || { echo "Held-out test requires frozen DSCT-FT v0.2 configuration" >&2; exit 2; }
+  [[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "DSCT_FT_TRACK_B_V0_3_FAST" ]] || { echo "Held-out test requires frozen DSCT-FT v0.3-fast configuration" >&2; exit 2; }
   args+=(--configuration-locked)
 fi
-CUDA_VISIBLE_DEVICES="${GPU}" "${PYTHON}" -m benchmarks.emotic_mlcil.runner "${args[@]}"
+runner=("${PYTHON}" -m benchmarks.emotic_mlcil.runner "${args[@]}")
+if [[ -n "${CPUSET}" ]]; then
+  command -v taskset >/dev/null || { echo "taskset is required for DSCT CPU affinity" >&2; exit 2; }
+  runner=(taskset -c "${CPUSET}" "${runner[@]}")
+fi
+CUDA_VISIBLE_DEVICES="${GPU}" "${runner[@]}"
 "${PYTHON}" -m benchmarks.emotic_mlcil.runner --protocol "${PROTOCOL}" --method dsct_ft --seed "${SEED}" \
   --output-root "${OUTPUT_ROOT}" --reporting-split "${REPORTING_SPLIT}" --export-sync-results --shard-run-id "${RUN_ID}"

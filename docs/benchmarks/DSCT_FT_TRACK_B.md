@@ -47,7 +47,7 @@ never exposed.
 | Encoder/decoder layers | 6 / 6 |
 | Hidden width | 256 |
 | Epochs / patience | 50 / 50 |
-| Effective train/eval batch | 4 / 1 |
+| Effective train/eval batch | 4 / 4 |
 | Per-GPU micro-batch | 1 |
 | Multi-GPU execution | four replicas; one sample/replica; one synchronized optimizer step |
 | Single-GPU fallback | four sequential micro-batches; one optimizer step |
@@ -62,6 +62,8 @@ never exposed.
 | Focal alpha/gamma | 0.25 / 2 |
 | Selection | current-label val mAP, earliest tie |
 | Main-table F1 | fixed 0.5 |
+| Numerical execution | AMP visual/transformer path; FP32 deformable attention and loss/matching |
+| Loader / CPU contract | 2 persistent workers, prefetch 2, pinned transfer, 4 BLAS/OpenMP threads |
 
 Training retains official horizontal flip and multi-scale short sides 480--800
 with maximum side 1333. Source random crop can remove the benchmark's single
@@ -82,10 +84,10 @@ declared `ipython` and `scikit-learn` imports are pinned to `8.18.1` and
 along with SciPy, are recorded by formal preflight.
 
 ```bash
-cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-v0.1
+cd /mnt/haoyuan/workspace/CODE_DDP-benchmark-dsct-ft
 
 RUN_ID="dsct_ft_seed0_val_$(date +%Y%m%d_%H%M%S)" \
-GPU=0 \
+GPU=4,5,6,7 \
 SESSION=emotic_dsct_ft_seed0_val \
 DSCT_SOURCE_ROOT=/mnt/haoyuan/workspace/baseline_sources/dsct_release_8b0fe36 \
 DSCT_PRETRAINED_WEIGHTS=/mnt/haoyuan/workspace/baseline_sources/dsct_release_8b0fe36/r50_deformable_detr-checkpoint.pth \
@@ -109,6 +111,19 @@ parallel and synchronize once per effective batch; a one-GPU fallback
 accumulates the same four weighted micro-losses before its single optimizer
 step. Formal smoke uses the true maximum `800x1333` geometry, and every epoch
 flushes a `DSCT_PROGRESS` JSON record with loss, validation mAP and ETA.
-The registered seed-0 server placement is physical GPUs `1,2,5,6`, exposed in
-that order so physical GPU 1 is the DataParallel output/checkpoint device.
+The subsequent v0.2 four-GPU FP32 attempt was deliberately stopped after its
+measured epoch time projected roughly 55--65 hours for the complete eight-task
+pipeline; it produced no registered result. Execution contract `v0.3-fast`
+does not change the model, optimizer, effective batch, learning rate, epoch
+count, losses, label visibility, or checkpoint selection. It uses AMP around
+the expensive visual/transformer path while retaining the legacy deformable
+attention extension and all matching/loss calculations in FP32. Validation
+and test now use effective batch 4 across the same four replicas, transfers
+are pinned/non-blocking, and two persistent loader workers are bounded to four
+OpenMP/BLAS threads each. Formal placement is physical GPUs `4,5,6,7`, all on
+NUMA node 1; CPU affinity is limited to `36-47,108-119` to prevent thread
+oversubscription. Before launching a long run, the true `800x1333` smoke
+measures optimizer-step time and memory. A full-run estimate above nine hours
+requires seed-0 validation first; an estimate at or below nine hours permits
+the user-authorized single-seed locked test directly.
 Download packages follow `DOWNLOAD_STANDARD.md` and exclude all `.pth` files.

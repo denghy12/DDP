@@ -9,6 +9,53 @@ import torch.nn.functional as F
 from torch import nn
 
 
+def _patch_ms_deform_attention_amp(module: nn.Module) -> int:
+    """Keep the legacy CUDA extension in FP32 inside an AMP model.
+
+    The fixed extension dispatches only float/double.  Casting at the narrow
+    extension boundary preserves the upstream operator while allowing the
+    surrounding ResNet/Transformer projections to use Tensor Cores.
+    """
+
+    matched = 0
+    patched_classes = set()
+    for child in module.modules():
+        if child.__class__.__name__ not in {"MSDeformAttn", "MSDeformAttnCtx"}:
+            continue
+        matched += 1
+        module_class = child.__class__
+        if module_class in patched_classes or getattr(
+            module_class, "_dsct_amp_bridge_installed", False
+        ):
+            continue
+        original = module_class.forward
+
+        def forward_fp32(self, *args, _original=original, **kwargs):
+            cast_args = tuple(
+                value.float()
+                if isinstance(value, torch.Tensor) and value.is_floating_point()
+                else value
+                for value in args
+            )
+            cast_kwargs = {
+                key: (
+                    value.float()
+                    if isinstance(value, torch.Tensor) and value.is_floating_point()
+                    else value
+                )
+                for key, value in kwargs.items()
+            }
+            with torch.cuda.amp.autocast(enabled=False):
+                result = _original(self, *cast_args, **cast_kwargs)
+            return result
+
+        forward_fp32._dsct_amp_bridge = True
+        module_class.forward = forward_fp32
+        module_class._dsct_amp_bridge_installed = True
+        patched_classes.add(module_class)
+    return matched
+
+
 def box_cxcywh_to_xyxy(boxes: torch.Tensor) -> torch.Tensor:
     center_x, center_y, width, height = boxes.unbind(-1)
     return torch.stack(
@@ -163,6 +210,7 @@ class DSCTFTModel(nn.Module):
     ) -> None:
         super().__init__()
         self.core = core
+        self.amp_bridge_operator_count = _patch_ms_deform_attention_amp(core)
         self.nested_tensor_factory = nested_tensor_factory
         self.classifier = DSCTTaskClassifier(hidden_dim)
         number_of_layers = len(core.class_embed_dsct)

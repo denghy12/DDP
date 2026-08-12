@@ -8,7 +8,7 @@ export PYTHONPATH="${ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 
 SESSION="${SESSION:-emotic_dsct_ft_formal_seed0}"
 RUN_ID="${RUN_ID:-dsct_ft_formal_seed0_$(date +%Y%m%d_%H%M%S)}"
-GPU="${GPU:-1,2,5,6}"
+GPU="${GPU:-4,5,6,7}"
 PYTHON="${PYTHON:-/opt/conda/envs/ddp/bin/python}"
 DATA_ROOT="${DATA_ROOT:-/mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC}"
 SOURCE_ROOT="${DSCT_SOURCE_ROOT:-/mnt/haoyuan/workspace/baseline_sources/dsct_release_8b0fe36}"
@@ -17,9 +17,10 @@ PROTOCOL="${PROTOCOL:-${ROOT}/configs/emotic_mlcil/protocol_b5c3_track_b.yaml}"
 OUTPUT_BASE="${DSCT_OUTPUT_BASE:-/mnt/haoyuan/workspace/emotic_benchmark_runs/dsct_ft_track_b_v0.1}"
 EXPECTED_GIT_COMMIT="${EXPECTED_GIT_COMMIT:?EXPECTED_GIT_COMMIT is required}"
 CONFIGURATION_LOCKED_CONFIRMATION="${CONFIGURATION_LOCKED_CONFIRMATION:?CONFIGURATION_LOCKED_CONFIRMATION is required}"
-MIN_FREE_GPU_MIB="${DSCT_MIN_FREE_GPU_MIB:-16384}"
+MIN_FREE_GPU_MIB="${DSCT_MIN_FREE_GPU_MIB:-12288}"
+CPUSET="${DSCT_CPUSET:-36-47,108-119}"
 
-[[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "DSCT_FT_TRACK_B_V0_2" ]] || { echo "Invalid DSCT-FT v0.2 configuration lock" >&2; exit 2; }
+[[ "${CONFIGURATION_LOCKED_CONFIRMATION}" == "DSCT_FT_TRACK_B_V0_3_FAST" ]] || { echo "Invalid DSCT-FT v0.3-fast configuration lock" >&2; exit 2; }
 [[ "${RUN_ID}" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$ ]] || { echo "Invalid RUN_ID" >&2; exit 2; }
 [[ "${GPU}" =~ ^[0-9]+$|^[0-9]+,[0-9]+,[0-9]+,[0-9]+$ ]] || { echo "GPU must contain one or four physical IDs" >&2; exit 2; }
 [[ "${EXPECTED_GIT_COMMIT}" =~ ^[0-9a-f]{40}$ ]] || { echo "EXPECTED_GIT_COMMIT must be a full SHA" >&2; exit 2; }
@@ -76,7 +77,7 @@ PY
   "${PYTHON}" "${SCRIPT_DIR}/compare_dsct_upstream_reference.py" --upstream-root "${SOURCE_ROOT}" --output "${ORACLE_JSON}"
   CUDA_VISIBLE_DEVICES="${GPU}" "${PYTHON}" "${SCRIPT_DIR}/smoke_dsct_ft_training.py" \
     --source-root "${SOURCE_ROOT}" --pretrained-weights "${PRETRAINED}" \
-    --batch-size 4 --height 800 --width 1333
+    --batch-size 4 --height 800 --width 1333 --warmup-steps 1 --benchmark-steps 2
 ) 2>&1 | tee "${PREFLIGHT_LOG}"
 PREFLIGHT_RC="${PIPESTATUS[0]}"
 set -e
@@ -84,15 +85,16 @@ set -e
 cp "${PREFLIGHT_LOG}" "${PREFLIGHT_DIR}/preflight.log"
 
 printf -v command \
-  'cd %q && RUN_ID=%q GPU=%q PYTHON=%q DATA_ROOT=%q DSCT_SOURCE_ROOT=%q DSCT_PRETRAINED_WEIGHTS=%q PROTOCOL=%q RUN_OUTPUT_ROOT=%q EXPECTED_GIT_COMMIT=%q CONFIGURATION_LOCKED_CONFIRMATION=%q bash %q 2>&1 | tee %q; code=${PIPESTATUS[0]}; echo DSCT_FT_FORMAL_SEED0_EXIT_CODE=$code; exec bash' \
+  'cd %q && export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 NUMEXPR_NUM_THREADS=4 VECLIB_MAXIMUM_THREADS=4 MALLOC_ARENA_MAX=4 PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128 && RUN_ID=%q GPU=%q PYTHON=%q DATA_ROOT=%q DSCT_SOURCE_ROOT=%q DSCT_PRETRAINED_WEIGHTS=%q PROTOCOL=%q RUN_OUTPUT_ROOT=%q EXPECTED_GIT_COMMIT=%q CONFIGURATION_LOCKED_CONFIRMATION=%q DSCT_CPUSET=%q bash %q 2>&1 | tee %q; code=${PIPESTATUS[0]}; echo DSCT_FT_FORMAL_SEED0_EXIT_CODE=$code; exec bash' \
   "${ROOT}" "${RUN_ID}" "${GPU}" "${PYTHON}" "${DATA_ROOT}" "${SOURCE_ROOT}" "${PRETRAINED}" "${PROTOCOL}" \
-  "${RUN_OUTPUT_ROOT}" "${EXPECTED_GIT_COMMIT}" "${CONFIGURATION_LOCKED_CONFIRMATION}" \
+  "${RUN_OUTPUT_ROOT}" "${EXPECTED_GIT_COMMIT}" "${CONFIGURATION_LOCKED_CONFIRMATION}" "${CPUSET}" \
   "${SCRIPT_DIR}/run_dsct_ft_formal_seed0.sh" "${LAUNCHER_LOG}"
 
 tmux new-session -d -s "${SESSION}" -n "dsct_ft_seed0" "${command}"
 echo "Started locked DSCT-FT Track-B formal seed 0: ${SESSION}"
 echo "Run ID: ${RUN_ID}"
 echo "Physical GPUs: ${GPU}; free memory MiB: ${FREE_GPU_MIB[*]}"
+echo "CPU affinity: ${CPUSET}; workers: 2; OMP/MKL threads: 4; eval batch: 4"
 echo "Attach: tmux attach -t ${SESSION}"
 echo "Archive: ${RUN_OUTPUT_ROOT}/download_packages/${RUN_ID}.tar.gz"
 echo "Checksum: ${RUN_OUTPUT_ROOT}/download_packages/${RUN_ID}.tar.gz.sha256"

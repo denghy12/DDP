@@ -161,10 +161,14 @@ head to protocol-ordered expanding heads. It is Track B, exposes current
 labels only, adds no anti-forgetting mechanism, and keeps upstream source
 external behind immutable hash/operator checks. The first single-GPU batch-4
 execution OOMed in task 0 before producing any metric or checkpoint. Execution
-contract v0.2 retains effective batch 4 and every algorithmic hyperparameter,
-but uses micro-batch 1 on four DataParallel replicas (physical GPUs 1/2/5/6)
-and one synchronized optimizer update. Its frozen worst-case `800x1333` smoke
-and server test rerun are the next gates before restarting seed 0 from epoch 1.
+contract v0.3-fast retains effective batch 4 and every algorithmic
+hyperparameter, uses micro-batch 1 on four same-NUMA DataParallel replicas
+(physical GPUs 4/5/6/7), AMP with an FP32 legacy-operator/loss boundary,
+effective eval batch 4, two persistent workers and bounded CPU threads. The
+v0.2 FP32 run was stopped without a registered result after projecting 55--65
+hours. A true-geometry throughput preflight now decides whether the next gate
+is validation (>9 h estimate) or the user-authorized single locked test seed
+(at most 9 h estimate).
 
 Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It
 retains the collected original DDP

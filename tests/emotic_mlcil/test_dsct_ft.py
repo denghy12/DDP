@@ -1,4 +1,5 @@
 import json
+import copy
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -18,6 +19,7 @@ from benchmarks.emotic_mlcil.methods.dsct_ft import (
     target_boxes_from_transport,
     target_query_indices,
 )
+from benchmarks.emotic_mlcil.methods.dsct_ft.model import _patch_ms_deform_attention_amp
 from benchmarks.emotic_mlcil.protocol import BenchmarkProtocol
 from benchmarks.emotic_mlcil.registry import method_class, method_names
 from benchmarks.emotic_mlcil.types import EvaluationBatch, TrainBatch
@@ -103,6 +105,8 @@ class DSCTFTTest(unittest.TestCase):
         self.assertEqual(options.effective_train_batch_size, 4)
         self.assertEqual(options.per_gpu_micro_batch_size, 1)
         self.assertEqual(options.maximum_data_parallel_replicas, 4)
+        self.assertTrue(options.amp)
+        self.assertTrue(options.tf32)
         with self.assertRaisesRegex(ValueError, "effective train batch size 4"):
             DSCTFTOptions.from_mapping({"effective_train_batch_size": 2})
         with self.assertRaisesRegex(ValueError, "per-GPU micro-batch size 1"):
@@ -113,6 +117,20 @@ class DSCTFTTest(unittest.TestCase):
             DSCTFTBenchmarkMethod(
                 BenchmarkProtocol.from_dict(protocol_config()), model=DSCTFTModel(TinyDSCTCore(), Nested)
             )
+
+    def test_amp_bridge_is_class_level_and_replica_safe(self):
+        class MSDeformAttn(nn.Module):
+            def forward(self, value):
+                return value + 1
+
+        operator = MSDeformAttn()
+        container = nn.Sequential(operator)
+        self.assertEqual(_patch_ms_deform_attention_amp(container), 1)
+        replica = copy.deepcopy(container)
+        value = torch.ones(2, dtype=torch.float64)
+        self.assertEqual(container(value).dtype, torch.float32)
+        self.assertEqual(replica(value).dtype, torch.float32)
+        self.assertTrue(torch.equal(container(value), replica(value)))
 
     def test_transport_box_and_official_iou_query_selection(self):
         images = transport(batch=1, height=20, width=40)
@@ -174,6 +192,8 @@ class DSCTFTTest(unittest.TestCase):
         self.assertFalse(config["clip_visual_encoder_used"])
         self.assertEqual(config["execution_mode"], "data_parallel_micro_batch_then_accumulate")
         self.assertEqual(config["optimizer_steps_per_effective_batch"], 1)
+        self.assertTrue(config["amp"])
+        self.assertTrue(config["tf32"])
         with tempfile.TemporaryDirectory() as directory:
             checkpoint = Path(directory) / "task0.pth"
             method.save_checkpoint(checkpoint)
@@ -235,11 +255,13 @@ class DSCTFTTest(unittest.TestCase):
         repository = Path(__file__).resolve().parents[2]
         launcher = (repository / "scripts/emotic-mlcil/launch_dsct_ft_formal_seed0_tmux.sh").read_text()
         worker = (repository / "scripts/emotic-mlcil/run_dsct_ft_formal_seed0.sh").read_text()
-        self.assertIn('GPU="${GPU:-1,2,5,6}"', launcher)
+        self.assertIn('GPU="${GPU:-4,5,6,7}"', launcher)
         self.assertIn("--batch-size 4 --height 800 --width 1333", launcher)
-        self.assertIn("DSCT_FT_TRACK_B_V0_2", launcher)
-        self.assertIn("DSCT_FT_TRACK_B_V0_2", worker)
+        self.assertIn("DSCT_FT_TRACK_B_V0_3_FAST", launcher)
+        self.assertIn("DSCT_FT_TRACK_B_V0_3_FAST", worker)
         self.assertIn("TRAIN_BATCH_SIZE=4", worker)
+        self.assertIn("EVAL_BATCH_SIZE=4", worker)
+        self.assertIn("WORKERS=2", worker)
 
 
 if __name__ == "__main__":

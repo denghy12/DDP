@@ -319,15 +319,25 @@ class EMOTICMLCILDataModule:
         dataset = self.method_dataset(task_id, selected_split)
         if shuffle is None:
             shuffle = selected_split == self.protocol.train_split
+        loader_options: Dict[str, Any] = {}
+        if num_workers > 0:
+            loader_options.update(
+                persistent_workers=True,
+                prefetch_factor=2,
+            )
         return MethodDataLoader(
             DataLoader(
                 dataset,
                 batch_size=batch_size,
                 shuffle=bool(shuffle),
                 num_workers=num_workers,
-                pin_memory=selected_split == self.protocol.train_split,
+                pin_memory=(
+                    selected_split == self.protocol.train_split
+                    or self.input_mode == "dsct_scene"
+                ),
                 drop_last=False,
                 collate_fn=_collate_train,
+                **loader_options,
             )
         )
 
@@ -340,12 +350,19 @@ class EMOTICMLCILDataModule:
         num_workers: int,
     ) -> DataLoader:
         dataset = self.evaluator_dataset(task_id, split, access)
+        loader_options: Dict[str, Any] = {}
+        if num_workers > 0:
+            loader_options.update(
+                persistent_workers=True,
+                prefetch_factor=2,
+            )
         return DataLoader(
             dataset,
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
-            pin_memory=False,
+            pin_memory=self.input_mode == "dsct_scene",
             drop_last=False,
             collate_fn=_collate_evaluation,
+            **loader_options,
         )
