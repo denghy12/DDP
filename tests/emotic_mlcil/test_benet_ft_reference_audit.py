@@ -36,6 +36,11 @@ class BENetFTReferenceAuditTest(unittest.TestCase):
         self.assertIn("exclude", document.lower())
         self.assertIn(".pth", document)
 
+    def test_smoke_expands_before_cuda_transfer(self):
+        smoke = (ROOT / "scripts/emotic-mlcil/smoke_benet_ft_training.py").read_text()
+        self.assertLess(smoke.index("model.add_head(5)"), smoke.index("model = model.cuda().train()"))
+        self.assertIn('devices != {"cuda"}', smoke)
+
 
 if __name__ == "__main__":
     unittest.main()

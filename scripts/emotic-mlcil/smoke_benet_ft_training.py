@@ -28,8 +28,14 @@ def main():
         raise RuntimeError("CUDA is required for BENet memory smoke")
     torch.cuda.reset_peak_memory_stats()
     core, block, provenance = load_official_benet_core(Path(args.source_root), Path(args.pretrained_weights))
-    model = BENetFTModel(core, block, provenance).cuda().train()
+    model = BENetFTModel(core, block, provenance)
     model.add_head(5)
+    # Match the real begin_task lifecycle: expand first, then move every newly
+    # created task module onto the selected CUDA device.
+    model = model.cuda().train()
+    devices = {parameter.device.type for parameter in model.parameters()}
+    if devices != {"cuda"}:
+        raise RuntimeError(f"BENet smoke model spans unexpected devices: {devices}")
     images = torch.randn(args.batch_size, 11, 512, 512, device="cuda")
     images[:, 9].zero_()
     images[:, 9, 128:384, 160:352] = 1
