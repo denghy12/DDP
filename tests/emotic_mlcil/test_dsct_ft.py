@@ -262,7 +262,7 @@ class DSCTFTTest(unittest.TestCase):
         self.assertIn("DSCT_FT_TRACK_B_V0_4_FAST", launcher)
         self.assertIn("DSCT_FT_TRACK_B_V0_4_FAST", worker)
         self.assertIn("TRAIN_BATCH_SIZE=4", worker)
-        self.assertIn("EVAL_BATCH_SIZE=32", worker)
+        self.assertIn("EVAL_BATCH_SIZE=16", worker)
         self.assertIn("WORKERS=2", worker)
 
 

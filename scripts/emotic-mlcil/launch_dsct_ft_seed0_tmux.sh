@@ -39,14 +39,14 @@ ORACLE="${LOG_DIR}/${RUN_ID}_upstream_oracle.json"; PREFLIGHT="${LOG_DIR}/${RUN_
 ) 2>&1 | tee "${PREFLIGHT}"
 
 printf -v command \
-  'cd %q && export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 NUMEXPR_NUM_THREADS=4 VECLIB_MAXIMUM_THREADS=4 MALLOC_ARENA_MAX=4 PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128 && RUN_ID=%q SEED=0 GPU=%q PYTHON=%q DATA_ROOT=%q DSCT_SOURCE_ROOT=%q DSCT_PRETRAINED_WEIGHTS=%q OUTPUT_ROOT=%q REPORTING_SPLIT=val TRAIN_BATCH_SIZE=4 EVAL_BATCH_SIZE=32 WORKERS=2 DSCT_CPUSET=%q bash %q 2>&1 | tee %q; code=${PIPESTATUS[0]}; package_code=not_run; if [[ "$code" -eq 0 ]]; then %q %q --run-root %q --run-id %q --expected-bundles 1 --launcher-log %q --extra %q --extra %q; package_code=$?; fi; echo DSCT_FT_EXIT_CODE=$code; echo DOWNLOAD_PACKAGE_EXIT_CODE=$package_code; exec bash' \
+  'cd %q && export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 NUMEXPR_NUM_THREADS=4 VECLIB_MAXIMUM_THREADS=4 MALLOC_ARENA_MAX=4 PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128 && RUN_ID=%q SEED=0 GPU=%q PYTHON=%q DATA_ROOT=%q DSCT_SOURCE_ROOT=%q DSCT_PRETRAINED_WEIGHTS=%q OUTPUT_ROOT=%q REPORTING_SPLIT=val TRAIN_BATCH_SIZE=4 EVAL_BATCH_SIZE=16 WORKERS=2 DSCT_CPUSET=%q bash %q 2>&1 | tee %q; code=${PIPESTATUS[0]}; package_code=not_run; if [[ "$code" -eq 0 ]]; then %q %q --run-root %q --run-id %q --expected-bundles 1 --launcher-log %q --extra %q --extra %q; package_code=$?; fi; echo DSCT_FT_EXIT_CODE=$code; echo DOWNLOAD_PACKAGE_EXIT_CODE=$package_code; exec bash' \
   "${ROOT}" "${RUN_ID}" "${GPU}" "${PYTHON}" "${DATA_ROOT}" "${SOURCE_ROOT}" "${PRETRAINED}" "${RUN_ROOT}" \
   "${CPUSET}" "${SCRIPT_DIR}/run_dsct_ft_baseline.sh" "${LOG_DIR}/${RUN_ID}.log" "${PYTHON}" "${SCRIPT_DIR}/package_benchmark_download.py" \
   "${RUN_ROOT}" "${RUN_ID}" "${LOG_DIR}/${RUN_ID}.log" "${ORACLE}" "${PREFLIGHT}"
 tmux new-session -d -s "${SESSION}" -n "dsct_ft_seed0_g${GPU}" "${command}"
 echo "Started DSCT-FT Track-B seed-0 validation: ${SESSION}"
 echo "Run ID: ${RUN_ID}"
-echo "Physical GPUs: ${GPU}; CPU affinity: ${CPUSET}; workers: 2; eval batch: 32"
+echo "Physical GPUs: ${GPU}; CPU affinity: ${CPUSET}; workers: 2; eval batch: 16"
 echo "Attach: tmux attach -t ${SESSION}"
 echo "Download: ${RUN_ROOT}/download_packages/${RUN_ID}.tar.gz"
 echo "Checksum: ${RUN_ROOT}/download_packages/${RUN_ID}.tar.gz.sha256"
