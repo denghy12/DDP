@@ -40,7 +40,9 @@ class BENetFTReferenceAuditTest(unittest.TestCase):
         for variable in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
             self.assertIn(variable, launcher)
             self.assertIn(variable, runner)
+        self.assertIn("benet_batch_progress", method)
         self.assertIn("benet_epoch_complete", method)
+        self.assertIn("estimated_epoch_remaining_seconds", method)
         self.assertIn("epoch_seconds", method)
 
     def test_smoke_expands_before_cuda_transfer(self):

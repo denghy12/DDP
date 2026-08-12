@@ -262,6 +262,11 @@ class BENetFTBenchmarkMethod(BenchmarkMethod):
         task_started = time.perf_counter()
         for epoch in range(self.options.epochs):
             epoch_started = time.perf_counter()
+            try:
+                total_batches: Optional[int] = len(train_loader)  # type: ignore[arg-type]
+            except TypeError:
+                total_batches = None
+            progress_interval = max(1, math.ceil(total_batches / 10)) if total_batches else 50
             self.model.train()
             totals = {name: 0.0 for name in ("loss", "classification", "heatmap", "size")}
             branch_batches = {name: 0 for name in modes}
@@ -299,6 +304,27 @@ class BENetFTBenchmarkMethod(BenchmarkMethod):
                 totals["size"] += float(size_loss.detach().cpu())
                 branch_batches[branch] += 1
                 batches += 1
+                if batches == 1 or batches % progress_interval == 0 or batches == total_batches:
+                    elapsed = time.perf_counter() - epoch_started
+                    print(
+                        json.dumps(
+                            {
+                                "event": "benet_batch_progress",
+                                "task_id": self.task_context.task_id,
+                                "epoch": epoch,
+                                "batches_completed": batches,
+                                "total_batches": total_batches,
+                                "epoch_fraction": (batches / total_batches) if total_batches else None,
+                                "epoch_elapsed_seconds": elapsed,
+                                "seconds_per_batch": elapsed / batches,
+                                "estimated_epoch_remaining_seconds": (
+                                    elapsed * (total_batches - batches) / batches if total_batches else None
+                                ),
+                            },
+                            sort_keys=True,
+                        ),
+                        flush=True,
+                    )
             if batches == 0:
                 raise ValueError("Training loader produced no samples")
             validation_map = self._selection_map(val_loader)

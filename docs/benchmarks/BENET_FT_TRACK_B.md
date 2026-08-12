@@ -95,9 +95,11 @@ This prevents an existing tmux server from silently retaining a high-thread
 environment while other baselines are running. The training log emits one
 JSON record per epoch (`benet_epoch_complete`) with the task/epoch identifiers,
 validation mAP, epoch duration, cumulative task duration, optimizer-step
-counts, and early-stopping state. Task 0 must finish before benchmark artifact
-directories appear; the launcher log is therefore the authoritative live
-progress source during the first task.
+counts, and early-stopping state. It additionally emits approximately ten
+`benet_batch_progress` records per epoch with completed/total batches, seconds
+per batch, and an estimated remaining duration for that epoch. Task 0 must
+finish before benchmark artifact directories appear; the launcher log is
+therefore the authoritative live progress source during the first task.
 
 Every completed run follows `DOWNLOAD_STANDARD.md`: the launcher creates one
 `download_packages/<RUN_ID>.tar.gz` and adjacent `.sha256`. The archive includes
