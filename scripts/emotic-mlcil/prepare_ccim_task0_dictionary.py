@@ -39,6 +39,9 @@ from benchmarks.emotic_mlcil.methods.emot_net_ccim_ft.model import (
     CCIM_UPSTREAM_COMMIT,
     CCIM_UPSTREAM_REPOSITORY,
 )
+from benchmarks.emotic_mlcil.methods.emot_net_ccim_ft.places365 import (
+    CaffeResNet152Places365,
+)
 from benchmarks.emotic_mlcil.protocol import load_protocol
 from src.helper_functions.emotic_loader import EMOTIC
 
@@ -77,26 +80,13 @@ def _validate_ccim_source(source_root: Path) -> None:
 
 
 def _load_places365_encoder(checkpoint_path: Path, device: torch.device) -> nn.Module:
-    from torchvision.models import resnet152
-
-    try:
-        model = resnet152(weights=None, num_classes=365)
-    except TypeError:  # torchvision 0.14 server compatibility
-        model = resnet152(pretrained=False, num_classes=365)
+    model = CaffeResNet152Places365()
     payload = torch.load(checkpoint_path, map_location="cpu")
-    if isinstance(payload, dict) and isinstance(payload.get("state_dict"), dict):
-        payload = payload["state_dict"]
-    if not isinstance(payload, dict):
-        raise ValueError("Places365 checkpoint does not contain a state dictionary")
-    state = {}
-    for name, value in payload.items():
-        clean = str(name)
-        for prefix in ("module.", "model."):
-            if clean.startswith(prefix):
-                clean = clean[len(prefix) :]
-        state[clean] = value
-    model.load_state_dict(state, strict=True)
-    model.fc = nn.Identity()
+    if not isinstance(payload, dict) or not isinstance(payload.get("state_dict"), dict):
+        raise ValueError("Places365 checkpoint is not the audited Caffe conversion")
+    if payload.get("resource") != "ResNet-152 Places365 Caffe-to-PyTorch pool5 encoder":
+        raise ValueError("Places365 checkpoint resource identity differs")
+    model.load_state_dict(payload["state_dict"], strict=True)
     return model.eval().to(device)
 
 
@@ -138,10 +128,6 @@ class _MaskedContextDataset(Dataset):
                 transforms.Resize(256),
                 transforms.CenterCrop(224),
                 transforms.ToTensor(),
-                transforms.Normalize(
-                    mean=(0.485, 0.456, 0.406),
-                    std=(0.229, 0.224, 0.225),
-                ),
             ]
         )
 
@@ -161,7 +147,10 @@ class _MaskedContextDataset(Dataset):
             if x2 > x1 and y2 > y1:
                 image = image.copy()
                 ImageDraw.Draw(image).rectangle((x1, y1, x2, y2), fill=(0, 0, 0))
-        return self.transform(image), self.sample_ids[item]
+        values = self.transform(image).mul(255.0)
+        values = values[[2, 1, 0], :, :]
+        values -= values.new_tensor((104.0, 117.0, 123.0)).view(3, 1, 1)
+        return values, self.sample_ids[item]
 
 
 def _extract_features(
@@ -272,7 +261,10 @@ def main() -> None:
         "sample_count": len(sample_ids),
         "sample_ids_sha256": _canonical_hash(sample_ids),
         "mask_fill_rgb": [0, 0, 0],
-        "preprocessing": "Resize(256), CenterCrop(224), ImageNet normalization",
+        "preprocessing": (
+            "Resize(256), CenterCrop(224), RGB-to-BGR, 0-255 scale, "
+            "subtract original Caffe ResNet BGR means [104, 117, 123]"
+        ),
         "kmeans": {
             "implementation": "sklearn.cluster.KMeans",
             "sklearn_version": sklearn_version,

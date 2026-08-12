@@ -56,24 +56,29 @@ dimensions. The fixed dictionary is an architectural auxiliary resource—not
 stored replay examples—so replay memory remains zero; its exact persistent
 byte count is reported separately in `config_resolved.json`.
 
-The preparation step requires an audited PyTorch-compatible ResNet-152
-Places365 checkpoint. The official Places365 release primarily publishes the
-paper's ResNet-152 as Torch/Caffe assets, so an arbitrary torchvision/ImageNet
-checkpoint must not be substituted. Any conversion must first be independently
-hash-registered and then supplied explicitly:
+The preparation step uses the official fine-tuned ResNet-152 Places365 Caffe
+model. Its Caffe ResNet-v1 topology differs from torchvision at the first pool
+and stage downsampling, so the repository converts the immutable Caffe blobs
+into an exact CUDA-capable PyTorch graph and rejects torchvision/ImageNet
+substitutes. The converter audits its `pool5` output against OpenCV DNN:
 
 ```bash
 bash scripts/emotic-mlcil/prepare_ccim_source.sh
 ```
 
 ```bash
+python scripts/emotic-mlcil/convert_places365_resnet152_caffe.py \
+  --prototxt /mnt/haoyuan/workspace/baseline_sources/places365/deploy_resnet152_places365.prototxt \
+  --caffemodel /mnt/haoyuan/workspace/baseline_sources/places365/resnet152_places365.caffemodel \
+  --output /mnt/haoyuan/workspace/baseline_sources/places365/resnet152_places365_pool5_v0.1.pth
+
 CCIM_PLACES365_EXPECTED_SHA256="<verified-converted-checkpoint-sha256>" \
-CCIM_PLACES365_SOURCE="<official-asset-url + deterministic-conversion-id>" \
+CCIM_PLACES365_SOURCE="official Places365 Caffe asset + direct blob mapping with pool5 OpenCV audit" \
 /opt/conda/envs/ddp/bin/python \
   scripts/emotic-mlcil/prepare_ccim_task0_dictionary.py \
   --protocol configs/emotic_mlcil/protocol_b5c3_track_b.yaml \
   --data-root /mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC \
-  --places365-checkpoint /mnt/haoyuan/workspace/baseline_sources/places365/resnet152_places365.pth.tar \
+  --places365-checkpoint /mnt/haoyuan/workspace/baseline_sources/places365/resnet152_places365_pool5_v0.1.pth \
   --ccim-source-root /mnt/haoyuan/workspace/baseline_sources/ccim_official \
   --output pretrained/ccim/emotic_task0_places365_k256_v0.1.pth \
   --device cuda:0

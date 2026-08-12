@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "emotic-mlcil" / "compare_ccim_upstream_reference.py"
 PREPARE = ROOT / "scripts" / "emotic-mlcil" / "prepare_ccim_task0_dictionary.py"
 PREPARE_SOURCE = ROOT / "scripts" / "emotic-mlcil" / "prepare_ccim_source.sh"
+CONVERTER = ROOT / "scripts" / "emotic-mlcil" / "convert_places365_resnet152_caffe.py"
 SPEC = importlib.util.spec_from_file_location("compare_ccim_upstream", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
@@ -18,7 +19,11 @@ SPEC.loader.exec_module(MODULE)
 
 class EMOTNetCCIMFTReferenceAuditTest(unittest.TestCase):
     def test_direct_entrypoints_resolve_repository(self):
-        for script, expected in ((SCRIPT, "--upstream-root"), (PREPARE, "--places365-checkpoint")):
+        for script, expected in (
+            (SCRIPT, "--upstream-root"),
+            (PREPARE, "--places365-checkpoint"),
+            (CONVERTER, "--caffemodel"),
+        ):
             with tempfile.TemporaryDirectory() as temporary:
                 result = subprocess.run(
                     [sys.executable, str(script), "--help"],
@@ -36,6 +41,13 @@ class EMOTNetCCIMFTReferenceAuditTest(unittest.TestCase):
         self.assertIn(MODULE.CCIM_UPSTREAM_COMMIT, source)
         self.assertIn(MODULE.CCIM_SOURCE_SHA256, source)
         self.assertIn(MODULE.CCIM_UPSTREAM_REPOSITORY, source)
+
+    def test_places365_converter_pins_official_assets_and_audits_pool5(self):
+        source = CONVERTER.read_text(encoding="utf-8")
+        self.assertIn("PLACES365_CAFFE_MODEL_SHA256", source)
+        self.assertIn("PLACES365_PROTOTXT_SHA256", source)
+        self.assertIn('net.forward("pool5")', source)
+        self.assertIn("operator_equivalence", source)
 
     def test_fixed_external_source_and_operator_equivalence(self):
         configured = os.environ.get("CCIM_SOURCE_ROOT")
