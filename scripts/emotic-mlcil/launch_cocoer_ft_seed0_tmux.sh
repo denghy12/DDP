@@ -17,8 +17,12 @@ UPSTREAM_ROOT="${COCOER_UPSTREAM_ROOT:-/mnt/haoyuan/workspace/baseline_sources/c
 OUTPUT_BASE="${COCOER_OUTPUT_BASE:-/mnt/haoyuan/workspace/emotic_benchmark_runs/cocoer_ft_track_b_v0.1}"
 TRAIN_BATCH_SIZE="${COCOER_TRAIN_BATCH_SIZE:-64}"
 EVAL_BATCH_SIZE="${COCOER_EVAL_BATCH_SIZE:-16}"
-WORKERS="${COCOER_WORKERS:-0}"
+WORKERS="${COCOER_WORKERS:-2}"
 REQUIRE_CLEAN="${COCOER_REQUIRE_CLEAN:-1}"
+GPU_PREPROCESS_APPROVED="${COCOER_GPU_PREPROCESS_APPROVED:-0}"
+export OMP_NUM_THREADS="${COCOER_OMP_NUM_THREADS:-4}"
+export MKL_NUM_THREADS="${COCOER_MKL_NUM_THREADS:-4}"
+export OPENBLAS_NUM_THREADS="${COCOER_OPENBLAS_NUM_THREADS:-4}"
 
 [[ "${RUN_ID}" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$ ]] || { echo "Invalid RUN_ID" >&2; exit 2; }
 [[ "${GPU}" =~ ^[0-9]+$ ]] || { echo "Invalid GPU" >&2; exit 2; }
@@ -41,6 +45,7 @@ PREFLIGHT_LOG="${LOG_DIR}/${RUN_ID}_preflight.log"
 ORACLE_JSON="${LOG_DIR}/${RUN_ID}_upstream_oracle.json"
 ASSET_AUDIT_JSON="${LOG_DIR}/${RUN_ID}_asset_audit.json"
 MEMORY_SMOKE_JSON="${LOG_DIR}/${RUN_ID}_memory_smoke.json"
+GPU_PREPROCESS_BENCHMARK_JSON="${LOG_DIR}/${RUN_ID}_gpu_preprocess_benchmark.json"
 mkdir -p "${LOG_DIR}"
 
 set +e
@@ -78,6 +83,17 @@ CUDA_VISIBLE_DEVICES="${GPU}" "${PYTHON}" \
   --head-cache "${HEAD_CACHE}" \
   --batch-size "${TRAIN_BATCH_SIZE}" \
   --output "${MEMORY_SMOKE_JSON}"
+echo "Benchmarking CPU-v0.1 versus CUDA-v0.2 preprocessing on GPU ${GPU}..."
+CUDA_VISIBLE_DEVICES="${GPU}" "${PYTHON}" \
+  "${SCRIPT_DIR}/benchmark_cocoer_gpu_preprocess.py" \
+  --protocol "${ROOT}/configs/emotic_mlcil/protocol_b5c3_track_b.yaml" \
+  --data-root "${DATA_ROOT}" \
+  --head-cache "${HEAD_CACHE}" \
+  --batch-size "${TRAIN_BATCH_SIZE}" \
+  --workers "${WORKERS}" \
+  --batches 4 \
+  --equivalence-samples 8 \
+  --output "${GPU_PREPROCESS_BENCHMARK_JSON}"
 ) 2>&1 | tee "${PREFLIGHT_LOG}"
 PREFLIGHT_RC="${PIPESTATUS[0]}"
 set -e
@@ -85,16 +101,22 @@ if [[ "${PREFLIGHT_RC}" -ne 0 ]]; then
   echo "CocoER-FT preflight failed with exit code ${PREFLIGHT_RC}" >&2
   exit "${PREFLIGHT_RC}"
 fi
+if [[ "${GPU_PREPROCESS_APPROVED}" != "1" ]]; then
+  echo "CUDA-v0.2 smoke/benchmark completed, but validation remains gated." >&2
+  echo "Review: ${GPU_PREPROCESS_BENCHMARK_JSON}" >&2
+  echo "Then rerun with COCOER_GPU_PREPROCESS_APPROVED=1." >&2
+  exit 3
+fi
 
 printf -v command \
-  'cd %q && RUN_ID=%q SEED=0 GPU=%q PYTHON=%q DATA_ROOT=%q COCOER_RESNET50_INIT=%q COCOER_CLIP_RN50=%q COCOER_HEAD_CACHE=%q OUTPUT_ROOT=%q REPORTING_SPLIT=val TRAIN_BATCH_SIZE=%q EVAL_BATCH_SIZE=%q WORKERS=%q bash %q 2>&1 | tee %q; code=${PIPESTATUS[0]}; package_code=not_run; if [[ "$code" -eq 0 ]]; then %q %q --run-root %q --run-id %q --expected-bundles 1 --extra %q --extra %q --extra %q; package_code=$?; fi; echo COCOER_FT_EXIT_CODE=$code; echo DOWNLOAD_PACKAGE_EXIT_CODE=$package_code; exec bash' \
+  'cd %q && RUN_ID=%q SEED=0 GPU=%q PYTHON=%q DATA_ROOT=%q COCOER_RESNET50_INIT=%q COCOER_CLIP_RN50=%q COCOER_HEAD_CACHE=%q OUTPUT_ROOT=%q REPORTING_SPLIT=val TRAIN_BATCH_SIZE=%q EVAL_BATCH_SIZE=%q WORKERS=%q bash %q 2>&1 | tee %q; code=${PIPESTATUS[0]}; package_code=not_run; if [[ "$code" -eq 0 ]]; then %q %q --run-root %q --run-id %q --expected-bundles 1 --extra %q --extra %q --extra %q --extra %q; package_code=$?; fi; echo COCOER_FT_EXIT_CODE=$code; echo DOWNLOAD_PACKAGE_EXIT_CODE=$package_code; exec bash' \
   "${ROOT}" "${RUN_ID}" "${GPU}" "${PYTHON}" "${DATA_ROOT}" \
   "${RESNET_INIT}" "${CLIP_RN50}" "${HEAD_CACHE}" "${RUN_ROOT}" \
   "${TRAIN_BATCH_SIZE}" "${EVAL_BATCH_SIZE}" "${WORKERS}" \
   "${SCRIPT_DIR}/run_cocoer_ft_baseline.sh" "${LOG_DIR}/${RUN_ID}.log" \
   "${PYTHON}" "${SCRIPT_DIR}/package_benchmark_download.py" \
   "${RUN_ROOT}" "${RUN_ID}" "${ORACLE_JSON}" "${ASSET_AUDIT_JSON}" \
-  "${MEMORY_SMOKE_JSON}"
+  "${MEMORY_SMOKE_JSON}" "${GPU_PREPROCESS_BENCHMARK_JSON}"
 
 tmux new-session -d -s "${SESSION}" -n "cocoer_ft_seed0_g${GPU}" "${command}"
 echo "Started CocoER-FT Track-B validation session: ${SESSION}"
@@ -103,3 +125,4 @@ echo "Attach: tmux attach -t ${SESSION}"
 echo "Download: ${RUN_ROOT}/download_packages/${RUN_ID}.tar.gz"
 echo "Checksum: ${RUN_ROOT}/download_packages/${RUN_ID}.tar.gz.sha256"
 echo "Memory smoke: ${MEMORY_SMOKE_JSON}"
+echo "GPU preprocessing benchmark: ${GPU_PREPROCESS_BENCHMARK_JSON}"

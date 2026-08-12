@@ -78,18 +78,19 @@ def main() -> None:
         init_scale=1.0,
     )
     current_classes = len(protocol.current_class_indices(protocol.num_tasks - 1))
-    images = torch.rand(
-        args.batch_size,
-        3,
-        3,
-        224,
-        224,
-        device="cuda",
-    )
-    geometry = torch.tensor(
-        [[[20.0, 10.0, 204.0, 220.0], [75.0, 15.0, 145.0, 75.0]]],
-        device="cuda",
-    ).expand(args.batch_size, -1, -1).contiguous()
+    raw_height, raw_width = 480, 640
+    raw_images = [
+        torch.randint(
+            0, 256, (3, raw_height, raw_width), dtype=torch.uint8
+        ).pin_memory()
+        for _ in range(args.batch_size)
+    ]
+    raw_geometry = torch.tensor(
+        [[[80.0, 50.0, 560.0, 460.0], [240.0, 60.0, 400.0, 200.0]]]
+    ).expand(args.batch_size, -1, -1).contiguous().pin_memory()
+    image_sizes = torch.tensor(
+        [[raw_height, raw_width]] * args.batch_size, dtype=torch.int64
+    ).pin_memory()
     targets = torch.randint(
         0,
         2,
@@ -100,6 +101,13 @@ def main() -> None:
 
     optimizer.zero_grad(set_to_none=True)
     torch.cuda.reset_peak_memory_stats()
+    preprocess_start = torch.cuda.Event(enable_timing=True)
+    preprocess_end = torch.cuda.Event(enable_timing=True)
+    preprocess_start.record()
+    images, geometry = method.gpu_preprocessor(
+        raw_images, raw_geometry, image_sizes, train=True
+    )
+    preprocess_end.record()
     with method._autocast():
         output = method.model(images, geometry)
         global_loss = dynamic_bce(
@@ -161,8 +169,14 @@ def main() -> None:
         "seen_classes": protocol.num_classes,
         "current_classes": current_classes,
         "train_batch_size": args.batch_size,
-        "input_shape": list(images.shape),
+        "raw_input_shape_per_sample": [3, raw_height, raw_width],
+        "model_input_shape": list(images.shape),
         "complete_paths": ["head", "body", "context", "vi", "global"],
+        "preprocessing_backend": "cuda_v0.2",
+        "preprocessing_milliseconds": preprocess_start.elapsed_time(preprocess_end),
+        "preprocessing_samples_per_second": (
+            1000.0 * args.batch_size / preprocess_start.elapsed_time(preprocess_end)
+        ),
         "optimizer": "AdamW",
         "optimizer_stepped": optimizer_stepped,
         "optimizer_state_tensors": optimizer_state_tensors,

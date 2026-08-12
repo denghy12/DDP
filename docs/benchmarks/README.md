@@ -146,7 +146,8 @@ Torch7 assets; seed-0 validation remains gated on hash-verifying and converting
 the separately distributed official Dropbox ZIP. CLIP and random fallback are
 explicitly rejected.
 
-CocoER-FT development is active on `codex/emotic-baseline-cocoer-ft`. It is a
+CocoER-FT GPU-preprocessing v0.2 development is isolated on
+`codex/emotic-baseline-cocoer-ft-gpu-preprocess`. It is a
 second Track-B static-to-incremental lower bound and deliberately retains the
 official method's three ImageNet ResNet-50 towers plus native frozen OpenAI
 CLIP RN50 vocabulary-informed image branch; it does not use the Track-A CLIP
@@ -161,8 +162,12 @@ forbidden. The cache records actual ONNX providers, SCRFD/FaceAnalysis
 equivalence, native/fallback IDs and counts, geometry, and hashes. The full
 CUDA run resolved 20,611 samples natively and supplied 3,155 train-median
 fallbacks, preserving all 23,766 samples with zero unresolved; the joint asset
-audit passed and the snapshot is registered. Seed-0 validation is now gated
-only on the launcher's full-path batch-64 CUDA memory smoke. See
+audit passed and the snapshot is registered. The CPU-preprocessing v0.1 run
+was terminated after severe CPU contention was confirmed, and no result from
+it is registered. v0.2 decodes each JPEG once and executes crop, coordinated
+flip, independent jitter, resize and normalization on CUDA. It requires both
+CPU-vs-CUDA equivalence/throughput and full batch-64 memory gates before a new
+seed-0 validation; its checkpoint schema rejects v0.1 partial checkpoints. See
 `COCOER_FT_TRACK_B.md`.
 
 Original-DDP-Tau2 is complete on `codex/emotic-baseline-original-ddp`. It

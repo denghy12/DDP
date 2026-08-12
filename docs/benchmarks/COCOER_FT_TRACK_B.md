@@ -18,7 +18,7 @@ native-backbone table.
 
 ## Frozen conversion interface
 
-The `CocoER-FT-v0.1` interface retains:
+The model-side CocoER interface retains:
 
 - context/body/head 224×224 views and their body/head coordinates;
 - three trainable ImageNet ResNet-50 towers and 2048→256 projections;
@@ -246,20 +246,66 @@ training is created. Its universal download package contains logs, scores,
 metrics, manifests, source audit, asset audit, and memory-smoke JSON but excludes
 every `.pth` file.
 
-## Time-constrained formal freeze
+## Aborted CPU-preprocessing v0.1 run
 
 The registered batch-64 smoke completed before held-out access with peak
 allocated/reserved memory of `10951.1/14936.0 MiB`, a successful AdamW update,
-and `2013` initialized optimizer-state tensors. The method retains the source
-configuration above without validation-driven changes. Because the standalone
-seed-0 validation job was still running when the formal deadline arrived, the
-user authorized a time-constrained pre-freeze: no standalone validation metric
-and no test metric may change any hyperparameter. Each formal training task
-still uses only the validation split for the already-registered earliest-best
-epoch rule; test is reporting-only.
+and `2013` initialized optimizer-state tensors. The later CPU-preprocessing
+execution exposed a severe throughput problem: each process repeatedly decoded
+one image and then performed coordinated crop/flip plus three independent PIL
+resize/jitter/normalize paths with `WORKERS=0`. A process consumed roughly 48
+logical CPU cores while its GPU spent most samples idle; concurrent validation
+and formal seeds also contended for disk and memory bandwidth. The user first
+reduced the run to formal seed 1 and paused it, then explicitly terminated it
+to replace the preprocessing backend. GPU2 returned to 18 MiB after cleanup.
 
-Three formal seeds require distinct GPUs because the measured reserved peak is
-about 14.9 GiB per process. The formal launcher enforces a clean exact commit,
-the explicit `COCOER_FT_TRACK_B_V0_1` lock, at least 18,000 MiB free per GPU,
-batch `64`, fixed threshold `0.5`, held-out reporting, three-seed aggregation,
-and checkpoint-free packaging.
+No v0.1 validation or held-out result is registered. Partial task checkpoints
+must not be resumed under v0.2 because preprocessing randomness and tensor
+implementation identity changed.
+
+## CUDA-preprocessing v0.2
+
+`CocoER-FT-v0.2` leaves the model, loss, label firewall, batch size, optimizer,
+epoch schedule, and source augmentation distributions unchanged. Its execution
+boundary changes as follows:
+
+1. CPU decodes each JPEG once into its variable-resolution contiguous RGB
+   `uint8` tensor and returns original body/head boxes plus height/width;
+2. two DataLoader workers prefetch raw samples, while OpenMP/MKL/OpenBLAS are
+   limited to four threads per training process;
+3. each raw image is transferred once to CUDA without padding the batch to the
+   largest image;
+4. CUDA tensor operations crop context/body/head at their native sizes, apply
+   the coordinated horizontal flip, apply three independent
+   brightness/contrast/saturation jitters, and only then resize each view to
+   224x224, normalize it, and derive final geometry;
+5. validation/test use the same CUDA path with stochastic augmentation disabled.
+
+The raw-image list avoids a high-resolution outlier expanding the whole batch.
+The GPU augmentation generator is seed-specific and its complete state is
+stored in every task checkpoint. This makes task-boundary recovery reproducible.
+
+Before v0.2 validation, the following server gates are mandatory:
+
+- exact sample-ID equality between CPU v0.1 and CUDA v0.2 eval loaders;
+- zero geometry error (up to float rounding tolerance);
+- reported max/mean normalized-tensor difference for PIL versus CUDA tensor
+  antialiased bilinear resize;
+- measured CPU-v0.1 and CUDA-v0.2 samples/second and speedup;
+- full batch-64 forward/backward/AdamW smoke including preprocessing peak memory;
+- CPU-process audit showing bounded thread use and no starvation of unrelated jobs.
+
+Run the preprocessing benchmark with:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 /opt/conda/envs/ddp/bin/python \
+  scripts/emotic-mlcil/benchmark_cocoer_gpu_preprocess.py \
+  --data-root /mnt/haoyuan/workspace/multi-lane-main/datasets/EMOTIC \
+  --head-cache pretrained/cocoer/emotic_head_boxes_v0.1.json \
+  --batch-size 64 --workers 2 --batches 4 \
+  --output /tmp/cocoer_gpu_preprocess_benchmark.json
+```
+
+The v0.1 formal launcher is intentionally absent from the v0.2 branch. A new
+configuration-locked formal runner may be added only after v0.2 seed-0
+validation completes and the execution configuration is frozen.

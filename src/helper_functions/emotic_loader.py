@@ -30,6 +30,15 @@ class CocoERTransforms:
     image_size: int = 224
 
 
+@dataclass(frozen=True)
+class CocoERGPUTransforms:
+    """Raw RGB transport for method-side GPU three-view preprocessing."""
+
+    head_boxes: Mapping[str, Tuple[float, float, float, float]]
+    train: bool = False
+    image_size: int = 224
+
+
 class EMOTIC(torch.utils.data.Dataset):
     """EMOTIC loader matching multi-lane-main's train/(val+test) protocol."""
 
@@ -135,8 +144,8 @@ class EMOTIC(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         image = Image.open(self.file_paths[idx]).convert("RGB")
         if self.input_mode == "cocoer_multilevel":
-            if not isinstance(self.transform, CocoERTransforms):
-                raise RuntimeError("CocoER requires CocoERTransforms")
+            if not isinstance(self.transform, (CocoERTransforms, CocoERGPUTransforms)):
+                raise RuntimeError("CocoER requires a registered CocoER transform")
             sample_key = self.sample_keys[idx]
             if sample_key not in self.transform.head_boxes:
                 raise KeyError(f"CocoER head-box cache is missing {sample_key}")
@@ -144,32 +153,43 @@ class EMOTIC(torch.utils.data.Dataset):
             head_box = self._valid_bbox(
                 image, self.transform.head_boxes[sample_key], "head"
             )
-            image, body_box, head_box = self._cocoer_joint_augment(
-                image, body_box, head_box, self.transform.train
-            )
-            width, height = image.size
-            body = image.crop(tuple(body_box))
-            head = image.crop(tuple(head_box))
-            context_tensor = self.transform.transform(image)
-            body_tensor = self.transform.transform(body)
-            head_tensor = self.transform.transform(head)
-            expected = (3, self.transform.image_size, self.transform.image_size)
-            if any(tuple(value.shape) != expected for value in (
-                context_tensor, body_tensor, head_tensor
-            )):
-                raise ValueError("CocoER transforms must return 3x224x224 tensors")
-            image = torch.stack((context_tensor, body_tensor, head_tensor), dim=0)
-            scale_x = self.transform.image_size / float(width)
-            scale_y = self.transform.image_size / float(height)
-            geometry = torch.tensor(
-                [
-                    [body_box[0] * scale_x, body_box[1] * scale_y,
-                     body_box[2] * scale_x, body_box[3] * scale_y],
-                    [head_box[0] * scale_x, head_box[1] * scale_y,
-                     head_box[2] * scale_x, head_box[3] * scale_y],
-                ],
-                dtype=torch.float32,
-            )
+            if isinstance(self.transform, CocoERGPUTransforms):
+                # Decode exactly once on CPU. Cropping, stochastic augmentation,
+                # resize, normalization, and geometry conversion occur as a
+                # method-side batch operation on the selected CUDA device.
+                image = torch.from_numpy(
+                    np.array(image, dtype=np.uint8, copy=True)
+                ).permute(2, 0, 1).contiguous()
+                geometry = torch.tensor(
+                    [body_box, head_box], dtype=torch.float32
+                )
+            else:
+                image, body_box, head_box = self._cocoer_joint_augment(
+                    image, body_box, head_box, self.transform.train
+                )
+                width, height = image.size
+                body = image.crop(tuple(body_box))
+                head = image.crop(tuple(head_box))
+                context_tensor = self.transform.transform(image)
+                body_tensor = self.transform.transform(body)
+                head_tensor = self.transform.transform(head)
+                expected = (3, self.transform.image_size, self.transform.image_size)
+                if any(tuple(value.shape) != expected for value in (
+                    context_tensor, body_tensor, head_tensor
+                )):
+                    raise ValueError("CocoER transforms must return 3x224x224 tensors")
+                image = torch.stack((context_tensor, body_tensor, head_tensor), dim=0)
+                scale_x = self.transform.image_size / float(width)
+                scale_y = self.transform.image_size / float(height)
+                geometry = torch.tensor(
+                    [
+                        [body_box[0] * scale_x, body_box[1] * scale_y,
+                         body_box[2] * scale_x, body_box[3] * scale_y],
+                        [head_box[0] * scale_x, head_box[1] * scale_y,
+                         head_box[2] * scale_x, head_box[3] * scale_y],
+                    ],
+                    dtype=torch.float32,
+                )
         elif self.input_mode == "body_context":
             body = self._crop_person(image, self.body_bboxes[idx])
             if self.transform is None:

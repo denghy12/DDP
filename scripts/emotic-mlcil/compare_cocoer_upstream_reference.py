@@ -78,11 +78,14 @@ def compare(upstream_root: Path, port_root: Optional[Path] = None):
     port_files = (
         repository / "benchmarks/emotic_mlcil/methods/cocoer_ft/model.py",
         repository / "benchmarks/emotic_mlcil/methods/cocoer_ft/method.py",
+        repository / "benchmarks/emotic_mlcil/methods/cocoer_ft/gpu_preprocess.py",
         repository / "scripts/emotic-mlcil/prepare_cocoer_native_assets.py",
         repository / "scripts/emotic-mlcil/prepare_cocoer_insightface_assets.py",
         repository / "scripts/emotic-mlcil/generate_cocoer_head_detections.py",
         repository / "scripts/emotic-mlcil/prepare_cocoer_head_cache.py",
         repository / "scripts/emotic-mlcil/audit_cocoer_assets.py",
+        repository / "scripts/emotic-mlcil/benchmark_cocoer_gpu_preprocess.py",
+        repository / "scripts/emotic-mlcil/smoke_cocoer_ft_training.py",
     )
     return {
         "schema_version": 1,

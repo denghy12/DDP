@@ -27,6 +27,7 @@ from ...types import (
     TrainBatch,
 )
 from .model import CocoERFTModel, NativeResNet50GridEncoder, dynamic_bce
+from .gpu_preprocess import CocoERGPUPreprocessor
 
 
 UPSTREAM_COMMIT = "dac8fc139e61b87f1bf0b27c581798df2a5a9d38"
@@ -60,6 +61,7 @@ class CocoERFTOptions:
     encoder_blocks: int = 3
     amp: bool = True
     tf32: bool = False
+    preprocessing_backend: str = "cuda_v0.2"
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> "CocoERFTOptions":
@@ -80,6 +82,8 @@ class CocoERFTOptions:
             raise ValueError("CocoER competition settings are invalid")
         if not 0 < options.pseudo_threshold < 1:
             raise ValueError("CocoER pseudo threshold must lie in (0,1)")
+        if options.preprocessing_backend != "cuda_v0.2":
+            raise ValueError("CocoER-FT v0.2 requires CUDA preprocessing")
         return options
 
 
@@ -128,15 +132,34 @@ def _validate_context(protocol: BenchmarkProtocol, context: TaskContext) -> None
 def _validate_train_batch(batch: Any, context: TaskContext) -> TrainBatch:
     if not isinstance(batch, TrainBatch):
         raise TypeError("CocoER training requires protocol-safe TrainBatch values")
-    CocoERFTModel.split_inputs(batch.images, batch.geometry)
-    expected_shape = (batch.images.shape[0], len(context.current_class_indices))
+    raw = isinstance(batch.images, list)
+    if raw:
+        count = len(batch.images)
+        if not batch.images or any(
+            not isinstance(value, torch.Tensor)
+            or value.dtype != torch.uint8
+            or value.ndim != 3
+            or value.shape[0] != 3
+            for value in batch.images
+        ):
+            raise ValueError("Raw CocoER images must be CHW uint8 rows")
+        if batch.geometry is None or batch.geometry.shape != (count, 2, 4):
+            raise ValueError("Raw CocoER batches require body/head boxes")
+        if batch.image_sizes is None or batch.image_sizes.shape != (count, 2):
+            raise ValueError("Raw CocoER batches require original image sizes")
+    else:
+        if not isinstance(batch.images, torch.Tensor):
+            raise TypeError("CocoER images must be a tensor or raw tensor list")
+        CocoERFTModel.split_inputs(batch.images, batch.geometry)
+        count = batch.images.shape[0]
+    expected_shape = (count, len(context.current_class_indices))
     if batch.targets_current.shape != expected_shape:
         raise ValueError("CocoER current targets do not match the task")
     expected = torch.zeros_like(batch.visible_mask, dtype=torch.bool)
     expected[:, list(context.current_class_indices)] = True
     if not torch.equal(batch.visible_mask.bool(), expected):
         raise ValueError("CocoER training batch exposes labels outside current classes")
-    if len(batch.sample_ids) != batch.images.shape[0]:
+    if len(batch.sample_ids) != count:
         raise ValueError("CocoER training IDs and images are not aligned")
     return batch
 
@@ -144,10 +167,29 @@ def _validate_train_batch(batch: Any, context: TaskContext) -> TrainBatch:
 def _validate_eval_batch(batch: Any, context: TaskContext) -> EvaluationBatch:
     if not isinstance(batch, EvaluationBatch):
         raise TypeError("CocoER prediction requires EvaluationBatch values")
-    CocoERFTModel.split_inputs(batch.images, batch.geometry)
+    raw = isinstance(batch.images, list)
+    if raw:
+        count = len(batch.images)
+        if not batch.images or any(
+            not isinstance(value, torch.Tensor)
+            or value.dtype != torch.uint8
+            or value.ndim != 3
+            or value.shape[0] != 3
+            for value in batch.images
+        ):
+            raise ValueError("Raw CocoER images must be CHW uint8 rows")
+        if batch.geometry is None or batch.geometry.shape != (count, 2, 4):
+            raise ValueError("Raw CocoER evaluation requires body/head boxes")
+        if batch.image_sizes is None or batch.image_sizes.shape != (count, 2):
+            raise ValueError("Raw CocoER evaluation requires image sizes")
+    else:
+        if not isinstance(batch.images, torch.Tensor):
+            raise TypeError("CocoER images must be a tensor or raw tensor list")
+        CocoERFTModel.split_inputs(batch.images, batch.geometry)
+        count = batch.images.shape[0]
     if batch.class_order_hash != context.class_order_hash:
         raise ValueError("CocoER evaluation class order differs")
-    if batch.targets_seen.shape != (batch.images.shape[0], len(context.seen_class_indices)):
+    if batch.targets_seen.shape != (count, len(context.seen_class_indices)):
         raise ValueError("CocoER evaluation targets do not match seen classes")
     return batch
 
@@ -181,6 +223,11 @@ class CocoERFTBenchmarkMethod(BenchmarkMethod):
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         self._set_seed(protocol.seed)
         self._amp_enabled = self.options.amp and self.device.type == "cuda"
+        self.gpu_preprocessor = (
+            CocoERGPUPreprocessor(self.device, seed=protocol.seed)
+            if self.device.type == "cuda"
+            else None
+        )
         self.resnet50_initialization_path = None
         self.resnet50_initialization_sha256 = None
         self.clip_rn50_path = None
@@ -261,9 +308,24 @@ class CocoERFTBenchmarkMethod(BenchmarkMethod):
         self.training_history = []
 
     def _outputs(self, batch: Union[TrainBatch, EvaluationBatch]):
+        images = batch.images
+        geometry = batch.geometry
+        if (
+            isinstance(images, list)
+        ):
+            if self.gpu_preprocessor is None:
+                raise RuntimeError("Raw CocoER batches require CUDA preprocessing")
+            if geometry is None or batch.image_sizes is None:
+                raise ValueError("Raw CocoER batches require boxes and image sizes")
+            images, geometry = self.gpu_preprocessor(
+                images,
+                geometry,
+                batch.image_sizes,
+                train=self.model.training,
+            )
         return self.model(
-            batch.images.to(self.device, non_blocking=True).float(),
-            batch.geometry.to(self.device, non_blocking=True).float(),
+            images.to(self.device, non_blocking=True).float(),
+            geometry.to(self.device, non_blocking=True).float(),
         )
 
     def _selection_map(self, loader: Iterable[TrainBatch]) -> float:
@@ -398,11 +460,15 @@ class CocoERFTBenchmarkMethod(BenchmarkMethod):
     def resolved_method_config(self) -> Mapping[str, Any]:
         return {
             "strategy": "sequential_finetuning",
-            "conversion_interface": "CocoER-FT-v0.1",
+            "conversion_interface": "CocoER-FT-v0.2",
             "upstream_repository": self.upstream_repository,
             "upstream_commit": self.upstream_commit,
             "upstream_license": self.upstream_license,
             "input_mode": "cocoer_multilevel",
+            "preprocessing_execution": (
+                "single_cpu_jpeg_decode_then_cuda_crop_flip_"
+                "independent_color_jitter_resize_normalize_geometry"
+            ),
             "native_backbone": self.backbone,
             "resnet50_initialization_path": self.resnet50_initialization_path,
             "resnet50_initialization_sha256": self.resnet50_initialization_sha256,
@@ -434,7 +500,7 @@ class CocoERFTBenchmarkMethod(BenchmarkMethod):
         destination = Path(path)
         destination.parent.mkdir(parents=True, exist_ok=True)
         torch.save({
-            "schema_version": 1,
+            "schema_version": 2,
             "method": self.method_name,
             "protocol_id": self.protocol.protocol_id,
             "protocol_hash": self.protocol.protocol_hash,
@@ -447,11 +513,16 @@ class CocoERFTBenchmarkMethod(BenchmarkMethod):
             "clip_rn50_sha256": self.clip_rn50_sha256,
             "head_box_cache_sha256": self.head_box_cache_sha256,
             "training_history": self.training_history,
+            "gpu_preprocessor_generator_state": (
+                None
+                if self.gpu_preprocessor is None
+                else self.gpu_preprocessor.generator.get_state().cpu()
+            ),
         }, destination)
 
     def load_checkpoint(self, path: Union[str, Path]) -> None:
         payload = torch.load(Path(path), map_location="cpu")
-        if not isinstance(payload, Mapping) or int(payload.get("schema_version", -1)) != 1:
+        if not isinstance(payload, Mapping) or int(payload.get("schema_version", -1)) != 2:
             raise ValueError("Unsupported CocoER checkpoint")
         for key, expected in {
             "method": self.method_name,
@@ -480,6 +551,11 @@ class CocoERFTBenchmarkMethod(BenchmarkMethod):
         self.model.clip_image_encoder.requires_grad_(False)
         self._completed_task_id = completed
         self.training_history = [dict(row) for row in payload.get("training_history", [])]
+        generator_state = payload.get("gpu_preprocessor_generator_state")
+        if self.gpu_preprocessor is not None:
+            if not isinstance(generator_state, torch.Tensor):
+                raise ValueError("Checkpoint lacks CocoER GPU preprocessing RNG state")
+            self.gpu_preprocessor.generator.set_state(generator_state)
 
     def parameter_statistics(self) -> ParameterStatistics:
         parameters = dict(self.model.named_parameters())

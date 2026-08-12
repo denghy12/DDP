@@ -2,6 +2,7 @@
 
 from .method import CocoERFTBenchmarkMethod, CocoERFTOptions
 from .model import CocoERFTModel, NativeResNet50GridEncoder, dynamic_bce
+from .gpu_preprocess import CocoERGPUPreprocessor
 
 __all__ = [
     "CocoERFTBenchmarkMethod",
@@ -9,4 +10,5 @@ __all__ = [
     "CocoERFTOptions",
     "NativeResNet50GridEncoder",
     "dynamic_bce",
+    "CocoERGPUPreprocessor",
 ]

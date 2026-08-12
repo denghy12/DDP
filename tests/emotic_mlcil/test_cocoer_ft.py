@@ -14,6 +14,7 @@ from benchmarks.emotic_mlcil.methods.cocoer_ft import (
     dynamic_bce,
 )
 from benchmarks.emotic_mlcil.methods.cocoer_ft.method import _load_resnet_state
+from benchmarks.emotic_mlcil.data_module import _collate_train
 from benchmarks.emotic_mlcil.methods.cocoer_ft.head_geometry import (
     median_relative_geometry,
     project_relative_geometry,
@@ -24,7 +25,11 @@ from benchmarks.emotic_mlcil.protocol import BenchmarkProtocol
 from benchmarks.emotic_mlcil.registry import method_class, method_names
 from benchmarks.emotic_mlcil.runner import _cocoer_transforms
 from benchmarks.emotic_mlcil.types import EvaluationBatch, TrainBatch
-from src.helper_functions.emotic_loader import CocoERTransforms, EMOTIC
+from src.helper_functions.emotic_loader import (
+    CocoERGPUTransforms,
+    CocoERTransforms,
+    EMOTIC,
+)
 from tests.emotic_mlcil import protocol_config, task_context
 
 
@@ -141,12 +146,18 @@ class CocoERFTTest(unittest.TestCase):
             path = Path(temporary) / "head_cache.json"
             path.write_text(json.dumps(payload), encoding="utf-8")
             train_transform, eval_transform = _cocoer_transforms(str(path))
+            self.assertIsInstance(train_transform, CocoERGPUTransforms)
             self.assertTrue(train_transform.train)
             self.assertFalse(eval_transform.train)
             self.assertEqual(
                 train_transform.head_boxes[sample_id],
                 (20.0, 10.0, 80.0, 50.0),
             )
+            cpu_train, cpu_eval = _cocoer_transforms(
+                str(path), gpu_preprocessing=False
+            )
+            self.assertIsInstance(cpu_train, CocoERTransforms)
+            self.assertIsInstance(cpu_eval, CocoERTransforms)
             payload["schema_version"] = 1
             path.write_text(json.dumps(payload), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "schema"):
@@ -189,7 +200,8 @@ class CocoERFTTest(unittest.TestCase):
         self.assertIs(method_class("cocoer_ft"), CocoERFTBenchmarkMethod)
         method = self.make_method()
         config = method.resolved_method_config()
-        self.assertEqual(config["conversion_interface"], "CocoER-FT-v0.1")
+        self.assertEqual(config["conversion_interface"], "CocoER-FT-v0.2")
+        self.assertEqual(config["preprocessing_backend"], "cuda_v0.2")
         self.assertEqual(config["input_mode"], "cocoer_multilevel")
         self.assertIn("ResNet-50 x3", config["native_backbone"])
         self.assertEqual(config["clip_visual_backbone"], "OpenAI CLIP RN50 (native CocoER component)")
@@ -301,6 +313,86 @@ class CocoERFTTest(unittest.TestCase):
             self.assertEqual(tuple(geometry.shape), (2, 4))
             self.assertTrue(torch.allclose(geometry[1], torch.tensor([67.2, 28.0, 145.6, 112.0])))
             self.assertEqual(target.tolist(), [1.0])
+
+    def test_gpu_loader_mode_returns_raw_rgb_and_original_boxes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "sample.png"
+            Image.new("RGB", (100, 80), color=(20, 30, 40)).save(path)
+            key = "emotic:test:sample.png:person=0"
+            dataset = EMOTIC.__new__(EMOTIC)
+            dataset.file_paths = [str(path)]
+            dataset.body_bboxes = [[10, 10, 90, 78]]
+            dataset.sample_keys = [key]
+            dataset.classes = ["a"]
+            dataset.targets = [[0]]
+            dataset.input_mode = "cocoer_multilevel"
+            dataset.transform = CocoERGPUTransforms(
+                head_boxes={key: (30, 10, 65, 40)}, train=False
+            )
+            image, target, boxes = dataset[0]
+            self.assertEqual(image.dtype, torch.uint8)
+            self.assertEqual(tuple(image.shape), (3, 80, 100))
+            self.assertEqual(
+                boxes.tolist(),
+                [[10.0, 10.0, 90.0, 78.0], [30.0, 10.0, 65.0, 40.0]],
+            )
+            self.assertEqual(target.tolist(), [1.0])
+
+    def test_raw_collation_preserves_variable_resolution_without_padding(self):
+        rows = []
+        for index, shape in enumerate(((3, 80, 100), (3, 96, 72))):
+            rows.append(
+                {
+                    "image": torch.zeros(shape, dtype=torch.uint8),
+                    "sample_id": f"raw-{index}",
+                    "targets_current": torch.tensor([float(index)]),
+                    "visible_mask": torch.tensor([True]),
+                    "geometry": torch.tensor(
+                        [[1.0, 2.0, 10.0, 20.0], [2.0, 3.0, 8.0, 9.0]]
+                    ),
+                }
+            )
+        batch = _collate_train(rows)
+        self.assertIsInstance(batch.images, list)
+        self.assertEqual([tuple(value.shape) for value in batch.images], [
+            (3, 80, 100), (3, 96, 72)
+        ])
+        self.assertEqual(batch.image_sizes.tolist(), [[80, 100], [96, 72]])
+        self.assertEqual(tuple(batch.geometry.shape), (2, 2, 4))
+
+    @unittest.skipUnless(torch.cuda.is_available(), "CUDA required")
+    def test_gpu_eval_preprocessing_shape_geometry_and_rng_restore(self):
+        from benchmarks.emotic_mlcil.methods.cocoer_ft import CocoERGPUPreprocessor
+
+        device = torch.device("cuda")
+        preprocess = CocoERGPUPreprocessor(device, seed=7)
+        images = [
+            torch.randint(0, 256, (3, 80, 100), dtype=torch.uint8),
+            torch.randint(0, 256, (3, 96, 72), dtype=torch.uint8),
+        ]
+        boxes = torch.tensor(
+            [
+                [[10, 10, 90, 78], [30, 10, 65, 40]],
+                [[5, 8, 65, 90], [20, 10, 45, 35]],
+            ],
+            dtype=torch.float32,
+        )
+        sizes = torch.tensor([[80, 100], [96, 72]])
+        views, geometry = preprocess(images, boxes, sizes, train=False)
+        self.assertEqual(tuple(views.shape), (2, 3, 3, 224, 224))
+        self.assertEqual(tuple(geometry.shape), (2, 2, 4))
+        expected = boxes.clone()
+        expected[0] *= torch.tensor([2.24, 2.8, 2.24, 2.8])
+        expected[1] *= torch.tensor([224 / 72, 224 / 96, 224 / 72, 224 / 96])
+        self.assertTrue(torch.allclose(geometry.cpu(), expected, atol=1e-5))
+        self.assertTrue(torch.isfinite(views).all())
+
+        state = preprocess.generator.get_state()
+        first = preprocess(images, boxes, sizes, train=True)
+        preprocess.generator.set_state(state)
+        second = preprocess(images, boxes, sizes, train=True)
+        self.assertTrue(torch.equal(first[0], second[0]))
+        self.assertTrue(torch.equal(first[1], second[1]))
 
 
 if __name__ == "__main__":

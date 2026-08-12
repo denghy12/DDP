@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
+
+
+def _pin_images(value):
+    if isinstance(value, torch.Tensor):
+        return value.pin_memory()
+    return [image.pin_memory() for image in value]
 
 
 _EVALUATOR_ACCESS_SENTINEL = object()
@@ -50,23 +56,44 @@ class TaskContext:
 class TrainBatch:
     """Method-facing batch; deliberately contains no old/future target tensor."""
 
-    images: torch.Tensor
+    images: Union[torch.Tensor, List[torch.Tensor]]
     sample_ids: List[str]
     targets_current: torch.Tensor
     visible_mask: torch.Tensor
     geometry: Optional[torch.Tensor] = None
+    image_sizes: Optional[torch.Tensor] = None
+
+    def pin_memory(self):
+        self.images = _pin_images(self.images)
+        self.targets_current = self.targets_current.pin_memory()
+        self.visible_mask = self.visible_mask.pin_memory()
+        if self.geometry is not None:
+            self.geometry = self.geometry.pin_memory()
+        if self.image_sizes is not None:
+            self.image_sizes = self.image_sizes.pin_memory()
+        return self
 
 
 @dataclass
 class EvaluationBatch:
     """Evaluator-only batch containing exactly the currently seen columns."""
 
-    images: torch.Tensor
+    images: Union[torch.Tensor, List[torch.Tensor]]
     sample_ids: List[str]
     targets_seen: torch.Tensor
     class_order_hash: str
     split_hash: str
     geometry: Optional[torch.Tensor] = None
+    image_sizes: Optional[torch.Tensor] = None
+
+    def pin_memory(self):
+        self.images = _pin_images(self.images)
+        self.targets_seen = self.targets_seen.pin_memory()
+        if self.geometry is not None:
+            self.geometry = self.geometry.pin_memory()
+        if self.image_sizes is not None:
+            self.image_sizes = self.image_sizes.pin_memory()
+        return self
 
 
 @dataclass

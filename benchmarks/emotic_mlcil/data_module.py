@@ -95,6 +95,25 @@ class MethodDataLoader:
         return len(self._loader)
 
 
+def _collate_images(rows: Sequence[Dict[str, Any]]):
+    image_rows = [row["image"] for row in rows]
+    if all(
+        isinstance(value, torch.Tensor)
+        and value.dtype == torch.uint8
+        and value.ndim == 3
+        for value in image_rows
+    ):
+        sizes = torch.tensor(
+            [[value.shape[-2], value.shape[-1]] for value in image_rows],
+            dtype=torch.int64,
+        )
+        # Keep variable-resolution images separate. Padding a batch to one
+        # high-resolution outlier can consume several GiB after CUDA float
+        # conversion. DataLoader pin_memory still recurses into this list.
+        return image_rows, sizes
+    return torch.stack(image_rows), None
+
+
 def _collate_train(rows: Sequence[Dict[str, Any]]) -> TrainBatch:
     if not rows:
         raise ValueError("Cannot collate an empty training batch")
@@ -103,8 +122,9 @@ def _collate_train(rows: Sequence[Dict[str, Any]]) -> TrainBatch:
         value is None for value in geometry_rows
     ):
         raise RuntimeError("Training geometry is only present for part of a batch")
+    images, image_sizes = _collate_images(rows)
     return TrainBatch(
-        images=torch.stack([row["image"] for row in rows]),
+        images=images,
         sample_ids=[str(row["sample_id"]) for row in rows],
         targets_current=torch.stack([row["targets_current"] for row in rows]),
         visible_mask=torch.stack([row["visible_mask"] for row in rows]),
@@ -113,6 +133,7 @@ def _collate_train(rows: Sequence[Dict[str, Any]]) -> TrainBatch:
             if geometry_rows[0] is None
             else torch.stack(geometry_rows)
         ),
+        image_sizes=image_sizes,
     )
 
 
@@ -128,8 +149,9 @@ def _collate_evaluation(rows: Sequence[Dict[str, Any]]) -> EvaluationBatch:
         value is None for value in geometry_rows
     ):
         raise RuntimeError("Evaluation geometry is only present for part of a batch")
+    images, image_sizes = _collate_images(rows)
     return EvaluationBatch(
-        images=torch.stack([row["image"] for row in rows]),
+        images=images,
         sample_ids=[str(row["sample_id"]) for row in rows],
         targets_seen=torch.stack([row["targets_seen"] for row in rows]),
         class_order_hash=next(iter(class_hashes)),
@@ -139,6 +161,7 @@ def _collate_evaluation(rows: Sequence[Dict[str, Any]]) -> EvaluationBatch:
             if geometry_rows[0] is None
             else torch.stack(geometry_rows)
         ),
+        image_sizes=image_sizes,
     )
 
 
@@ -323,15 +346,22 @@ class EMOTICMLCILDataModule:
         dataset = self.method_dataset(task_id, selected_split)
         if shuffle is None:
             shuffle = selected_split == self.protocol.train_split
+        loader_options = {}
+        if num_workers > 0 and self.input_mode == "cocoer_multilevel":
+            loader_options.update(persistent_workers=True, prefetch_factor=2)
         return MethodDataLoader(
             DataLoader(
                 dataset,
                 batch_size=batch_size,
                 shuffle=bool(shuffle),
                 num_workers=num_workers,
-                pin_memory=selected_split == self.protocol.train_split,
+                pin_memory=(
+                    selected_split == self.protocol.train_split
+                    or self.input_mode == "cocoer_multilevel"
+                ),
                 drop_last=False,
                 collate_fn=_collate_train,
+                **loader_options,
             )
         )
 
@@ -344,12 +374,16 @@ class EMOTICMLCILDataModule:
         num_workers: int,
     ) -> DataLoader:
         dataset = self.evaluator_dataset(task_id, split, access)
+        loader_options = {}
+        if num_workers > 0 and self.input_mode == "cocoer_multilevel":
+            loader_options.update(persistent_workers=True, prefetch_factor=2)
         return DataLoader(
             dataset,
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
-            pin_memory=False,
+            pin_memory=self.input_mode == "cocoer_multilevel",
             drop_last=False,
             collate_fn=_collate_evaluation,
+            **loader_options,
         )

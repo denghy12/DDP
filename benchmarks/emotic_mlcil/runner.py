@@ -45,12 +45,16 @@ from .types import (
     TaskContext,
     TaskMetrics,
 )
-from src.helper_functions.emotic_loader import BodyContextTransforms, CocoERTransforms
+from src.helper_functions.emotic_loader import (
+    BodyContextTransforms,
+    CocoERGPUTransforms,
+    CocoERTransforms,
+)
 
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
 CORE_BASE_COMMIT = "00f399f13bc7552c254c8f6e6c095a8be4f56146"
-CORE_RUNTIME_VERSION = "0.10.1"
+CORE_RUNTIME_VERSION = "0.11.0"
 
 
 def _current_git_commit() -> str:
@@ -951,7 +955,7 @@ def _emot_net_transforms():
     return transform, transform
 
 
-def _cocoer_transforms(head_cache_path: str):
+def _cocoer_transforms(head_cache_path: str, *, gpu_preprocessing: bool = True):
     """Released three-view ImageNet normalization and audited face geometry."""
 
     import torchvision.transforms as transforms
@@ -1038,6 +1042,11 @@ def _cocoer_transforms(head_cache_path: str):
         if not all(math.isfinite(value) for value in values):
             raise ValueError("Non-finite CocoER head box")
         boxes[sample_id] = values
+    if gpu_preprocessing:
+        return (
+            CocoERGPUTransforms(boxes, train=True),
+            CocoERGPUTransforms(boxes, train=False),
+        )
     def native(train: bool):
         operations = []
         if train:
