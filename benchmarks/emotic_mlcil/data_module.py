@@ -347,7 +347,8 @@ class EMOTICMLCILDataModule:
         if shuffle is None:
             shuffle = selected_split == self.protocol.train_split
         loader_options = {}
-        if num_workers > 0 and self.input_mode == "cocoer_multilevel":
+        cocoer_input = getattr(self, "input_mode", "full") == "cocoer_multilevel"
+        if num_workers > 0 and cocoer_input:
             loader_options.update(persistent_workers=True, prefetch_factor=2)
         return MethodDataLoader(
             DataLoader(
@@ -357,7 +358,7 @@ class EMOTICMLCILDataModule:
                 num_workers=num_workers,
                 pin_memory=(
                     selected_split == self.protocol.train_split
-                    or self.input_mode == "cocoer_multilevel"
+                    or cocoer_input
                 ),
                 drop_last=False,
                 collate_fn=_collate_train,
@@ -375,14 +376,15 @@ class EMOTICMLCILDataModule:
     ) -> DataLoader:
         dataset = self.evaluator_dataset(task_id, split, access)
         loader_options = {}
-        if num_workers > 0 and self.input_mode == "cocoer_multilevel":
+        cocoer_input = getattr(self, "input_mode", "full") == "cocoer_multilevel"
+        if num_workers > 0 and cocoer_input:
             loader_options.update(persistent_workers=True, prefetch_factor=2)
         return DataLoader(
             dataset,
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
-            pin_memory=self.input_mode == "cocoer_multilevel",
+            pin_memory=cocoer_input,
             drop_last=False,
             collate_fn=_collate_evaluation,
             **loader_options,
