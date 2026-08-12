@@ -326,3 +326,11 @@ allocated/reserved memory. The registered held-out lock token is
 The v0.1 formal launcher is intentionally absent from the v0.2 branch. A new
 configuration-locked formal runner may be added only after v0.2 seed-0
 validation completes and the execution configuration is frozen.
+
+At the user's explicit deadline instruction, the frozen v0.2 configuration is
+run as one held-out seed only. `launch_cocoer_ft_formal_seed0_tmux.sh` enforces
+seed 0, one GPU, batch 64, two loader workers, the v0.2 lock token, at least
+18,000 MiB free memory, a clean worktree, and one checkpoint-free result
+bundle. One continual seed cannot be sharded over tasks because task `t`
+depends on the trained checkpoint from task `t-1`; unvalidated DataParallel is
+not used merely to occupy extra GPUs.

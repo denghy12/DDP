@@ -30,6 +30,9 @@ PACKAGE_SPEC = importlib.util.spec_from_file_location(
 PACKAGE_MODULE = importlib.util.module_from_spec(PACKAGE_SPEC)
 PACKAGE_SPEC.loader.exec_module(PACKAGE_MODULE)
 LAUNCHER = ROOT / "scripts" / "emotic-mlcil" / "launch_cocoer_ft_seed0_tmux.sh"
+FORMAL_SEED0 = (
+    ROOT / "scripts" / "emotic-mlcil" / "launch_cocoer_ft_formal_seed0_tmux.sh"
+)
 HEAD_RESULT = ROOT / "docs" / "benchmarks" / "results" / "cocoer_head_preprocess_v0.1.json"
 BUFFALO_L_TREE_SHA256 = "50fa1383e97d137f2902b53de7b7305ffbd35eb4ae32135d95d1e25d5a9d9d3d"
 
@@ -115,6 +118,12 @@ class CocoERFTReferenceAuditTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("COCOER_FT_TRACK_B_V0_2", runner)
         self.assertNotIn("COCOER_FT_TRACK_B_V0_1", runner)
+        formal = FORMAL_SEED0.read_text(encoding="utf-8")
+        self.assertIn("SEED=0", formal)
+        self.assertIn("REPORTING_SPLIT=test", formal)
+        self.assertIn("CONFIGURATION_LOCKED_CONFIRMATION=COCOER_FT_TRACK_B_V0_2", formal)
+        self.assertIn("--expected-bundles 1", formal)
+        self.assertNotIn("seed012", formal)
 
     def test_runtime_entrypoints_restore_repository_root(self):
         for script in (GENERATE, ASSET_AUDIT):
