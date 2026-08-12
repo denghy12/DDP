@@ -436,6 +436,15 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
             **asdict(self.options),
         }
 
+    def checkpoint_extra_metadata(self) -> Mapping[str, Any]:
+        """Extension point for source methods hosted by the EMOT-Net lifecycle."""
+
+        return {}
+
+    def validate_checkpoint_extra_metadata(self, value: Mapping[str, Any]) -> None:
+        if dict(value):
+            raise ValueError("Checkpoint contains unexpected EMOT-Net method metadata")
+
     def save_checkpoint(self, path: Union[str, Path]) -> None:
         if self.task_context is None or self._completed_task_id < 0:
             raise RuntimeError("A completed active task is required for checkpointing")
@@ -457,6 +466,7 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
                 "options": asdict(self.options),
                 "native_initialization_sha256": self.native_initialization_sha256,
                 "native_source_asset_sha256": dict(self.native_source_asset_sha256),
+                "method_extra": dict(self.checkpoint_extra_metadata()),
                 "training_history": self.training_history,
                 "current_class_weights": self.current_class_weights,
             },
@@ -476,12 +486,18 @@ class EMOTNetFTBenchmarkMethod(BenchmarkMethod):
         for key, value in expected.items():
             if payload.get(key) != value:
                 raise ValueError(f"Checkpoint {key} differs from EMOT-Net-FT")
-        if dict(payload.get("options", {})) != asdict(self.options):
+        checkpoint_options = dict(payload.get("options", {}))
+        expected_options = asdict(self.options)
+        if checkpoint_options != expected_options:
             raise ValueError("Checkpoint EMOT-Net options differ")
         if payload.get("native_initialization_sha256") != self.native_initialization_sha256:
             raise ValueError("Checkpoint native initialization differs")
         if dict(payload.get("native_source_asset_sha256", {})) != self.native_source_asset_sha256:
             raise ValueError("Checkpoint native source assets differ")
+        method_extra = payload.get("method_extra", {})
+        if not isinstance(method_extra, Mapping):
+            raise ValueError("Checkpoint method metadata must be a mapping")
+        self.validate_checkpoint_extra_metadata(method_extra)
         completed = int(payload["completed_task_id"])
         expected_heads = tuple(
             len(self.protocol.current_class_indices(task_id))

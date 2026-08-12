@@ -14,6 +14,7 @@ from .original_ddp import OriginalDDPBenchmarkMethod
 from .agcn import AGCNBenchmarkMethod
 from .replay import DERPPBenchmarkMethod, ERBenchmarkMethod, PRSBenchmarkMethod
 from .emot_net_ft import EMOTNetFTBenchmarkMethod
+from .emot_net_ccim_ft import EMOTNetCCIMFTBenchmarkMethod
 from .emotionclip_ft import EmotionCLIPFTBenchmarkMethod
 
 __all__ = [
@@ -31,5 +32,6 @@ __all__ = [
     "PRSBenchmarkMethod",
     "DERPPBenchmarkMethod",
     "EMOTNetFTBenchmarkMethod",
+    "EMOTNetCCIMFTBenchmarkMethod",
     "EmotionCLIPFTBenchmarkMethod",
 ]

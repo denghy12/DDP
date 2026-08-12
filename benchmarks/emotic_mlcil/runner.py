@@ -29,6 +29,7 @@ from .methods.l3a import L3ABenchmarkMethod
 from .methods.original_ddp import OriginalDDPBenchmarkMethod
 from .methods.agcn import AGCNBenchmarkMethod
 from .methods.emot_net_ft import EMOTNetFTBenchmarkMethod
+from .methods.emot_net_ccim_ft import EMOTNetCCIMFTBenchmarkMethod
 from .methods.emotionclip_ft import EmotionCLIPFTBenchmarkMethod
 from .methods.replay import (
     DERPPBenchmarkMethod,
@@ -53,7 +54,7 @@ from src.helper_functions.emotic_loader import (
 
 BASE_COMMIT = "f9459d0769f4ef3ee93e51db31df6ec509a933ad"
 CORE_BASE_COMMIT = "00f399f13bc7552c254c8f6e6c095a8be4f56146"
-CORE_RUNTIME_VERSION = "0.11.0"
+CORE_RUNTIME_VERSION = "0.12.0"
 
 
 def _current_git_commit() -> str:
@@ -807,6 +808,7 @@ def _parse_args() -> argparse.Namespace:
             "prs",
             "derpp",
             "emot_net_ft",
+            "emot_net_ccim_ft",
             "emotionclip_ft",
         ),
         default="ddp",
@@ -832,6 +834,13 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--emotionclip-checkpoint",
         help="Official full EmotionCLIP checkpoint containing model state",
+    )
+    parser.add_argument(
+        "--ccim-dictionary",
+        help=(
+            "Protocol-audited 256x2048 Task-0-only ResNet152-Places365 "
+            "confounder dictionary for EMOT-Net+CCIM-FT"
+        ),
     )
     parser.add_argument("--output-root", default="./output")
     parser.add_argument("--reporting-split", default="val")
@@ -1012,6 +1021,7 @@ def main() -> None:
         "prs": PRSBenchmarkMethod,
         "derpp": DERPPBenchmarkMethod,
         "emot_net_ft": EMOTNetFTBenchmarkMethod,
+        "emot_net_ccim_ft": EMOTNetCCIMFTBenchmarkMethod,
         "emotionclip_ft": EmotionCLIPFTBenchmarkMethod,
     }
     method_class = method_classes[args.method]
@@ -1047,11 +1057,13 @@ def main() -> None:
         return
     if not args.data_root:
         raise ValueError("--data-root is required for benchmark execution")
-    if args.method == "emot_net_ft":
+    if args.method in {"emot_net_ft", "emot_net_ccim_ft"}:
         if args.input_mode != "body_context":
-            raise ValueError("EMOT-Net-FT requires --input-mode body_context")
+            raise ValueError("EMOT-Net methods require --input-mode body_context")
         if not args.emot_net_native_init:
-            raise ValueError("EMOT-Net-FT requires --emot-net-native-init")
+            raise ValueError("EMOT-Net methods require --emot-net-native-init")
+        if args.method == "emot_net_ccim_ft" and not args.ccim_dictionary:
+            raise ValueError("EMOT-Net+CCIM-FT requires --ccim-dictionary")
         train_transform, eval_transform = _emot_net_transforms()
     elif args.method == "emotionclip_ft":
         if args.input_mode != "image_bbox_mask":
@@ -1100,6 +1112,13 @@ def main() -> None:
         method = EMOTNetFTBenchmarkMethod(
             protocol,
             native_initialization_path=args.emot_net_native_init,
+            device=args.device,
+        )
+    elif args.method == "emot_net_ccim_ft":
+        method = EMOTNetCCIMFTBenchmarkMethod(
+            protocol,
+            native_initialization_path=args.emot_net_native_init,
+            ccim_dictionary_path=args.ccim_dictionary,
             device=args.device,
         )
     elif args.method == "emotionclip_ft":

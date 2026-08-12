@@ -58,6 +58,7 @@ remain a reserved extension point.
 - [ER control and PRS Track-A porting contract](ER_PRS_TRACK_A.md)
 - [DER++ source audit and Track-A porting contract](DERPP_TRACK_A.md)
 - [EMOT-Net native-backbone sequential FT Track-B contract](EMOT_NET_FT_TRACK_B.md)
+- [EMOT-Net+CCIM native-backbone sequential FT Track-B contract](EMOT_NET_CCIM_FT_TRACK_B.md)
 - [EmotionCLIP native-backbone sequential FT Track-B contract](EMOTIONCLIP_FT_TRACK_B.md)
 - [Universal checkpoint-free download standard](DOWNLOAD_STANDARD.md)
 - [Registered clean DDP seed-0 result](results/ddp_seed0_core_v0.1.json)
@@ -153,6 +154,15 @@ deviation. Exact provenance is registered in the
 [`validation`](results/emot_net_ft_seed0_validation_v0.1.json) and
 [`formal`](results/emot_net_ft_seed0_formal_v0.1.json) snapshots. This Track-B
 result must not be placed in a unified Track-A ranking.
+
+EMOT-Net+CCIM-FT development is isolated on
+`codex/emotic-baseline-emot-net-ccim-ft`. It is the paired causal-module
+ablation for EMOT-Net-FT: the native host, current-label-only Method-FT
+lifecycle and optimization remain the same, while the exact official CCIM is
+inserted before the expanding heads. To avoid future-data leakage, the
+ResNet152-Places365 `K=256` confounder dictionary uses only Task-0-accessible
+training images and is then frozen. Server validation is intentionally blocked
+until that audited dictionary resource exists.
 
 EmotionCLIP-FT development is isolated on
 `codex/emotic-baseline-emotionclip-ft`. It is also Track B: the method retains

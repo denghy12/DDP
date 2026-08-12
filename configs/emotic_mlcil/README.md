@@ -7,8 +7,8 @@ configuration content and never infers a protocol from the filename.
 boundaries, split roles, visibility firewall, metrics, and fixed threshold but
 declares Track B for methods that retain an audited original backbone. Track-A
 and Track-B outputs have distinct protocol IDs/hashes and must not be merged
-into one ranking. Native-backbone `EMOT-Net-FT` and `EmotionCLIP-FT` use this
-configuration.
+into one ranking. Native-backbone `EMOT-Net-FT`, `EMOT-Net+CCIM-FT`, and
+`EmotionCLIP-FT` use this configuration.
 
 `protocol_b10c4.yaml` is the registered five-task extension over the identical
 alphabetical 26-class order. Task sizes are `10/4/4/4/4`, seen-class counts are
@@ -55,6 +55,13 @@ the official checkpoint SHA-256, subject-aware ViT-B/32, bbox-mask input,
 normalized features, expanding heads, current-label BCE, full visual
 fine-tuning, and explicit absence of replay, distillation, EWC, Adapter and the
 CLIP text encoder.
+
+EMOT-Net+CCIM-FT also keeps immutable method settings outside the frozen
+Track-B YAML. Its manifest records the fixed CCIM source commit/hash, exact
+dot-product intervention, 256-by-2048 dictionary dimensions, Task-0-only
+construction scope, dictionary/checkpoint/sample-ID hashes, persistent
+auxiliary bytes, and absence of future-image access and replay. The same
+dictionary is reused across formal run seeds.
 
 KRT likewise uses immutable code defaults rather than adding fields to the
 frozen YAML. Its manifest records the fixed upstream commit/archive hash,
