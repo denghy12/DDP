@@ -106,3 +106,31 @@ Every completed run follows `DOWNLOAD_STANDARD.md`: the launcher creates one
 metrics, score artifacts, manifests, reports, logs, and source-equivalence
 evidence, and explicitly excludes all `.pth` checkpoints and other large
 training state.
+
+## Direct configuration freeze and held-out seed-0 entry point
+
+The initial validation execution was deliberately stopped during Task 0,
+epoch 0 after 69 of 224 training batches. It produced no completed epoch,
+checkpoint, metric, or validation artifact and therefore was not used to alter
+any hyperparameter. At the user's explicit request, the registered values in
+the table above were frozen a priori and the formal scope was reduced to seed
+0 only. This is a single-run result and must not be reported as a three-seed
+mean or with a standard deviation.
+
+The formal launcher requires a clean exact commit and the confirmation string
+`BENET_FT_TRACK_B_V0_1`. It fixes `reporting_split=test`, seed 0, train/eval
+batches `24/8`, workers 0, and two BLAS/OpenMP CPU threads. Training still uses
+only validation current-label mAP for early stopping; held-out test labels are
+never available to checkpoint selection.
+
+```bash
+FROZEN_COMMIT="$(git rev-parse HEAD)"
+RUN_ID="benet_ft_formal_seed0_$(date +%Y%m%d_%H%M%S)" \
+GPU=7 \
+SESSION=emotic_benet_ft_formal_seed0 \
+EXPECTED_GIT_COMMIT="$FROZEN_COMMIT" \
+CONFIGURATION_LOCKED_CONFIRMATION=BENET_FT_TRACK_B_V0_1 \
+BENET_CPU_THREADS=2 \
+BENET_RUN_GPU_SMOKE=0 \
+bash scripts/emotic-mlcil/launch_benet_ft_formal_seed0_tmux.sh
+```

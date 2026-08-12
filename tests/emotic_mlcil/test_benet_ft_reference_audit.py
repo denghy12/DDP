@@ -50,6 +50,19 @@ class BENetFTReferenceAuditTest(unittest.TestCase):
         self.assertLess(smoke.index("model.add_head(5)"), smoke.index("model = model.cuda().train()"))
         self.assertIn('devices != {"cuda"}', smoke)
 
+    def test_formal_entrypoint_is_locked_seed0_only(self):
+        launcher = (ROOT / "scripts/emotic-mlcil/launch_benet_ft_formal_seed0_tmux.sh").read_text()
+        worker = (ROOT / "scripts/emotic-mlcil/run_benet_ft_formal_seed0.sh").read_text()
+        self.assertIn("EXPECTED_GIT_COMMIT", launcher)
+        self.assertIn("BENET_FT_TRACK_B_V0_1", launcher)
+        self.assertIn("REPORTING_SPLIT=test", worker)
+        self.assertIn("SEED=0", worker)
+        self.assertIn("TRAIN_BATCH_SIZE=24", worker)
+        self.assertIn("EVAL_BATCH_SIZE=8", worker)
+        self.assertIn("WORKERS=0", worker)
+        self.assertIn("--expected-bundles 1", worker)
+        self.assertNotIn("for seed in", worker)
+
 
 if __name__ == "__main__":
     unittest.main()
