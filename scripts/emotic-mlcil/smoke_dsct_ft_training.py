@@ -29,8 +29,8 @@ def main():
     gpu_count = min(args.batch_size, torch.cuda.device_count())
     if gpu_count < 1:
         raise RuntimeError("No visible CUDA device")
-    if args.batch_size != 4 or gpu_count not in (1, 4):
-        raise ValueError("DSCT smoke requires global batch 4 on one or four visible GPUs")
+    if args.batch_size != 4 or gpu_count not in (1, 2, 4):
+        raise ValueError("DSCT smoke requires global batch 4 on 1, 2, or 4 visible GPUs")
     model.add_head(5); model.to(device).train()
     parallel = (
         torch.nn.DataParallel(model, device_ids=list(range(gpu_count)), output_device=0)
@@ -58,32 +58,15 @@ def main():
 
     def training_step():
         optimizer.zero_grad(set_to_none=True)
-        if gpu_count > 1:
-            with torch.cuda.amp.autocast(enabled=options.amp):
-                output = parallel(images)
-            output = loss_fp32(output)
+        with torch.cuda.amp.autocast(enabled=options.amp):
+            output = parallel(images)
+        output = loss_fp32(output)
+        with torch.cuda.amp.autocast(enabled=False):
             loss, _ = dsct_current_task_loss(output, targets, 5)
-            with torch.cuda.amp.autocast(enabled=False):
-                for auxiliary in output.get("aux_outputs", []):
-                    auxiliary = dict(auxiliary); auxiliary["target_boxes"] = output["target_boxes"]
-                    value, _ = dsct_current_task_loss(auxiliary, targets, 5); loss = loss + value
-            scaler.scale(loss).backward()
-        else:
-            loss = images.new_zeros(())
-            for index in range(args.batch_size):
-                with torch.cuda.amp.autocast(enabled=options.amp):
-                    output = model(images[index:index + 1])
-                output = loss_fp32(output)
-                with torch.cuda.amp.autocast(enabled=False):
-                    micro_loss, _ = dsct_current_task_loss(output, targets[index:index + 1], 5)
-                    for auxiliary in output.get("aux_outputs", []):
-                        auxiliary = dict(auxiliary); auxiliary["target_boxes"] = output["target_boxes"]
-                        value, _ = dsct_current_task_loss(
-                            auxiliary, targets[index:index + 1], 5
-                        ); micro_loss = micro_loss + value
-                scaler.scale(micro_loss / args.batch_size).backward()
-                loss = loss + micro_loss.detach() / args.batch_size
-                del output, micro_loss
+            for auxiliary in output.get("aux_outputs", []):
+                auxiliary = dict(auxiliary); auxiliary["target_boxes"] = output["target_boxes"]
+                value, _ = dsct_current_task_loss(auxiliary, targets, 5); loss = loss + value
+        scaler.scale(loss).backward()
         scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(model.parameters(), options.gradient_clip_norm)
         scaler.step(optimizer)
@@ -102,7 +85,7 @@ def main():
     peak_allocated = [torch.cuda.max_memory_allocated(index) / 2**20 for index in range(gpu_count)]
     peak_reserved = [torch.cuda.max_memory_reserved(index) / 2**20 for index in range(gpu_count)]
     print(json.dumps({"global_batch_size": args.batch_size,
-                      "per_gpu_micro_batch_size": 1,
+                      "per_gpu_micro_batch_size": args.batch_size // gpu_count,
                       "visible_gpu_count": gpu_count,
                       "height": args.height, "width": args.width,
                       "amp": options.amp, "tf32": options.tf32,
