@@ -110,7 +110,7 @@ class DSCTFTTest(unittest.TestCase):
         self.assertTrue(options.channels_last)
         with self.assertRaisesRegex(ValueError, "effective train batch size 4"):
             DSCTFTOptions.from_mapping({"effective_train_batch_size": 2})
-        with self.assertRaisesRegex(ValueError, "per-GPU micro-batch size 1"):
+        with self.assertRaisesRegex(ValueError, "per-GPU micro-batch size 2"):
             DSCTFTOptions.from_mapping({"per_gpu_micro_batch_size": 1})
         with self.assertRaisesRegex(ValueError, "two DataParallel replicas"):
             DSCTFTOptions.from_mapping({"maximum_data_parallel_replicas": 4})
@@ -177,7 +177,7 @@ class DSCTFTTest(unittest.TestCase):
         self.assertIn("task_eta_seconds", progress_payload)
         history = method.training_log_records()
         self.assertEqual(history[0]["optimizer_steps"], 1.0)
-        self.assertEqual(history[0]["micro_batches"], 4.0)
+        self.assertEqual(history[0]["micro_batches"], 2.0)
         self.assertEqual(history[0]["effective_train_batch_size"], 4.0)
         evaluation = EvaluationBatch(
             images=batch.images, sample_ids=batch.sample_ids,
