@@ -15,6 +15,7 @@ from torch import nn
 
 UPSTREAM_REPOSITORY = "https://github.com/TristanCladiere/BENet"
 UPSTREAM_COMMIT = "b86747e0e259b1ec70fc84ca76efd7ea3bb3728e"
+PRETRAINED_WEIGHTS_SHA256 = "ef4c99ab8341b5d8c0437b3ea44aec6bd13b82f49b3b2c5e7696ce06c04777f5"
 VERIFIED_SOURCE_SHA256 = {
     "lib/models/BENet.py": "e17d68ba5a42e46fc6496dbdfd7b8686bb7b24467cf556f4b8a989fd7ed7512c",
     "lib/core/loss_mt.py": "2e38e401d685f7465729f64776940a0a0490049f65629b50d1bf017c748cee3e",
@@ -85,6 +86,9 @@ def load_official_benet_core(source_root: Path, pretrained_weights: Path):
     hashes = verify_benet_source(source_root)
     if not pretrained_weights.is_file():
         raise FileNotFoundError(f"Missing BENet HigherHRNet initialization: {pretrained_weights}")
+    weight_hash = _sha256(pretrained_weights)
+    if weight_hash != PRETRAINED_WEIGHTS_SHA256:
+        raise ValueError("BENet HigherHRNet initialization hash differs")
     source_file = source_root / "lib/models/BENet.py"
     spec = importlib.util.spec_from_file_location("_emotic_benet_fixed_source", source_file)
     if spec is None or spec.loader is None:
@@ -96,7 +100,7 @@ def load_official_benet_core(source_root: Path, pretrained_weights: Path):
     core.init_weights(str(pretrained_weights), verbose=False)
     return core, module.BasicBlock, {
         "source_files": hashes,
-        "pretrained_weights_sha256": _sha256(pretrained_weights),
+        "pretrained_weights_sha256": weight_hash,
     }
 
 
@@ -266,4 +270,3 @@ class BENetFTModel(nn.Module):
             for branch in ("bu", "pc", "context")
         ]
         return torch.stack(probabilities).mean(dim=0)
-

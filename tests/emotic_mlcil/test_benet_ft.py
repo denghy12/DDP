@@ -7,6 +7,7 @@ from PIL import Image
 from torch import nn
 
 from benchmarks.emotic_mlcil.methods.benet_ft import BENetFTBenchmarkMethod, BENetFTOptions, focal_tag_loss
+from benchmarks.emotic_mlcil.methods.benet_ft.model import PRETRAINED_WEIGHTS_SHA256
 from benchmarks.emotic_mlcil.protocol import BenchmarkProtocol
 from benchmarks.emotic_mlcil.registry import method_class, method_names
 from benchmarks.emotic_mlcil.types import EvaluationBatch, TrainBatch
@@ -109,6 +110,10 @@ class BENetFTTest(unittest.TestCase):
         self.assertFalse(config["benchmark_added_adapter"])
         self.assertFalse(config["extra_heco_data_used"])
         self.assertEqual(BENetFTOptions().learning_rate, 1.0e-3)
+        self.assertEqual(
+            PRETRAINED_WEIGHTS_SHA256,
+            "ef4c99ab8341b5d8c0437b3ea44aec6bd13b82f49b3b2c5e7696ce06c04777f5",
+        )
 
     def test_focal_tag_formula(self):
         logits = torch.tensor([[0.2, -0.4, 0.7], [-0.8, 0.3, 0.1]], dtype=torch.float64)

@@ -13,6 +13,11 @@ This is Track B because it retains BENet's native HigherHRNet-W32 backbone and
 official COCO-pose initialization. It must not be merged into the Track-A CLIP
 ranking.
 
+The W32/512 initialization is fixed at SHA-256
+`ef4c99ab8341b5d8c0437b3ea44aec6bd13b82f49b3b2c5e7696ce06c04777f5`.
+The runtime rejects every other payload rather than silently using a different
+backbone state or random initialization.
+
 ## Static-to-incremental mapping
 
 The source no-fusion EMOTIC configuration has bottom-up (BU), person-crop
@@ -67,6 +72,11 @@ The source's optional periodic test evaluation is prohibited.
 | Classification loss | source `FocalTagLoss` |
 | Main-table F1 threshold | fixed `0.5` |
 
+Server CUDA smoke at batch 24 completed an Adam update on an RTX 4090 with
+`12,866.6 MiB` peak allocated and `14,426 MiB` peak reserved. This validates
+one BENet-FT process per 24 GiB GPU; multiple BENet workers must not share a
+single 4090.
+
 The source static schedule is 250 epochs on the complete 26-class dataset.
 Repeating 250 epochs for each of eight incremental tasks would be a different
 compute budget; the 25-epoch cap is an explicit benchmark adaptation and must
@@ -84,4 +94,3 @@ Every completed run follows `DOWNLOAD_STANDARD.md`: the launcher creates one
 metrics, score artifacts, manifests, reports, logs, and source-equivalence
 evidence, and explicitly excludes all `.pth` checkpoints and other large
 training state.
-
